@@ -42,21 +42,27 @@ class FirebaseBootstrap {
       );
       _initialised = true;
       return const FirebaseReady();
-    } on FirebaseNotConfigured {
-      return const FirebaseUnavailable(
-        'ยังไม่ได้เชื่อมต่อ Firebase\n\n'
-        'นักศึกษาต้องรันคำสั่ง:\n'
-        'firebase login\n'
-        'flutterfire configure --project=thaiotop-587f1 \\\n'
-        '    --options-file=lib/core/config/firebase_options.dart',
-        isConfigurationMissing: true,
-      );
     } catch (error) {
+      // `DefaultFirebaseOptions.currentPlatform` throws when the project has
+      // not been wired up yet. Detect that specifically so the message tells
+      // the developer the exact command to run, instead of dumping a stack
+      // trace on a white screen.
+      final bool notConfigured = error is UnsupportedError ||
+          error.toString().contains('not been configured');
+
       return FirebaseUnavailable(
-        'เชื่อมต่อ Firebase ไม่สำเร็จ\n\n${_describe(error)}',
+        notConfigured ? _notConfiguredMessage : _describe(error),
+        isConfigurationMissing: notConfigured,
       );
     }
   }
+
+  static const String _notConfiguredMessage =
+      'ยังไม่ได้เชื่อมต่อ Firebase\n\n'
+      'นักศึกษาต้องรันคำสั่ง:\n'
+      'firebase login\n'
+      'flutterfire configure --project=thaiotop-587f1 \\\n'
+      '    --options-file=lib/core/config/firebase_options.dart';
 
   /// Turns a raw exception into something a human can act on.
   static String _describe(Object error) {
