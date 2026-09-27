@@ -10,6 +10,9 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # ฟอนต์ไอคอน iOS — จำเป็นเพราะ page transition ของ iOS ใช้ CupertinoIcons
+  cupertino_icons: ^1.0.8
+
   # --- Cloud backend (ข้อกำหนด: ต้องใช้ Cloud Database) ---
   firebase_core: ^4.15.0          # ตัวเริ่มต้น Firebase SDK
   firebase_auth: ^6.7.0           # ระบบสมาชิก: สมัคร / ล็อกอิน / รีเซ็ตรหัสผ่าน

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "94897777520",
+    "project_id": "thaiotop-587f1",
+    "storage_bucket": "thaiotop-587f1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:94897777520:android:c1fe72b05cb48ddba0fdb5",
+        "android_client_info": {
+          "package_name": "com.thaiotop.thai_otop_marketplace"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD8frRt_NazqCX5N9aj0sRPFqL2230S2v0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
