@@ -40,21 +40,33 @@
 
 ### สิ่งที่ยังไม่เสร็จ (ตั้งใจ ไม่ใช่ตกหล่น)
 
-- **Firebase ยังไม่ได้เชื่อม** — รอ `firebase login` (ต้องใช้ browser) แล้วรัน
-  `flutterfire configure --project=thaiotop-587f1` → เป็นงานของ Week 3
+- **ยังไม่ได้เปิด Firebase Authentication ใน Console** — ไฟล์ config สร้างแล้ว
+  (`android/app/google-services.json`, `lib/core/config/firebase_options.dart`) แต่ยังไม่ได้
+  enable provider ฝั่ง Console และยังไม่ได้ทดสอบจริงบนอุปกรณ์ → เป็นงานแรกของ Week 3
 - **ยังไม่มี test** — เขียนใน Week 5 ตามที่กำหนด (≥ 10 เคส)
 - **ยังไม่ได้ bundle ฟอนต์ Noto Sans Thai** — ดาวน์โหลดจากเน็ตถูกบล็อกในเครื่องนี้
   จึงใช้ฟอนต์ระบบก่อน พร้อมวางจุดเปลี่ยนไว้ที่ `kAppFontFamily` แล้ว (Week 5)
+- **ยังไม่ได้ติดตั้ง Android `cmdline-tools`** — ไม่กระทบการ build (พิสูจน์แล้วว่า
+  `flutter build apk` สำเร็จ) แต่ `flutter doctor` จะยังเตือนเรื่อง license
+
+### ✅ หลักฐานการรันได้จริง (เพิ่มเติม 27 ก.ย. 2569)
+
+| คำสั่ง | ผลลัพธ์ |
+|---|---|
+| `flutter analyze` | `No issues found!` (1.8 วิ) |
+| `flutter build web --no-wasm-dry-run` | สำเร็จ |
+| `flutter build apk --debug` | สำเร็จ 78.7 วิ → `build/app/outputs/flutter-apk/app-debug.apk` (157.27 MB) |
 
 ### ⚠️ ความเสี่ยงที่พบ และการจัดการ
 
 | ความเสี่ยง | ผลกระทบ | การจัดการ |
 |---|---|---|
-| Firebase ยังไม่ได้ login | บล็อก Week 3 ทั้งสัปดาห์ | ต้อง login **ภายใน 28 ก.ย.** ไม่งั้นเสี่ยง |
-| Android toolchain ไม่ครบ (ไม่มี `cmdline-tools`, ยังไม่ accept license) | สร้าง APK ไม่ได้ → บล็อก Week 6 | ตั้งค่าใน Week 3 (ต้องใช้เวลาราว 1 ชม.) |
+| Firebase Auth ยังไม่ได้ enable ใน Console | บล็อก Auth flow ใน Week 3 | ต้อง enable Email/Password ผ่าน browser |
+| เครื่องตั้ง Windows เป็นภาษาไทย | Gradle ใช้ `BuddhistCalendar` → ปี 2569 เกินช่วง MS-DOS → `mergeDebugJavaResource` พัง | บังคับ `-Duser.language=en -Duser.country=US` ใน `android/gradle.properties` (แก้แล้ว) |
 | ไม่มี Android device เชื่อม | ทดสอบบนเครื่องจริงไม่ได้ | ใช้ emulator หรือ Chrome ระหว่างพัฒนา |
 | เครื่อง block การดาวน์โหลดจาก GitHub | ติดตั้งฟอนต์/asset อัตโนมัติไม่ได้ | ใช้ฟอนต์ระบบ, เตรียมสคริปต์ seed ข้อมูลแทน |
 | เหลือเวลาน้อย (3 วันถึงส่ง Week 2) | — | ตัด scope: ไม่มี Multi-vendor cart, ไม่มี 3D map, ไม่มี admin dashboard ซับซ้อน |
+
 
 ### สัปดาห์หน้า (Week 3) จะทำ
 
@@ -96,3 +108,7 @@ week4(chat): แชทลูกค้า-ร้าน + ส่งรูป
 | 2 | 27 ก.ย. | `app_theme.dart` | `CupertinoPageTransitionsBuilder` ไม่รู้จัก | อยู่ใน `cupertino.dart` ไม่ใช่ `material.dart` | เพิ่ม import แบบ `show` | ✅ แก้แล้ว |
 | 3 | 27 ก.ย. | `hero_3d.dart` | ชื่อพารามิเตอร์ชนกัน (`Offset d` vs `double d`) | ตั้งชื่อกระชับเกินไป | เปลี่ยนเป็น named parameters | ✅ แก้แล้ว |
 | 4 | 27 ก.ย. | ทั้งโปรเจกต์ | โฟลเดอร์ `flutter_application_1` ซ้อนอยู่ในราก | ถูกสร้างพลาดระหว่าง session ทำงาน | ย้ายออกไปเก็บที่ temp (ไม่ลบทิ้ง) | ✅ แก้แล้ว |
+| 5 | 27 ก.ย. | `:app:compileFlutterBuildDebug` | `BoxConstraints` not found, `layoutChild`/`hasChild`/`positionChild` ไม่มี ใน `material_ui-1.2.0` | `.dart_tool/package_config.json` ยังชี้ `C:\flutter` ซึ่งถูกย้ายไป `D:\flutter` แล้ว | ลบ `.dart_tool` + `pubspec.lock` แล้ว `flutter pub get` ใหม่ | ✅ แก้แล้ว |
+| 6 | 27 ก.ย. | `:image_picker_android:compileDebugKotlin` | `package android.annotation does not exist`, `Cannot access 'java.lang.Class'` | `JAVA_HOME` ว่าง → Gradle จับ Oracle JDK 23 ซึ่งใหม่เกินสำหรับ AGP 9.0.1 | ติดตั้ง Microsoft OpenJDK 17 + pin `org.gradle.java.home` ใน `android/gradle.properties` | ✅ แก้แล้ว |
+| 7 | 27 ก.ย. | `:app:mergeDebugJavaResource` | `VerifyException (no error message)` | Windows ตั้งภาษาไทย → JVM ใช้ `sun.util.BuddhistCalendar` → `YEAR=2569` เกินช่วง MS-DOS (1980–2107) ที่ AGP `MsDosDateTimeUtils` ยอมรับ | บังคับ `-Duser.language=en -Duser.country=US` ใน `org.gradle.jvmargs` | ✅ แก้แล้ว |
+| 8 | 27 ก.ย. | Gradle cache | `Remove-Item -Recurse` ลบไม่หมด, `build/` เหลือ 3,020 ไฟล์ | Windows MAX_PATH (260 ตัว) | ใช้ `Remove-Item -LiteralPath "\\?\$path" -Recurse -Force` | ✅ แก้แล้ว |
