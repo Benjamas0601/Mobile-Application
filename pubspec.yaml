@@ -1,5 +1,5 @@
 name: thai_otop_marketplace
-description: "A new Flutter project."
+description: "Thai OTOP Marketplace — แพลตฟอร์มค้นพบสินค้าและเรื่องราวจากผู้ประกอบการ OTOP ทั่วประเทศไทย"
 publish_to: 'none'
 version: 0.1.0+1
 
@@ -9,6 +9,29 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  # --- Cloud backend (ข้อกำหนด: ต้องใช้ Cloud Database) ---
+  firebase_core: ^4.15.0          # ตัวเริ่มต้น Firebase SDK
+  firebase_auth: ^6.7.0           # ระบบสมาชิก: สมัคร / ล็อกอิน / รีเซ็ตรหัสผ่าน
+  cloud_firestore: ^6.10.0        # Cloud Database: สินค้า ร้าน ออเดอร์ แชท คูปอง
+  firebase_storage: ^13.6.0       # อัปโหลดรูปสินค้า (หลายรูป) และรูปในแชท
+
+  # --- Localization ---
+  # เหตุผล: แอปเป็น Thai-first ต้องแสดงวันที่/ตัวเลข/วันในสัปดาห์เป็นภาษาไทย
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
+
+  # --- State management & routing ---
+  flutter_riverpod: ^3.4.3        # DI + จัดการ state (แทน setState ทั่วแอป)
+  go_router: ^18.0.1              # declarative routing + redirect ตาม role
+
+  # --- UI / performance ---
+  cached_network_image: ^4.0.2    # cache รูปสินค้า ลดการโหลดซ้ำตอนเลื่อน list
+  equatable: ^3.0.0               # เปรียบเทียบ state แบบ value equality
+
+  # --- Device ---
+  image_picker: ^1.2.3            # เลือกรูปจากเครื่อง/กล้อง (สินค้า + แชท)
 
 dev_dependencies:
   flutter_test:
