@@ -180,7 +180,7 @@
 | 4 | Home อ่านข้อมูลจริง | หมวดหมู่ 10 หมวด · สินค้า 11 ชิ้น · เลือกภาค | ✅ |
 | 5 | Product Story / detail | อ่าน store + variant + story ครบ 4 ช่อง | ✅ |
 | 6 | Register | เขียน `users/{uid}` profile หลังสมัครสำเร็จ | ✅ |
-| 7 | Local guest cart | เพิ่ม/ลด/ลบ/ล้าง + clamp ไม่เกินสต็อก + ค่าส่ง ฿50 / ฟรีเมื่อครบ ฿500 | ✅ |
+| 7 | Local guest cart | เพิ่ม/ลด/ลบ/ล้าง + clamp ไม่เกินสต็อก + ค่าส่ง ฿50 / ฟรีเมื่อยอดถึง ฿1,000 | ✅ |
 | 8 | Checkout auth gate | 3 ปุ่ม: เข้าสู่ระบบ · สมัครสมาชิก · กลับไปเลือกสินค้า | ✅ |
 | 9 | Redirect กลับมา flow เดิม | Login/Register รับ `?redirect=` แล้วกลับ `/checkout` ไม่ใช่ Home | ✅ |
 | 10 | Guest search | ค้นหาใน Home debounce 350 ms คง category/region เดิม | ✅ |
@@ -293,4 +293,62 @@ docs(week3): <เอกสาร>
 > ตรวจซ้ำแล้วพบว่า seed **มี** `active: true` อยู่แล้ว (`tool/seed_firestore.js:381`)
 > สาเหตุจริงคือ composite index ที่ยังไม่ได้สร้าง — บันทึกไว้เพื่อกันไม่ให้
 > ใครเข้าใจผิดตามต่อไป
+
+---
+
+## 🧾 Week 3 — ชำระเงิน + สถานะออเดอร์ (28 ก.ย. 2569)
+
+> ปิดงาน scope "เลือกวิธีชำระเงิน (mock ไม่ต่อ gateway จริง) + ติดตามสถานะออเดอร์"
+> ทั้งชุด: UI → Riverpod → Repository → Firestore — สร้างข้อมูลจริงบนโปรเจกต์ และพิสูจน์ด้วย E2E
+
+### ขอบเขตที่ทำเสร็จ
+
+| # | งาน | ผล | สถานะ |
+|---|---|---|---|
+| 1 | หน้าชำระเงิน `/checkout/payment` | 3 วิธี: พร้อมเพย์ (QR) · โอนผ่านธนาคาร · COD · แสดงยอดรวมบนปุ่มยืนยัน | ✅ |
+| 2 | mock ไม่ใช่เงินจริง | แจ้งเตือนชัดเจนว่ายังไม่ต่อ gateway · สลิป/QR เล็ง Cloudinary ไว้ (ยังไม่มี creds) | ✅ |
+| 3 | สร้าง `orders` doc | สถานะแรก `pending_payment` · items snapshot ฝังใน doc · seller ตรวจราคาจริงต้องทำ Cloud Function | ✅ |
+| 4 | ประวัติ + รายละเอียดออเดอร์ | `watchMyOrders` เรียงล่าสุด · timeline 5 สเต็ป · ยกเลิกเป็น terminal state | ✅ |
+| 5 | ปุ่มเดินสถานะ (demo เฉพาะ seller/admin) | `advanceStatus` เขียนทีละ 1 สเต็ป ตาม state machine · rules ตรวจซ้ำฝั่ง server | ✅ |
+| 6 | ตะกร้า = 1 ร้าน | ปฏิเสธสินค้าต่างร้าน · ล้างแล้วเพิ่มร้านใหม่ได้ · มี test กัน regression | ✅ |
+| 7 | Seed ออเดอร์ demo | 6 ออเดอร์ครบทุกสถานะ + payment docs → เห็นผลทันทีในแอป | ✅ |
+| 8 | E2E บน emulator กับ Firestore จริง | login → ประวัติ seeded → timeline → ซื้อจริง → ออเดอร์ใหม่โผล่ในประวัติ | ✅ |
+
+### ✅ หลักฐาน (รอบส่ง Week 3)
+
+| คำสั่ง / การทดสอบ | ผลลัพธ์ |
+|---|---|
+| `flutter analyze --no-pub` | `No issues found!` |
+| `flutter test --no-pub` | **85/85 ผ่าน** (8 ไฟล์) |
+| `flutter test integration_test -d emulator-5554` | **E2E ผ่าน** — login จริง + อ่านข้อมูลจริง + สร้างออเดอร์จริงบน Firestore จริง |
+| `npx firebase deploy --only firestore:rules` | กฎ `orders` แยก `get`/`list` อัปโหลดเรียบร้อย |
+| `node tool/seed_firestore.js thaiotop-587f1` | seed 6 ออเดอร์ 5 payment ลงโปรเจกต์จริง |
+| `flutter build apk --debug` | สำเร็จ → `app-debug.apk` (ติดตั้งบนอีมูเลเตอร์) |
+
+### ✅ Test ของสัปดาห์นี้
+
+| ไฟล์ | เคส | ครอบคลุม |
+|---|---|---|
+| `test/payment_and_order_test.dart` | 14 | 3 วิธีชำระ+ยอดรวม · แจ้งไม่ต่อ gateway · COD ซ่อน QR · ไร้ draft ถูกรอ · สั่งสำเร็จล้างตะกร้า · เขียนพลาดเก็บ cart+draft+แสดงข้อความ · ตะกร้าว่าง/ที่อยู่เปล่าไม่แตะ repo · timeline/ยกเลิก · ลูกค้า vs ผู้ขาย control · advance เขียน 1 สเต็ป · ปุ่ม "กลับไปรายการคำสั่งซื้อ" |
+| `test/order_model_test.dart` | 14 | state machine `allowedNext` · happy path 4 สเต็ป · terminal · fromFirestore + doc เก่า · timeline ย่อเมื่อยกเลิก · item snapshot ครบ |
+| `test/image_storage_test.dart` | 9 | ต่อ Cloudinary จริง + override fake ได้ · ไม่ตั้งค่า → `ImageUploadException` พร้อมชื่อ flag · folder path ตรง Firestore · extension case-insensitive |
+| `test/cart_test.dart` | 18 | + single-store: ปฏิเสธต่างร้าน · ล้างแล้วเพิ่มร้านใหม่ · outOfStock/atStockLimit · parity `getShippingFee` |
+| `integration_test/login_and_purchase_flow_test.dart` | 1 | E2E: login → ประวัติ seeded → timeline → ซื้อจริง → ออเดอร์ใหม่ในประวัติ |
+
+### ⚠️ ข้อจำกัดที่เหลือ
+
+1. **เงินยังเป็น mock** — สลิปพร้อมเพย์จริงต้อง Cloudinary creds (`CLOUDINARY_CLOUD_NAME` + `CLOUDINARY_UPLOAD_PRESET`) → รอผู้ใช้ตั้งค่า
+2. **ผู้ขายเดินสถานะยังไม่พิสูจน์แบบ E2E** — ครอบด้วย unit/widget test + rules ตรวจซ้ำ (payments update ผ่าน `isOrderSeller`)
+3. **Product CRUD ฝั่งผู้ขาย** ยังไม่เริ่ม (งานใหญ่สุดที่เหลือจาก Week 3)
+4. ออเดอร์ที่ E2E สร้าง (pending ฿1,290) ถูกทิ้งไว้ใน Firestore จริง — seed ไม่ตัดลบออเดอร์พิเศษ ถ้าต้องการข้อมูลสะอาดให้ลบ doc พวกนี้เอง
+
+### 📋 Bug Log เพิ่ม
+
+| # | วันที่ | ส่วนที่พบ | อาการ | สาเหตุ | วิธีแก้ | สถานะ |
+|---|---|---|---|---|---|---|
+| 23 | 28 ก.ย. | `order_provider.dart` `place()` | สั่งซื้อด้วยตะกร้าว่าง/ที่อยู่เปล่า → ผ่านเข้า repo ทั้งที่ไม่ควร | ไม่มี guard ตรวจ precondition ฝั่ง provider | เพิ่ม guard `lines/storeId/address ว่าง → return null` | ✅ แก้แล้ว · test จับแล้ว |
+| 24 | 28 ก.ย. | `payment_screen.dart` | เขียนออเดอร์พลาด (เช่น rules ปฏิเสธ) → crash ไร้ข้อความ | `OrderWriteException` ไม่ถูก catch | `try/on OrderWriteException` → แสดง `e.message` | ✅ แก้แล้ว |
+| 25 | 28 ก.ย. | Empty views | หน้าไร้ข้อมูลกดปุ่มแล้ว nothing happen | EmptyView บางจุดไม่มี `onAction` | ใส่ `onAction: () => context.go(...)` (home / orders) | ✅ แก้แล้ว |
+| 26 | 28 ก.ย. | `firestore.rules` `orders.read` | list ออเดอร์ตัวเองโดน `PERMISSION_DENIED` ทั้งที่ `get` ทีละ doc ผ่าน | read ใช้ `isOrderParty` ซึ่งเรียก `get()`/`exists()` ไปเอกสารอื่น → **list query ถูกปฏิเสธทั้ง query** | แยก `allow get` (ใช้ cross-doc ได้) กับ `allow list` (อ้างเฉพาะ `resource.data.buyerUid`) | ✅ แก้แล้ว · deploy + E2E ผ่าน |
+| 27 | 28 ก.ย. | `order_detail_screen.dart` | หลังสั่งซื้อ `context.go(orderDetail)` แล้วไม่มีทางกลับถึงประวัติ (ไม่มี back button) | detail เปิดเป็นหน้าเดียวใน stack → AppBar ไม่มี leading | เพิ่มปุ่มท้ายหน้า "กลับไปรายการคำสั่งซื้อ" — `canPop()` ? pop : `context.go(orders)` | ✅ แก้แล้ว · test + E2E ผ่าน |
 
