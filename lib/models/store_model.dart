@@ -1,0 +1,58 @@
+import '../core/constants/app_enums.dart';
+import 'firestore_codec.dart';
+
+/// A `stores/{storeId}` document — an OTOP producer's shop.
+class StoreModel {
+  const StoreModel({
+    required this.id,
+    required this.ownerUid,
+    required this.name,
+    required this.province,
+    required this.region,
+    required this.community,
+    required this.description,
+    this.coverImageUrl = '',
+    this.logoUrl,
+    this.otopCertified = false,
+    this.ratingAvg = 0,
+    this.ratingCount = 0,
+    this.commissionRate = 0,
+  });
+
+  final String id;
+  final String ownerUid;
+  final String name;
+  final String province;
+  final String region;
+  final String community;
+  final String description;
+  final String coverImageUrl;
+  final String? logoUrl;
+  final bool otopCertified;
+  final double ratingAvg;
+  final int ratingCount;
+
+  /// Platform commission as a fraction (0.08 = 8%).
+  final double commissionRate;
+
+  ThaiRegion? get regionEnum => ThaiRegion.fromValue(region);
+
+  factory StoreModel.fromFirestore(String id, Map<String, dynamic> data) {
+    final FirestoreReader r = FirestoreReader(data);
+    return StoreModel(
+      id: id,
+      ownerUid: r.string('ownerUid'),
+      name: r.string('name'),
+      province: r.string('province'),
+      region: r.string('region'),
+      community: r.string('community'),
+      description: r.string('description'),
+      coverImageUrl: r.string('coverImageUrl'),
+      logoUrl: r.stringOrNull('logoUrl'),
+      otopCertified: r.boolean('otopCertified'),
+      ratingAvg: r.decimal('ratingAvg'),
+      ratingCount: r.integer('ratingCount'),
+      commissionRate: r.decimal('commissionRate'),
+    );
+  }
+}

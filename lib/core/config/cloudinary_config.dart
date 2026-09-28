@@ -15,7 +15,9 @@ class CloudinaryConfig {
   const CloudinaryConfig._();
 
   /// ชื่อ cloud จากหน้า Cloudinary Console เช่น `dxyz12345`
-  static const String cloudName = String.fromEnvironment('CLOUDINARY_CLOUD_NAME');
+  static const String cloudName = String.fromEnvironment(
+    'CLOUDINARY_CLOUD_NAME',
+  );
 
   /// ชื่อ Unsigned upload preset (สร้างไว้ใน Settings → Upload presets)
   static const String uploadPreset = String.fromEnvironment(
@@ -23,13 +25,16 @@ class CloudinaryConfig {
   );
 
   /// ตั้งค่าครบทุกตัวแล้วหรือยัง — ใช้ตอน dev เพื่อไม่ให้ล้มตอนอัปโหลดรูป
-  static bool get isConfigured => cloudName.isNotEmpty && uploadPreset.isNotEmpty;
+  static bool get isConfigured =>
+      cloudName.isNotEmpty && uploadPreset.isNotEmpty;
 
   /// API key — ใช้ตอน dev เท่านั้น (ดูรายละเอียดในคำเตือนด้านล่าง)
   static const String apiKey = String.fromEnvironment('CLOUDINARY_API_KEY');
 
   /// API secret — ใช้ตอน dev เท่านั้น
-  static const String apiSecret = String.fromEnvironment('CLOUDINARY_API_SECRET');
+  static const String apiSecret = String.fromEnvironment(
+    'CLOUDINARY_API_SECRET',
+  );
 
   /// ข้อความสำหรับแสดงผลตอนยังไม่ได้ตั้งค่า
   static const String notConfiguredMessage =

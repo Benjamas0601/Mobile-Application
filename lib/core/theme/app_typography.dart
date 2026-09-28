@@ -25,7 +25,12 @@ class AppTextStyles {
 
   /// Family list handed to [TextStyle.fontFamilyFallback].
   /// Order matters: Latin first (cleaner shapes), Thai as the fallback.
-  static const List<String> _fallback = <String>['Roboto', _thai, 'Leelawadee UI', 'Thonburi'];
+  static const List<String> _fallback = <String>[
+    'Roboto',
+    _thai,
+    'Leelawadee UI',
+    'Thonburi',
+  ];
 
   static TextStyle _s({
     required double size,

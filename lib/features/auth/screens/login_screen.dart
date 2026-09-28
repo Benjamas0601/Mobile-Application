@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_strings.dart';
+import '../../../core/routes/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
-import '../widgets/hero_3d.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../repositories/auth_repository.dart';
 
 /// Entry screen for every role (customer / seller / affiliate).
 ///
@@ -12,19 +16,28 @@ import '../widgets/hero_3d.dart';
 /// same identity, and role selection happens after sign-in, not before —
 /// asking for a role up front is the most common drop-off in Thai
 /// marketplace apps.
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class LoginScreen extends ConsumerStatefulWidget {
+  const LoginScreen({super.key, this.redirect});
+
+  /// Where to go after a successful sign-in.
+  ///
+  /// Set when the login screen was reached from a gate such as checkout, so the
+  /// user resumes the flow they interrupted instead of being dumped on Home.
+  /// Null means "go home", which is the normal browsing case.
+  final String? redirect;
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
+  bool _busy = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -33,11 +46,67 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _submit() {
-    // TODO(week3): call AuthRepository.signIn(email, password) and route by role.
+  Future<void> _submit() async {
     // Validation runs first so the button gives immediate feedback instead of
     // a network round-trip.
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+
+    try {
+      await ref
+          .read(authRepositoryProvider)
+          .signIn(
+            email: _emailController.text,
+            password: _passwordController.text,
+          );
+      if (!mounted) return;
+
+      // Resume the interrupted flow when there was one; otherwise land on the
+      // catalogue, which is the app's home for everyone.
+      final String? redirect = widget.redirect;
+      if (redirect != null && redirect.isNotEmpty) {
+        context.go(redirect);
+      } else {
+        context.go(AppRoutes.home);
+      }
+    } on AuthFailure catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.message);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = 'เข้าสู่ระบบไม่สำเร็จ: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _forgotPassword() async {
+    final String email = _emailController.text.trim();
+    if (email.isEmpty) {
+      setState(() => _error = 'กรุณากรอกอีเมลก่อน แล้วกดลืมรหัสผ่าน');
+      return;
+    }
+    try {
+      await ref.read(authRepositoryProvider).sendPasswordReset(email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ส่งลิงก์ตั้งรหัสผ่านใหม่ไปที่อีเมลแล้ว')),
+      );
+    } on AuthFailure catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.message);
+    }
+  }
+
+  /// Fills the demo account so the app can be tried without typing.
+  void _fillDemo() {
+    _emailController.text = 'customer@example.com';
+    _passwordController.text = 'OtopDemo123';
+    setState(() => _error = null);
   }
 
   @override
@@ -60,11 +129,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: <Widget>[
                         const SizedBox(height: AppSpacing.xl),
-                        const Center(child: Hero3d()),
+                        const Center(child: _Hero()),
                         const SizedBox(height: AppSpacing.xl),
                         _buildHeadline(),
                         const SizedBox(height: AppSpacing.xxl),
+                        if (_error != null) ...<Widget>[
+                          _ErrorBanner(message: _error!),
+                          const SizedBox(height: AppSpacing.md),
+                        ],
                         _buildForm(),
+                        const SizedBox(height: AppSpacing.lg),
+                        _buildDemoHint(),
                         const SizedBox(height: AppSpacing.xl),
                         _buildFooter(),
                         const SizedBox(height: AppSpacing.xxl),
@@ -83,7 +158,11 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildHeadline() {
     return Column(
       children: <Widget>[
-        Text(AppStrings.appName, style: AppTextStyles.displayMedium, textAlign: TextAlign.center),
+        Text(
+          AppStrings.appName,
+          style: AppTextStyles.displayMedium,
+          textAlign: TextAlign.center,
+        ),
         const SizedBox(height: AppSpacing.xs),
         Text(
           AppStrings.appTagline,
@@ -105,6 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
             autocorrect: false,
+            enabled: !_busy,
             decoration: const InputDecoration(
               labelText: AppStrings.email,
               prefixIcon: Icon(Icons.alternate_email),
@@ -116,13 +196,17 @@ class _LoginScreenState extends State<LoginScreen> {
             controller: _passwordController,
             obscureText: _obscurePassword,
             textInputAction: TextInputAction.done,
+            enabled: !_busy,
             decoration: InputDecoration(
               labelText: AppStrings.password,
               prefixIcon: const Icon(Icons.lock_outline),
               suffixIcon: IconButton(
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
                 icon: Icon(
-                  _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                  _obscurePassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
                 ),
                 tooltip: _obscurePassword ? 'แสดงรหัสผ่าน' : 'ซ่อนรหัสผ่าน',
               ),
@@ -133,17 +217,35 @@ class _LoginScreenState extends State<LoginScreen> {
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              // TODO(week3): wire to AuthRepository.sendPasswordReset.
-              onPressed: () {},
+              onPressed: _busy ? null : _forgotPassword,
               child: const Text(AppStrings.forgotPassword),
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
           FilledButton(
-            onPressed: _submit,
-            child: const Text(AppStrings.login),
+            onPressed: _busy ? null : _submit,
+            child: _busy
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text(AppStrings.login),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDemoHint() {
+    return Center(
+      child: TextButton.icon(
+        onPressed: _busy ? null : _fillDemo,
+        icon: const Icon(Icons.bolt_rounded, size: 18),
+        label: const Text('ลองบัญชีสาธิต (ลูกค้า)'),
       ),
     );
   }
@@ -154,8 +256,7 @@ class _LoginScreenState extends State<LoginScreen> {
       children: <Widget>[
         Text(AppStrings.dontHaveAccount, style: AppTextStyles.bodyMedium),
         TextButton(
-          // TODO(week3): route to /register.
-          onPressed: () {},
+          onPressed: _busy ? null : () => context.push(AppRoutes.register),
           child: const Text(AppStrings.register),
         ),
       ],
@@ -179,5 +280,59 @@ class _LoginScreenState extends State<LoginScreen> {
     if ((value ?? '').isEmpty) return AppStrings.errRequired;
     if (value!.length < 6) return AppStrings.errPasswordShort;
     return null;
+  }
+}
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.dangerLight,
+        borderRadius: AppRadius.cardRadius,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Icon(
+            Icons.error_outline_rounded,
+            color: AppColors.danger,
+            size: 18,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.danger),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Compact stand-in for the 3D hero, so the login screen builds even if the
+/// 3D widget is unavailable on a platform.
+class _Hero extends StatelessWidget {
+  const _Hero();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 88,
+      height: 88,
+      decoration: BoxDecoration(
+        gradient: AppColors.gradient(const <int>[0xFF146356, 0xFF2E7D6F]),
+        borderRadius: AppRadius.cardRadius,
+      ),
+      alignment: Alignment.center,
+      child: const Text('🇹🇭', style: TextStyle(fontSize: 40)),
+    );
   }
 }

@@ -70,7 +70,8 @@ class FirestoreReader {
     return null;
   }
 
-  DateTime dateTimeOr(String key, DateTime fallback) => dateTime(key) ?? fallback;
+  DateTime dateTimeOr(String key, DateTime fallback) =>
+      dateTime(key) ?? fallback;
 
   List<String> stringList(String key) {
     final Object? value = _data[key];
@@ -83,7 +84,9 @@ class FirestoreReader {
     final Object? value = _data[key];
     if (value is! List) return const <Map<String, dynamic>>[];
     return List<Map<String, dynamic>>.unmodifiable(
-      value.whereType<Map>().map((Map<Object?, Object?> e) => e.cast<String, dynamic>()),
+      value.whereType<Map>().map(
+        (Map<Object?, Object?> e) => e.cast<String, dynamic>(),
+      ),
     );
   }
 

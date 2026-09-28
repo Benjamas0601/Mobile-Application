@@ -47,7 +47,8 @@ class FirebaseBootstrap {
       // not been wired up yet. Detect that specifically so the message tells
       // the developer the exact command to run, instead of dumping a stack
       // trace on a white screen.
-      final bool notConfigured = error is UnsupportedError ||
+      final bool notConfigured =
+          error is UnsupportedError ||
           error.toString().contains('not been configured');
 
       return FirebaseUnavailable(
@@ -68,9 +69,12 @@ class FirebaseBootstrap {
   static String _describe(Object error) {
     if (error is FirebaseException) {
       return switch (error.code) {
-        'permission-denied' => 'ไม่มีสิทธิ์เข้าถึง Firestore — ตรวจสอบ Security Rules',
-        'unavailable' => 'เชื่อมต่อเซิร์ฟเวอร์ Firebase ไม่ได้ — ลองเช็คอินเทอร์เน็ต',
-        'invalid-api-key' => 'API Key ไม่ถูกต้อง — ตรวจสอบไฟล์ firebase_options.dart',
+        'permission-denied' =>
+          'ไม่มีสิทธิ์เข้าถึง Firestore — ตรวจสอบ Security Rules',
+        'unavailable' =>
+          'เชื่อมต่อเซิร์ฟเวอร์ Firebase ไม่ได้ — ลองเช็คอินเทอร์เน็ต',
+        'invalid-api-key' =>
+          'API Key ไม่ถูกต้อง — ตรวจสอบไฟล์ firebase_options.dart',
         _ => '${error.code}: ${error.message ?? 'ไม่ทราบสาเหตุ'}',
       };
     }

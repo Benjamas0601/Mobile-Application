@@ -77,7 +77,10 @@ enum ProductStatus {
   bool get isVisibleToCustomers => this == ProductStatus.active;
 
   static ProductStatus fromValue(String? value) {
-    return ThaiEnumLookup.firstOrNull(ProductStatus.values, (e) => e.value == value) ??
+    return ThaiEnumLookup.firstOrNull(
+          ProductStatus.values,
+          (e) => e.value == value,
+        ) ??
         ProductStatus.draft;
   }
 }
@@ -100,16 +103,25 @@ enum OrderStatus {
 
   /// Statuses the seller is allowed to move an order to.
   List<OrderStatus> get allowedNext => switch (this) {
-        OrderStatus.pendingPayment => const <OrderStatus>[OrderStatus.paid, OrderStatus.cancelled],
-        OrderStatus.paid => const <OrderStatus>[OrderStatus.awaitingShipment, OrderStatus.cancelled],
-        OrderStatus.awaitingShipment => const <OrderStatus>[OrderStatus.shipped],
-        OrderStatus.shipped => const <OrderStatus>[OrderStatus.completed],
-        OrderStatus.completed => const <OrderStatus>[],
-        OrderStatus.cancelled => const <OrderStatus>[],
-      };
+    OrderStatus.pendingPayment => const <OrderStatus>[
+      OrderStatus.paid,
+      OrderStatus.cancelled,
+    ],
+    OrderStatus.paid => const <OrderStatus>[
+      OrderStatus.awaitingShipment,
+      OrderStatus.cancelled,
+    ],
+    OrderStatus.awaitingShipment => const <OrderStatus>[OrderStatus.shipped],
+    OrderStatus.shipped => const <OrderStatus>[OrderStatus.completed],
+    OrderStatus.completed => const <OrderStatus>[],
+    OrderStatus.cancelled => const <OrderStatus>[],
+  };
 
   static OrderStatus fromValue(String? value) {
-    return ThaiEnumLookup.firstOrNull(OrderStatus.values, (e) => e.value == value) ??
+    return ThaiEnumLookup.firstOrNull(
+          OrderStatus.values,
+          (e) => e.value == value,
+        ) ??
         OrderStatus.pendingPayment;
   }
 }
@@ -130,7 +142,10 @@ enum PaymentStatus {
   final String label;
 
   static PaymentStatus fromValue(String? value) {
-    return ThaiEnumLookup.firstOrNull(PaymentStatus.values, (e) => e.value == value) ??
+    return ThaiEnumLookup.firstOrNull(
+          PaymentStatus.values,
+          (e) => e.value == value,
+        ) ??
         PaymentStatus.unpaid;
   }
 }
@@ -146,7 +161,10 @@ enum DiscountType {
   final String label;
 
   static DiscountType fromValue(String? value) {
-    return ThaiEnumLookup.firstOrNull(DiscountType.values, (e) => e.value == value) ??
+    return ThaiEnumLookup.firstOrNull(
+          DiscountType.values,
+          (e) => e.value == value,
+        ) ??
         DiscountType.fixedAmount;
   }
 }
@@ -165,7 +183,10 @@ enum CommissionStatus {
   final String label;
 
   static CommissionStatus fromValue(String? value) {
-    return ThaiEnumLookup.firstOrNull(CommissionStatus.values, (e) => e.value == value) ??
+    return ThaiEnumLookup.firstOrNull(
+          CommissionStatus.values,
+          (e) => e.value == value,
+        ) ??
         CommissionStatus.pending;
   }
 }
@@ -186,7 +207,10 @@ enum PaymentMethod {
   bool get requiresSlip => this != PaymentMethod.cashOnDelivery;
 
   static PaymentMethod fromValue(String? value) {
-    return ThaiEnumLookup.firstOrNull(PaymentMethod.values, (e) => e.value == value) ??
+    return ThaiEnumLookup.firstOrNull(
+          PaymentMethod.values,
+          (e) => e.value == value,
+        ) ??
         PaymentMethod.bankTransfer;
   }
 }
@@ -203,7 +227,10 @@ enum MessageType {
   final String label;
 
   static MessageType fromValue(String? value) {
-    return ThaiEnumLookup.firstOrNull(MessageType.values, (e) => e.value == value) ??
+    return ThaiEnumLookup.firstOrNull(
+          MessageType.values,
+          (e) => e.value == value,
+        ) ??
         MessageType.text;
   }
 }
@@ -222,7 +249,10 @@ enum NotificationType {
   final String label;
 
   static NotificationType fromValue(String? value) {
-    return ThaiEnumLookup.firstOrNull(NotificationType.values, (e) => e.value == value) ??
+    return ThaiEnumLookup.firstOrNull(
+          NotificationType.values,
+          (e) => e.value == value,
+        ) ??
         NotificationType.system;
   }
 }

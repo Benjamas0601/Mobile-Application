@@ -21,7 +21,8 @@ class BootstrapGate extends StatelessWidget {
   Widget build(BuildContext context) {
     return switch (startup) {
       FirebaseReady() => child ?? const SizedBox.shrink(),
-      FirebaseUnavailable(:final reason, :final isConfigurationMissing) => _StartupErrorScreen(
+      FirebaseUnavailable(:final reason, :final isConfigurationMissing) =>
+        _StartupErrorScreen(
           reason: reason,
           isConfigurationMissing: isConfigurationMissing,
         ),
@@ -30,7 +31,10 @@ class BootstrapGate extends StatelessWidget {
 }
 
 class _StartupErrorScreen extends StatelessWidget {
-  const _StartupErrorScreen({required this.reason, required this.isConfigurationMissing});
+  const _StartupErrorScreen({
+    required this.reason,
+    required this.isConfigurationMissing,
+  });
 
   final String reason;
   final bool isConfigurationMissing;
@@ -53,24 +57,34 @@ class _StartupErrorScreen extends StatelessWidget {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: isConfigurationMissing ? AppColors.warningLight : AppColors.dangerLight,
+                      color: isConfigurationMissing
+                          ? AppColors.warningLight
+                          : AppColors.dangerLight,
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
                     child: Icon(
-                      isConfigurationMissing ? Icons.build_circle_outlined : Icons.cloud_off_outlined,
-                      color: isConfigurationMissing ? AppColors.warning : AppColors.danger,
+                      isConfigurationMissing
+                          ? Icons.build_circle_outlined
+                          : Icons.cloud_off_outlined,
+                      color: isConfigurationMissing
+                          ? AppColors.warning
+                          : AppColors.danger,
                       size: 30,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   Text(
-                    isConfigurationMissing ? 'ยังตั้งค่าไม่เสร็จ' : AppStrings.errorTitle,
+                    isConfigurationMissing
+                        ? 'ยังตั้งค่าไม่เสร็จ'
+                        : AppStrings.errorTitle,
                     style: AppTextStyles.headlineMedium,
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     reason,
-                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.inkMuted),
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.inkMuted,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   Text(

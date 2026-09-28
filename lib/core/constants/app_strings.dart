@@ -14,7 +14,8 @@ class AppStrings {
   // --- Generic states ------------------------------------------------------
   /// Required by the brief: never show a blank screen.
   static const String errorTitle = 'ไม่สามารถโหลดข้อมูลได้';
-  static const String errorBody = 'กรุณาลองใหม่อีกครั้ง หรือตรวจสอบการเชื่อมต่ออินเทอร์เน็ต';
+  static const String errorBody =
+      'กรุณาลองใหม่อีกครั้ง หรือตรวจสอบการเชื่อมต่ออินเทอร์เน็ต';
   static const String retry = 'ลองอีกครั้ง';
   static const String loading = 'กำลังโหลด...';
   static const String seeAll = 'ดูทั้งหมด';
@@ -30,7 +31,8 @@ class AppStrings {
 
   // --- Empty states --------------------------------------------------------
   static const String emptyProducts = 'ยังไม่พบสินค้าในหมวดนี้';
-  static const String emptyProductsHint = 'ลองเปลี่ยนหมวดหมู่ หรือค้นหาด้วยคำอื่น';
+  static const String emptyProductsHint =
+      'ลองเปลี่ยนหมวดหมู่ หรือค้นหาด้วยคำอื่น';
   static const String emptyCart = 'ตะกร้ายังว่างอยู่';
   static const String emptyCartHint = 'ลองเลือกสินค้าจากร้าน OTOP ที่คุณสนใจ';
   static const String emptyOrders = 'ยังไม่มีคำสั่งซื้อ';
@@ -38,7 +40,8 @@ class AppStrings {
   static const String emptyChat = 'ยังไม่มีการสนทนา';
   static const String emptyChatHint = 'ถามร้านค้าได้โดยตรงจากหน้าสินค้า';
   static const String emptySearch = 'ไม่พบผลลัพธ์';
-  static const String emptySearchHint = 'ตรวจสอบคำค้น หรือลองค้นหาด้วยชื่อจังหวัดแทน';
+  static const String emptySearchHint =
+      'ตรวจสอบคำค้น หรือลองค้นหาด้วยชื่อจังหวัดแทน';
 
   // --- Navigation (customer) ----------------------------------------------
   static const String navHome = 'หน้าแรก';
@@ -123,6 +126,29 @@ class AppStrings {
   static const String mvpPaymentNotice =
       'ระบบชำระเงินในเวอร์ชันนี้เป็น MVP Flow (ยังไม่เชื่อม Payment Gateway จริง) '
       'ทุกขั้นตอนถูกบันทึกลงฐานข้อมูลจริง และออกแบบให้ต่อ Gateway ได้ภายหลัง';
+
+  // --- Guest checkout gate -------------------------------------------------
+  // The app is browse-first, so these strings only appear at the one step that
+  // needs a named person.
+  static const String loginToOrder = 'เข้าสู่ระบบเพื่อดำเนินการสั่งซื้อ';
+  static const String loginToOrderHint =
+      'คุณสามารถเลือกสินค้าและใส่ตะกร้าได้ตามปกติ '
+      'กรุณาเข้าสู่ระบบหรือสมัครสมาชิกเพื่อยืนยันคำสั่งซื้อ';
+  static const String backToCart = 'กลับไปเลือกสินค้า';
+  static const String searchHint = 'ค้นหาสินค้า เช่น กาแฟ ผ้าไหม';
+  static const String clearSearch = 'ล้างคำค้นหา';
+  static const String searchResults = 'ผลการค้นหา';
+  static const String addressHint =
+      'บ้านเลขที่ หมู่ ซอย ถนน ตำบล อำเภอ จังหวัด และเบอร์โทร';
+  static const String orderPlaced = 'สั่งซื้อสำเร็จแล้ว';
+  static const String continueShopping = 'เลือกสินค้าเพิ่ม';
+  static const String addedToCart = 'เพิ่มลงตะกร้าแล้ว';
+
+  // --- Stores --------------------------------------------------------------
+  static const String stores = 'ร้านค้า';
+  static const String loadStoresFailed = 'โหลดร้านค้าไม่สำเร็จ';
+  static const String noStores = 'ยังไม่มีร้านค้าในระบบ';
+  static const String remove = 'นำออก';
 
   // --- Chat ----------------------------------------------------------------
   static const String chat = 'แชท';

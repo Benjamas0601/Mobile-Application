@@ -34,8 +34,12 @@ class AppRadius {
 
   /// Product cards, sheets, chat bubbles.
   static const BorderRadius cardRadius = BorderRadius.all(Radius.circular(lg));
-  static const BorderRadius sheetRadius = BorderRadius.vertical(top: Radius.circular(xl));
-  static const BorderRadius pillRadius = BorderRadius.all(Radius.circular(pill));
+  static const BorderRadius sheetRadius = BorderRadius.vertical(
+    top: Radius.circular(xl),
+  );
+  static const BorderRadius pillRadius = BorderRadius.all(
+    Radius.circular(pill),
+  );
 }
 
 class AppElevation {

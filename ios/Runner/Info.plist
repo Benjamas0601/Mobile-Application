@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>ต้องใช้กล้องเพื่อถ่ายสลิปการชำระเงิน</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ต้องเข้าถึงอัลบั้มรูปเพื่อแนบสลิปการชำระเงิน</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

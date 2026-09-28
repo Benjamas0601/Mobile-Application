@@ -36,7 +36,8 @@ class CloudinaryImageService implements ImageStorageService {
   Uri _apiUri(String action) =>
       Uri.https('api.cloudinary.com', '/v1_1/$_cloudName/image/$action');
 
-  Uri _deliveryUri() => Uri.https('res.cloudinary.com', '/$_cloudName/image/upload');
+  Uri _deliveryUri() =>
+      Uri.https('res.cloudinary.com', '/$_cloudName/image/upload');
 
   @override
   Future<UploadedImage> uploadImage({
@@ -54,15 +55,14 @@ class CloudinaryImageService implements ImageStorageService {
           http.MultipartRequest('POST', _apiUri('upload'))
             ..fields['upload_preset'] = _uploadPreset
             ..fields['folder'] = folder
-            ..files.add(
-              await http.MultipartFile.fromPath('file', file.path),
-            );
+            ..files.add(await http.MultipartFile.fromPath('file', file.path));
 
       final http.StreamedResponse streamed = await _client.send(request);
       final String body = await streamed.stream.bytesToString();
       final int status = streamed.statusCode;
-      final Map<String, dynamic> json =
-          body.isEmpty ? <String, dynamic>{} : jsonDecode(body) as Map<String, dynamic>;
+      final Map<String, dynamic> json = body.isEmpty
+          ? <String, dynamic>{}
+          : jsonDecode(body) as Map<String, dynamic>;
 
       if (status != 200) {
         final Map<String, dynamic> error =
@@ -117,7 +117,10 @@ class CloudinaryImageService implements ImageStorageService {
 
   @override
   Future<void> deleteImage(String publicId) async {
-    if (_apiKey == null || _apiKey.isEmpty || _apiSecret == null || _apiSecret.isEmpty) {
+    if (_apiKey == null ||
+        _apiKey.isEmpty ||
+        _apiSecret == null ||
+        _apiSecret.isEmpty) {
       throw const ImageUploadException(
         'Unsigned preset ลบรูปไม่ได้ (ต้องมี API key/secret) — '
         'ให้ใช้การ "ซ่อนรูป" ใน Firestore แทนการลบไฟล์จริง',
@@ -125,9 +128,11 @@ class CloudinaryImageService implements ImageStorageService {
     }
 
     final int timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final String signature =
-        sha1.convert(utf8.encode('public_id=$publicId&timestamp=$timestamp$_apiSecret'))
-            .toString();
+    final String signature = sha1
+        .convert(
+          utf8.encode('public_id=$publicId&timestamp=$timestamp$_apiSecret'),
+        )
+        .toString();
 
     final http.Response response = await _client.post(
       _apiUri('destroy'),

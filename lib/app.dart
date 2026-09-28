@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'core/config/firebase_bootstrap.dart';
 import 'core/theme/app_theme.dart';
@@ -13,13 +15,17 @@ import 'widgets/bootstrap_gate.dart';
 ///  2. theme          — light + dark from the design tokens
 ///  3. startup gate   — blocks the app with a readable message if Firebase
 ///                      could not start, so we never render a white screen
-class ThaiOtopApp extends StatelessWidget {
+class ThaiOtopApp extends ConsumerWidget {
   const ThaiOtopApp({super.key, required this.startup});
 
   final FirebaseStartupResult startup;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watching the router provider rebuilds navigation when the auth stream
+    // changes, which is what keeps the redirect honest after sign-out.
+    final GoRouter router = ref.watch(routerProvider);
+
     return MaterialApp.router(
       title: 'Thai OTOP Marketplace',
       debugShowCheckedModeBanner: false,
@@ -39,7 +45,7 @@ class ThaiOtopApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
 
-      routerConfig: appRouter,
+      routerConfig: router,
 
       builder: (BuildContext context, Widget? child) {
         return BootstrapGate(startup: startup, child: child);

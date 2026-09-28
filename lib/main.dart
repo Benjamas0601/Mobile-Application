@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
 import 'core/config/firebase_bootstrap.dart';
@@ -11,5 +12,7 @@ Future<void> main() async {
   // crashing, so the user always sees an explanation.
   final FirebaseStartupResult startup = await FirebaseBootstrap.start();
 
-  runApp(ThaiOtopApp(startup: startup));
+  // ProviderScope wraps the whole app so repositories can be overridden in
+  // tests and the router can read auth state.
+  runApp(ProviderScope(child: ThaiOtopApp(startup: startup)));
 }

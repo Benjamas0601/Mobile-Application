@@ -54,7 +54,9 @@ class ImageUploadPolicy {
     }
     if (size > maxBytes) {
       final double mb = size / (1024 * 1024);
-      throw ImageUploadException('ไฟล์ใหญ่เกิน 5 MB (ไฟล์นี้ ${mb.toStringAsFixed(1)} MB)');
+      throw ImageUploadException(
+        'ไฟล์ใหญ่เกิน 5 MB (ไฟล์นี้ ${mb.toStringAsFixed(1)} MB)',
+      );
     }
     final String ext = extensionOf(file.name);
     if (!allowedExtensions.contains(ext)) {
@@ -75,8 +77,10 @@ class ImageUploadPolicy {
   ///
   /// ออกแบบให้ตรงกับโครงสร้างที่วางไว้ใน `storage.rules` เพื่อให้ย้ายกลับไป
   /// Firebase Storage ทีหลังได้โดยไม่ต้องแก้ฐานข้อมูล
-  static String folderForProduct({required String storeId, required String productId}) =>
-      'stores/$storeId/products/$productId';
+  static String folderForProduct({
+    required String storeId,
+    required String productId,
+  }) => 'stores/$storeId/products/$productId';
 
   static String folderForStoreCover({required String storeId}) =>
       'stores/$storeId/cover';
@@ -88,7 +92,8 @@ class ImageUploadPolicy {
   static String folderForPaymentSlip({required String paymentId}) =>
       'payments/$paymentId/slips';
 
-  static String folderForReview({required String reviewId}) => 'reviews/$reviewId';
+  static String folderForReview({required String reviewId}) =>
+      'reviews/$reviewId';
 }
 
 /// ข้อผิดพลาดที่คาดว่าจะเกิด ควรเอาไปแสดงผลให้ผู้ใช้อ่านได้

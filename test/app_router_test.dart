@@ -1,0 +1,219 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:thai_otop_marketplace/core/constants/app_strings.dart';
+import 'package:thai_otop_marketplace/core/routes/app_router.dart';
+import 'package:thai_otop_marketplace/features/auth/screens/login_screen.dart';
+import 'package:thai_otop_marketplace/features/auth/screens/register_screen.dart';
+
+void main() {
+  group('authRedirect', () {
+    test('a guest may browse the whole catalogue', () {
+      // Browse-first: opening the app must never bounce a guest to login.
+      expect(authRedirect(signedIn: false, location: AppRoutes.home), isNull);
+      expect(authRedirect(signedIn: false, location: AppRoutes.cart), isNull);
+      expect(authRedirect(signedIn: false, location: AppRoutes.stores), isNull);
+      expect(
+        authRedirect(signedIn: false, location: AppRoutes.productDetail('p1')),
+        isNull,
+      );
+    });
+
+    test('a guest reaches checkout, where the gate itself offers a choice', () {
+      // Guarding /checkout here would hide the three-button gate and race the
+      // auth stream when signing in.
+      expect(
+        authRedirect(signedIn: false, location: AppRoutes.checkout),
+        isNull,
+      );
+    });
+
+    test(
+      'a guest is sent to login for account-only routes, with destination',
+      () {
+        for (final String location in <String>[
+          AppRoutes.orders,
+          AppRoutes.ordersHistory,
+          AppRoutes.profile,
+        ]) {
+          expect(
+            authRedirect(signedIn: false, location: location),
+            '${AppRoutes.login}?redirect=$location',
+          );
+        }
+      },
+    );
+
+    test('the login screen itself is never redirected', () {
+      expect(authRedirect(signedIn: false, location: AppRoutes.login), isNull);
+      expect(
+        authRedirect(signedIn: false, location: AppRoutes.register),
+        isNull,
+      );
+    });
+
+    test('a signed-in user reaches everything', () {
+      for (final String location in <String>[
+        AppRoutes.home,
+        AppRoutes.login,
+        AppRoutes.register,
+        AppRoutes.cart,
+        AppRoutes.checkout,
+        AppRoutes.orders,
+        AppRoutes.profile,
+      ]) {
+        expect(authRedirect(signedIn: true, location: location), isNull);
+      }
+    });
+
+    test('an unknown path is not guarded', () {
+      expect(authRedirect(signedIn: false, location: '/nope'), isNull);
+    });
+  });
+
+  group('auth screens', () {
+    // The hero spins forever, so `pumpAndSettle` would never return. A single
+    // pump is enough: the form validation is synchronous.
+    Future<void> pumpAuth(WidgetTester tester, Widget child) async {
+      await tester.pumpWidget(ProviderScope(child: MaterialApp(home: child)));
+      await tester.pump();
+    }
+
+    testWidgets('login rejects an empty submit', (WidgetTester tester) async {
+      await pumpAuth(tester, const LoginScreen());
+
+      await tester.tap(find.widgetWithText(FilledButton, AppStrings.login));
+      await tester.pump();
+
+      expect(find.text(AppStrings.errRequired), findsNWidgets(2));
+    });
+
+    testWidgets('login rejects a malformed email', (WidgetTester tester) async {
+      await pumpAuth(tester, const LoginScreen());
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, AppStrings.email),
+        'not-an-email',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, AppStrings.password),
+        'secret123',
+      );
+      await tester.tap(find.widgetWithText(FilledButton, AppStrings.login));
+      await tester.pump();
+
+      expect(find.text(AppStrings.errEmailFormat), findsOneWidget);
+    });
+
+    testWidgets('register blocks a mismatched confirmation', (
+      WidgetTester tester,
+    ) async {
+      await pumpAuth(tester, const RegisterScreen());
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, AppStrings.displayName),
+        'Test',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, AppStrings.email),
+        'new@example.com',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, AppStrings.password),
+        'secret123',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, AppStrings.confirmPassword),
+        'different',
+      );
+      await submitRegister(tester);
+      await tester.pump();
+
+      expect(find.text(AppStrings.errPasswordMismatch), findsOneWidget);
+    });
+
+    testWidgets('register rejects a short password', (
+      WidgetTester tester,
+    ) async {
+      await pumpAuth(tester, const RegisterScreen());
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, AppStrings.displayName),
+        'Test',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, AppStrings.email),
+        'new@example.com',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, AppStrings.password),
+        'abc',
+      );
+      await submitRegister(tester);
+      await tester.pump();
+
+      expect(find.text(AppStrings.errPasswordShort), findsOneWidget);
+    });
+
+    testWidgets('register rejects a malformed mobile number', (
+      WidgetTester tester,
+    ) async {
+      await pumpAuth(tester, const RegisterScreen());
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, AppStrings.displayName),
+        'Test',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, AppStrings.phone),
+        '12345',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, AppStrings.password),
+        'secret123',
+      );
+      await submitRegister(tester);
+      await tester.pump();
+
+      expect(find.text(AppStrings.errPhoneFormat), findsOneWidget);
+    });
+
+    testWidgets('register accepts a valid form', (WidgetTester tester) async {
+      await pumpAuth(tester, const RegisterScreen());
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, AppStrings.displayName),
+        'Test',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, AppStrings.email),
+        'new@example.com',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, AppStrings.password),
+        'secret123',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, AppStrings.confirmPassword),
+        'secret123',
+      );
+      await submitRegister(tester);
+      await tester.pump();
+
+      // Validation passed, so the form submitted: no validator messages.
+      expect(find.text(AppStrings.errRequired), findsNothing);
+      expect(find.text(AppStrings.errPasswordMismatch), findsNothing);
+      expect(find.text(AppStrings.errPasswordShort), findsNothing);
+    });
+  });
+}
+
+/// The register form is taller than the 800x600 test surface, so the submit
+/// button sits below the fold. Scroll it into view or the tap silently misses
+/// and the validators never run.
+Future<void> submitRegister(WidgetTester tester) async {
+  final Finder button = find.widgetWithText(FilledButton, AppStrings.register);
+  await tester.ensureVisible(button);
+  await tester.pump();
+  await tester.tap(button);
+}

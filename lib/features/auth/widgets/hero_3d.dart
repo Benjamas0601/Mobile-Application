@@ -40,7 +40,8 @@ class _Hero3dState extends State<Hero3d> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     // Respect the OS "reduce motion" accessibility setting.
-    final bool reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final bool reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
     return Semantics(
       label: 'ภาพสินค้าจากผู้ประกอบการ OTOP',
@@ -104,14 +105,17 @@ class _HeroPainter extends CustomPainter {
   /// Soft radial glow behind the object — the "premium" lighting cue.
   void _paintGlow(Canvas canvas, Size size) {
     final Paint paint = Paint()
-      ..shader = RadialGradient(
-        colors: <Color>[
-          AppColors.accent.withValues(alpha: 0.22),
-          AppColors.primary.withValues(alpha: 0.10),
-          Colors.transparent,
-        ],
-        stops: const <double>[0, 0.55, 1],
-      ).createShader(Rect.fromCircle(center: Offset.zero, radius: size.width * 0.48));
+      ..shader =
+          RadialGradient(
+            colors: <Color>[
+              AppColors.accent.withValues(alpha: 0.22),
+              AppColors.primary.withValues(alpha: 0.10),
+              Colors.transparent,
+            ],
+            stops: const <double>[0, 0.55, 1],
+          ).createShader(
+            Rect.fromCircle(center: Offset.zero, radius: size.width * 0.48),
+          );
 
     canvas.drawCircle(Offset.zero, size.width * 0.48, paint);
   }
@@ -146,17 +150,40 @@ class _HeroPainter extends CustomPainter {
 
     // --- Faces, painted back-to-front -------------------------------------
     // Right face (darkest) — the shade side that gives the object volume.
-    _face(canvas, <Offset>[leftBottom, frontBottom, frontTop, leftTop], AppColors.primaryDark);
+    _face(canvas, <Offset>[
+      leftBottom,
+      frontBottom,
+      frontTop,
+      leftTop,
+    ], AppColors.primaryDark);
     // Left face (mid tone).
-    _face(canvas, <Offset>[backBottom, leftBottom, leftTop, backTop], AppColors.primary);
+    _face(canvas, <Offset>[
+      backBottom,
+      leftBottom,
+      leftTop,
+      backTop,
+    ], AppColors.primary);
     // Top face (brightest — light comes from above).
-    _face(canvas, <Offset>[backTop, rightTop, frontTop, leftTop], const Color(0xFF1E8570));
+    _face(canvas, <Offset>[
+      backTop,
+      rightTop,
+      frontTop,
+      leftTop,
+    ], const Color(0xFF1E8570));
 
     // --- Kraft ribbon wrapping over the top and down both visible sides ----
-    _ribbonBand(canvas, width: width, depth: depth, height: height,
-        frontBottom: frontBottom, leftBottom: leftBottom,
-        backTop: backTop, rightTop: rightTop,
-        frontTop: frontTop, leftTop: leftTop);
+    _ribbonBand(
+      canvas,
+      width: width,
+      depth: depth,
+      height: height,
+      frontBottom: frontBottom,
+      leftBottom: leftBottom,
+      backTop: backTop,
+      rightTop: rightTop,
+      frontTop: frontTop,
+      leftTop: leftTop,
+    );
 
     // --- Lid seam ---------------------------------------------------------
     final Paint seam = Paint()
@@ -246,16 +273,28 @@ class _HeroPainter extends CustomPainter {
 
     // Two loops.
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(centre.dx - 20, knotY), width: 34, height: 22),
+      Rect.fromCenter(
+        center: Offset(centre.dx - 20, knotY),
+        width: 34,
+        height: 22,
+      ),
       loop,
     );
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(centre.dx + 20, knotY), width: 34, height: 22),
+      Rect.fromCenter(
+        center: Offset(centre.dx + 20, knotY),
+        width: 34,
+        height: 22,
+      ),
       loop,
     );
 
     // Knot.
-    canvas.drawCircle(Offset(centre.dx, knotY), 6, Paint()..color = AppColors.clay);
+    canvas.drawCircle(
+      Offset(centre.dx, knotY),
+      6,
+      Paint()..color = AppColors.clay,
+    );
 
     // Ribbon tails falling over the front edge.
     final Paint tail = Paint()
@@ -290,9 +329,11 @@ class _HeroPainter extends CustomPainter {
       // Each mote loops on its own offset in time.
       final double phase = (t + i / seeds.length) % 1.0;
       final double dy = math.sin(phase * 2 * math.pi) * 7;
-      final double opacity = 0.25 + 0.45 * (0.5 + 0.5 * math.sin(phase * 2 * math.pi));
+      final double opacity =
+          0.25 + 0.45 * (0.5 + 0.5 * math.sin(phase * 2 * math.pi));
 
-      final Paint paint = Paint()..color = AppColors.accent.withValues(alpha: opacity);
+      final Paint paint = Paint()
+        ..color = AppColors.accent.withValues(alpha: opacity);
       canvas.drawCircle(seeds[i] + Offset(0, dy), 2.6, paint);
     }
   }

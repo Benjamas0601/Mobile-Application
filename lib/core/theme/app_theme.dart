@@ -44,7 +44,9 @@ class AppTheme {
       onErrorContainer: AppColors.danger,
       surface: isDark ? AppColors.surfaceMuted : AppColors.surface,
       onSurface: isDark ? AppColors.background : AppColors.ink,
-      surfaceContainerHighest: isDark ? AppColors.border : AppColors.surfaceMuted,
+      surfaceContainerHighest: isDark
+          ? AppColors.border
+          : AppColors.surfaceMuted,
       onSurfaceVariant: AppColors.inkMuted,
       outline: AppColors.borderStrong,
       outlineVariant: AppColors.border,
@@ -55,7 +57,9 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: isDark ? AppColors.surfaceMuted : AppColors.background,
+      scaffoldBackgroundColor: isDark
+          ? AppColors.surfaceMuted
+          : AppColors.background,
       textTheme: text,
       fontFamily: kAppFontFamily.isEmpty ? null : kAppFontFamily,
 
@@ -66,7 +70,9 @@ class AppTheme {
         scrolledUnderElevation: 0.5,
         centerTitle: false,
         titleTextStyle: text.titleLarge,
-        systemOverlayStyle: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        systemOverlayStyle: isDark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
       ),
 
       cardTheme: CardThemeData(
@@ -84,7 +90,9 @@ class AppTheme {
           minimumSize: const Size(0, AppSizes.minTapTarget),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
           textStyle: text.labelLarge,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
         ),
       ),
 
@@ -95,7 +103,9 @@ class AppTheme {
           textStyle: text.labelLarge,
           side: BorderSide(color: scheme.outline),
           foregroundColor: scheme.onSurface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
         ),
       ),
 
@@ -146,7 +156,10 @@ class AppTheme {
         selectedColor: AppColors.primaryLight,
         side: BorderSide(color: scheme.outlineVariant),
         labelStyle: text.labelMedium!,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
         shape: const RoundedRectangleBorder(borderRadius: AppRadius.pillRadius),
       ),
 
@@ -158,12 +171,19 @@ class AppTheme {
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (Set<WidgetState> states) => states.contains(WidgetState.selected)
-              ? text.labelSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)
+              ? text.labelSmall?.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                )
               : text.labelSmall,
         ),
       ),
 
-      dividerTheme: DividerThemeData(color: scheme.outlineVariant, thickness: 1, space: 1),
+      dividerTheme: DividerThemeData(
+        color: scheme.outlineVariant,
+        thickness: 1,
+        space: 1,
+      ),
 
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.surface,
@@ -175,11 +195,17 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.ink,
-        contentTextStyle: text.bodyMedium?.copyWith(color: AppColors.background),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+        contentTextStyle: text.bodyMedium?.copyWith(
+          color: AppColors.background,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
       ),
 
-      progressIndicatorTheme: const ProgressIndicatorThemeData(color: AppColors.primary),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.primary,
+      ),
 
       // Respect the OS "reduce motion" accessibility switch.
       pageTransitionsTheme: const PageTransitionsTheme(
@@ -195,7 +221,9 @@ class AppTheme {
     // Re-colour the ink tokens when the dark theme is active so text keeps
     // its hierarchy instead of turning into flat black-on-black.
     final Color ink = scheme.onSurface;
-    final Color muted = isLight(scheme) ? AppColors.inkMuted : AppColors.inkSubtle;
+    final Color muted = isLight(scheme)
+        ? AppColors.inkMuted
+        : AppColors.inkSubtle;
 
     return TextTheme(
       displayLarge: AppTextStyles.displayLarge.copyWith(color: ink),
@@ -215,5 +243,6 @@ class AppTheme {
     );
   }
 
-  static bool isLight(ColorScheme scheme) => scheme.brightness == Brightness.light;
+  static bool isLight(ColorScheme scheme) =>
+      scheme.brightness == Brightness.light;
 }
