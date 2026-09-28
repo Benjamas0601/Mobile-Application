@@ -40,7 +40,7 @@ enum ThaiRegion {
   northeast('northeast', 'ภาคอีสาน', 'นครราชสีมา อุดรธานี บุรีรัมย์'),
   central('central', 'ภาคกลาง', 'อยุธยา สุราษฎร์ธานี นครปฐม'),
   east('east', 'ภาคตะวันออก', 'ระยอง จันทบุรี ตราด'),
-  west('west', 'ภาคตะวันตก', 'กาญจนบุรี ระยอง เพชรบุรี'),
+  west('west', 'ภาคตะวันตก', 'กาญจนบุรี ราชบุรี เพชรบุรี'),
   south('south', 'ภาคใต้', 'สงขลา สุราษฎร์ธานี นครศรีธรรมราช');
 
   const ThaiRegion(this.value, this.label, this.exampleProvinces);
@@ -167,6 +167,63 @@ enum CommissionStatus {
   static CommissionStatus fromValue(String? value) {
     return ThaiEnumLookup.firstOrNull(CommissionStatus.values, (e) => e.value == value) ??
         CommissionStatus.pending;
+  }
+}
+
+/// How the buyer paid, kept separate from [PaymentStatus] so the chosen
+/// channel and its state can change independently.
+enum PaymentMethod {
+  promptPay('promptpay', 'พร้อมเพย์'),
+  bankTransfer('bank_transfer', 'โอนผ่านธนาคาร'),
+  cashOnDelivery('cash_on_delivery', 'เก็บเงินปลายทาง');
+
+  const PaymentMethod(this.value, this.label);
+
+  final String value;
+  final String label;
+
+  /// Only channels that need a slip image to prove the transfer.
+  bool get requiresSlip => this != PaymentMethod.cashOnDelivery;
+
+  static PaymentMethod fromValue(String? value) {
+    return ThaiEnumLookup.firstOrNull(PaymentMethod.values, (e) => e.value == value) ??
+        PaymentMethod.bankTransfer;
+  }
+}
+
+/// Content shape of a chat message.
+enum MessageType {
+  text('text', 'ข้อความ'),
+  image('image', 'รูปภาพ'),
+  system('system', 'ระบบ');
+
+  const MessageType(this.value, this.label);
+
+  final String value;
+  final String label;
+
+  static MessageType fromValue(String? value) {
+    return ThaiEnumLookup.firstOrNull(MessageType.values, (e) => e.value == value) ??
+        MessageType.text;
+  }
+}
+
+/// What triggers a notification, which decides the icon shown in the list.
+enum NotificationType {
+  orderStatus('order_status', 'สถานะคำสั่งซื้อ'),
+  newMessage('new_message', 'ข้อความใหม่'),
+  promotion('promotion', 'โปรโมชั่น'),
+  reviewReply('review_reply', 'ตอบรีวิว'),
+  system('system', 'ระบบ');
+
+  const NotificationType(this.value, this.label);
+
+  final String value;
+  final String label;
+
+  static NotificationType fromValue(String? value) {
+    return ThaiEnumLookup.firstOrNull(NotificationType.values, (e) => e.value == value) ??
+        NotificationType.system;
   }
 }
 

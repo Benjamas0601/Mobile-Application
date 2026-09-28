@@ -1,0 +1,407 @@
+rules_version = '2';
+
+// Firestore Security Rules — Thai OTOP Marketplace
+// "ชั้นที่ 1" ของความปลอดภัยตาม docs/05_architecture.md ข้อ 5
+// (ชั้นที่ 2 คือ UI ซ่อนปุ่ม — เป็นแค่ UX ไม่ใช่ความปลอดภัย)
+//
+// หลักการที่ใช้ทั้งไฟล์
+//   1. Deny by default — ไม่เข้าเงื่อนไขใด = ไม่อนุญาต
+//   2. บทบาทอ่านจาก users/{uid}.roles เท่านั้น และผู้ใช้แก้ roles เองไม่ได้
+//      → ปิด privilege escalation
+//   3. ผู้ขายแก้ได้เฉพาะของในร้านตัวเอง โดยเทียบจาก storeId เสมอ
+//   4. ⚠️ Rules ตรวจ "โครงสร้าง" ได้ แต่ตรวจ "ความถูกต้องของตัวเลข" ไม่ได้
+//      เช่น ราคาในออเดอร์ต้องตรวจใน Cloud Function (ดูข้อจำกัดใน orders.create)
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ================================================================ //
+    // Helper functions — ประกาศไว้ระดับ documents เพื่อให้ทุก match ใช้ได้
+    // ================================================================ //
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function roleList() {
+      return isSignedIn() && userDoc().roles is list ? userDoc().roles : [];
+    }
+
+    function hasRole(role) {
+      return role in roleList();
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    function storeDoc(storeId) {
+      return get(/databases/$(database)/documents/stores/$(storeId)).data;
+    }
+
+    function storeExists(storeId) {
+      return exists(/databases/$(database)/documents/stores/$(storeId));
+    }
+
+    // เจ้าของร้านจริง (ยืนยันจาก ownerUid ในเอกสารร้าน ไม่เชื่อค่าที่ส่งมา)
+    function ownsStore(storeId) {
+      return isSignedIn() && storeExists(storeId)
+        && storeDoc(storeId).ownerUid == request.auth.uid;
+    }
+
+    // ผู้ขายของร้านนั้น หรือแอดมิน
+    function sellsInStore(storeId) {
+      return isSignedIn() && (ownsStore(storeId) || isAdmin());
+    }
+
+    // เจ้าของร้านของสินค้าหนึ่ง (สินค้าไม่ได้เก็บ ownerUid จึงต้อง hop ไปที่ store)
+    function ownsProductStore(productId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/products/$(productId))
+        && ownsStore(
+             get(/databases/$(database)/documents/products/$(productId)).data.storeId
+           );
+    }
+
+    function orderDoc(orderId) {
+      return get(/databases/$(database)/documents/orders/$(orderId)).data;
+    }
+
+    function orderExists(orderId) {
+      return exists(/databases/$(database)/documents/orders/$(orderId));
+    }
+
+    function isOrderBuyer(orderId) {
+      return isSignedIn() && orderExists(orderId)
+        && orderDoc(orderId).buyerUid == request.auth.uid;
+    }
+
+    function isOrderSeller(orderId) {
+      return isSignedIn() && orderExists(orderId)
+        && sellsInStore(orderDoc(orderId).storeId);
+    }
+
+    // ผู้ที่เกี่ยวข้องกับออเดอร์ (ลูกค้า / ผู้ขายร้านนั้น / แอดมิน)
+    function isOrderParty(orderId) {
+      return isOrderBuyer(orderId) || isOrderSeller(orderId) || isAdmin();
+    }
+
+    // เปลี่ยนเฉพาะ field ที่อนุญาต และต้องมีการเปลี่ยนแปลงจริงอย่างน้อยหนึ่ง field
+    function changesOnlyTo(list) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(list);
+    }
+
+    // ต้องยกเลิกผ่าน status ไม่ใช่การลบเอกสาร (เก็บประวัติไว้ตรวจย้อนหลัง)
+    function neverDelete() {
+      return false;
+    }
+
+    // ================================================================ //
+    // users/{uid} — โปรไฟล์ผู้ใช้
+    // ================================================================ //
+    match /users/{userId} {
+
+      // ผู้ใช้ที่ล็อกอินอ่านโปรไฟล์ผู้อื่นได้ เพื่อแสดงชื่อผู้ขายบนหน้าสินค้า
+      // (เบอร์โทร/อีเมลถูกกรองออกที่ชั้น UI — UserModel.toPublicMap)
+      allow read: if isSignedIn();
+
+      // สร้างตอนสมัครสมาชิก: ของตัวเองเท่านั้น และ role แรกต้องเป็น customer
+      allow create: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.roles == ['customer']
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.createdAt == request.time;
+
+      // แก้ได้เฉพาะตัวเอง (หรือแอดมิน) แต่ห้ามแตะ roles / email / createdAt
+      allow update: if isSignedIn()
+        && (request.auth.uid == userId || isAdmin())
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(
+             ['roles', 'createdAt', 'email']
+           );
+
+      // ลบบัญชีได้เฉพาะตัวเอง (ไม่ใช่แอดมิน เพื่อไม่ให้หลักฐานการซื้อขายหาย)
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // ================================================================ //
+    // stores/{storeId} — ร้าน OTOP
+    // ================================================================ //
+    match /stores/{storeId} {
+      allow read: if true;
+
+      // เปิดร้านได้เฉพาะผู้มี role seller และต้องตั้งตัวเองเป็นเจ้าของ
+      allow create: if isSignedIn()
+        && (hasRole('seller') || isAdmin())
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+
+      // แก้ได้เฉพาะเจ้าของ และห้ามย้ายเจ้าของ (ย้ายร้าน = ปิดร้านเดิมแล้วเปิดใหม่)
+      allow update: if ownsStore(storeId)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(
+             ['ownerUid', 'createdAt']
+           );
+
+      // ลบร้าน = แอดมินเท่านั้น (เจ้าของใช้ archived แทน เพื่อไม่ให้ออเดอร์ที่
+      // อ้างถึงร้านเสียหาย) — ต้องลบสินค้าด้วยก่อน ให้ Cloud Function ตรวจ
+      allow delete: if isAdmin();
+    }
+
+    // ================================================================ //
+    // categories/{categoryId} — หมวดสินค้า
+    // ================================================================ //
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ================================================================ //
+    // products/{productId}
+    // ================================================================ //
+    match /products/{productId} {
+      allow read: if true;
+
+      allow create: if isSignedIn()
+        && (hasRole('seller') || isAdmin())
+        && sellsInStore(request.resource.data.storeId);
+
+      // แก้ได้เฉพาะเจ้าของร้านเดิม และห้ามย้ายสินค้าไปร้านอื่น
+      allow update: if isSignedIn()
+        && (sellsInStore(resource.data.storeId) || isAdmin())
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(
+             ['storeId', 'createdAt']
+           );
+
+      allow delete: if isSignedIn()
+        && (sellsInStore(resource.data.storeId) || isAdmin());
+    }
+
+    // ================================================================ //
+    // product_variants/{variantId} — สี/ขนาด ที่มีสต็อกแยก
+    // ================================================================ //
+    match /product_variants/{variantId} {
+      allow read: if true;
+
+      allow create: if isSignedIn() && (
+        ownsProductStore(request.resource.data.productId) || isAdmin()
+      );
+
+      // variant ย้ายสินค้าไม่ได้ เพราะสต็อกแยกผูกกับสินค้าเดิม
+      allow update: if isSignedIn() && (
+        ownsProductStore(resource.data.productId) || isAdmin()
+      ) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(
+           ['productId', 'createdAt']
+         );
+
+      allow delete: if isSignedIn() && (
+        ownsProductStore(resource.data.productId) || isAdmin()
+      );
+    }
+
+    // ================================================================ //
+    // cart_items/{cartItemId} — ตะกร้า: ของตัวเองเท่านั้น
+    // ================================================================ //
+    match /cart_items/{cartItemId} {
+      allow read, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
+
+      // แก้ได้เฉพาะตัวเอง และห้ามโยนสินค้าไปของคนอื่น
+      allow update: if isSignedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    // ================================================================ //
+    // orders/{orderId} + orders/{orderId}/items/{orderItemId}
+    // ================================================================ //
+    match /orders/{orderId} {
+
+      // ลูกค้าเห็นของตัวเอง / ผู้ขายเห็นเฉพาะร้านตัวเอง / แอดมินเห็นหมด
+      allow read: if isOrderParty(orderId);
+
+      // ⚠️ ข้อจำกัดของ Rules: เขียนยอดรวมที่ขอมาเองได้
+      //    การตรวจราคาจริงต้องทำใน Cloud Function (ตามเอกสารสถาปัตยกรรม)
+      allow create: if isSignedIn()
+        && request.resource.data.buyerUid == request.auth.uid
+        && request.resource.data.status == 'pending_payment'
+        && request.resource.data.total is number
+        && request.resource.data.total >= 0
+        && request.resource.data.createdAt == request.time;
+
+      // ลูกค้า: แก้ได้เฉพาะก่อนชำระเงิน และห้ามแตะเงิน/เจ้าของ/สถานะ
+      // ผู้ขาย: แก้ได้เฉพาะสถานะการจัดส่ง
+      // แอดมิน: แก้ได้ทั้งหมด
+      allow update: if isSignedIn() && (
+        (isOrderBuyer(orderId)
+          && resource.data.status == 'pending_payment'
+          && changesOnlyTo(['shippingAddress', 'couponCode', 'note']))
+        || (isOrderSeller(orderId)
+          && changesOnlyTo(['status', 'shippedAt', 'trackingNumber']))
+        || isAdmin()
+      );
+
+      allow delete: if neverDelete();
+
+      // snapshot ของสินค้าที่ซื้อ — อ่านได้เฉพาะคนในออเดอร์, เขียนเองไม่ได้
+      match /items/{orderItemId} {
+        allow read: if isSignedIn() && (
+          isOrderBuyer(orderId) || isOrderSeller(orderId) || isAdmin()
+        );
+        allow write: if false;
+      }
+    }
+
+    // ================================================================ //
+    // payments/{paymentId}
+    // ================================================================ //
+    match /payments/{paymentId} {
+      allow read: if isSignedIn() && isOrderParty(resource.data.orderId);
+
+      // ลูกค้าสร้างรายการชำระเอง (ยังไม่ verified)
+      allow create: if isSignedIn()
+        && request.resource.data.status in ['awaiting_transfer', 'submitted'];
+
+      // ผู้ขาย/แอดมินเท่านั้นที่เปลี่ยนสถานะเป็น verified / failed
+      allow update: if isSignedIn() && (
+        isAdmin() || isOrderSeller(resource.data.orderId)
+      );
+
+      // เก็บไว้เป็น audit trail ห้ามลบ
+      allow delete: if neverDelete();
+    }
+
+    // ================================================================ //
+    // reviews/{reviewId}
+    // ================================================================ //
+    match /reviews/{reviewId} {
+      allow read: if true;
+
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5;
+
+      // ผู้รีวิวแก้ของตัวเอง / ร้านตอบกลับ / แอดมิน
+      allow update: if isSignedIn() && (
+        resource.data.userId == request.auth.uid
+        || ownsProductStore(resource.data.productId)
+        || isAdmin()
+      );
+
+      allow delete: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+    }
+
+    // ================================================================ //
+    // chat_threads/{threadId} + messages/{messageId}
+    // ================================================================ //
+    match /chat_threads/{threadId} {
+
+      function isParticipant() {
+        return isSignedIn() && request.auth.uid in resource.data.participantUids;
+      }
+
+      function isThreadSeller() {
+        return isSignedIn() && sellsInStore(resource.data.storeId);
+      }
+
+      allow read: if isParticipant() || isThreadSeller() || isAdmin();
+
+      allow create: if isSignedIn()
+        && request.auth.uid in request.resource.data.participantUids
+        && request.resource.data.lastAt == request.time;
+
+      allow update: if (isParticipant() || isThreadSeller() || isAdmin())
+        && changesOnlyTo([
+          'lastMessage', 'lastAt', 'unreadByBuyer', 'unreadBySeller'
+        ]);
+
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isParticipant() || isThreadSeller() || isAdmin();
+
+        // ส่งได้เฉพาะคนในห้อง และต้องเป็นผู้ส่งเอง
+        allow create: if isParticipant()
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.createdAt == request.time;
+
+        // แชทแก้ย้อนหลังไม่ได้
+        allow update, delete: if false;
+      }
+    }
+
+    // ================================================================ //
+    // coupons/{couponId} — แอดมินจัดการ, ผู้ใช้อ่านเพื่อไปใช้ตอน checkout
+    // ================================================================ //
+    match /coupons/{couponId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ================================================================ //
+    // affiliate_* — พาร์ทเนอร์เห็นแค่ของตัวเอง
+    // ================================================================ //
+    match /affiliate_links/{linkId} {
+      allow read: if isSignedIn() && (
+        resource.data.affiliateUid == request.auth.uid || isAdmin()
+      );
+
+      allow create: if isSignedIn()
+        && hasRole('affiliate')
+        && request.resource.data.affiliateUid == request.auth.uid;
+
+      // คลิก/ออเดอร์ถูกนับโดยระบบ ไม่ใช่ผู้ใช้
+      allow update: if isAdmin();
+
+      allow delete: if isSignedIn() && (
+        resource.data.affiliateUid == request.auth.uid || isAdmin()
+      );
+    }
+
+    match /affiliate_clicks/{clickId} {
+      // คลิกจากลิงก์ต้องบันทึกได้แม้ผู้คลิกยังไม่ได้ล็อกอิน
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /affiliate_commissions/{commissionId} {
+      allow read: if isSignedIn() && (
+        resource.data.affiliateUid == request.auth.uid || isAdmin()
+      );
+      allow create, update: if isAdmin();
+      allow delete: if neverDelete();
+    }
+
+    // ================================================================ //
+    // notifications/{id} — ของตัวเองเท่านั้น
+    // ================================================================ //
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      // ระบบสร้างจาก Cloud Function
+      allow create: if isAdmin();
+
+      // ผู้ใช้กดอ่านแล้วเท่านั้น
+      allow update: if isSignedIn()
+        && resource.data.userId == request.auth.uid
+        && changesOnlyTo(['read', 'readAt']);
+
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // ================================================================ //
+    // ทุก path ที่ไม่ได้ระบุข้างบน = ไม่อนุญาต
+    // ================================================================ //
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

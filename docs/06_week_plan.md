@@ -11,7 +11,7 @@
 | สัปดาห์ | ส่ง | สถานะ |
 |---|---|---|
 | Week 2 | 30 ก.ย. 2569 | ✅ **เสร็จ** |
-| Week 3 | 7 ต.ค. 2569 | ⏳ รอเริ่ม |
+| Week 3 | 7 ต.ค. 2569 | 🔄 **กำลังทำ** |
 | Week 4 | 14 ต.ค. 2569 | ⏳ |
 | Week 5 | 21 ต.ค. 2569 | ⏳ |
 | Week 6 | 4 พ.ย. 2569 | ⏳ |
@@ -81,6 +81,46 @@
 
 ---
 
+## 🔄 Week 3 (เริ่ม 28 ก.ย. 2569) — Cloud Database + Authentication
+
+### เปิดใช้งาน Cloud Database (เสร็จ 28 ก.ย. 2569)
+
+| # | งาน | ผล | สถานะ |
+|---|---|---|---|
+| 1 | เปิด Google Cloud API ที่จำเป็น | `firestore.googleapis.com`, `identitytoolkit.googleapis.com`, `firebasestorage.googleapis.com` | ✅ |
+| 2 | สร้าง Firestore database | `projects/thaiotop-587f1/databases/(default)` edition `STANDARD` | ✅ |
+| 3 | เลือก region | **`asia-southeast1`** (สิงคโปร์) — เลือกครั้งเดียวเปลี่ยนไม่ได้ | ✅ |
+| 4 | เปิด delete protection | `DELETE_PROTECTION_ENABLED` กันลบฐานข้อมูกพลาด | ✅ |
+| 5 | เขียน Firestore Security Rules | `firestore.rules` — ครบทุก collection ตาม role table | ✅ |
+| 6 | คอมไพล์ + deploy rules | `rules file compiled successfully` | ✅ |
+| 7 | เขียน composite indexes | `firestore.indexes.json` — 10 index ตาม query ที่ออกแบบไว้ | ✅ |
+| 8 | deploy indexes | `deployed indexes ... successfully for (default) database` | ✅ |
+| 9 | ยืนยัน rules บนเซิร์ฟเวอร์ | เทียบกับไฟล์ในเครื่อง: **14,933 bytes = 14,933 bytes ตรงกัน** | ✅ |
+| 10 | เขียน Storage Rules | `storage.rules` — อัปโหลดรูปเฉพาะร้านตัวเอง, จำกัด 5 MB, ชนิด image | ✅ |
+| 11 | ผูกไฟล์ทั้งหมดใน `firebase.json` | เดิมมีแค่ส่วน `flutter` → เพิ่ม `firestore` + `storage` | ✅ |
+| 12 | เพิ่ม enum ที่ยังขาด | `PaymentMethod`, `MessageType`, `NotificationType` ใน `app_enums.dart` | ✅ |
+
+### ⏳ เหลือ 2 อย่างที่ทำผ่าน API ไม่ได้ (ต้องกดเองใน Browser)
+
+| # | งาน | ทำไมทำแทนไม่ได้ | ลิงก์ |
+|---|---|---|---|
+| 1 | เปิด Auth provider **Email/Password** | Identity Toolkit config resource ยังไม่ถูกสร้าง และ API ไม่มีเมธอดสร้างได้ (`CONFIGURATION_NOT_FOUND` / `INVALID_PROVIDER_ID`) ต้องให้ Console เป็นผู้ initialize | https://console.firebase.google.com/project/thaiotop-587f1/authentication/providers |
+| 2 | **Get Started** Firebase Storage | ยังไม่มี default bucket — ต้องกด Get Started เพื่อสร้าง bucket | https://console.firebase.google.com/project/thaiotop-587f1/storage |
+
+> ทั้งสองอย่างเป็นการกด 1 คลิก ใช้เวลารวมประมาณ 1–2 นาที
+> หลังจากนั้น deploy storage rules ได้ด้วย `firebase deploy --only storage`
+
+### ต่อไปในสัปดาห์นี้
+
+1. เขียน Models ทั้งหมด (`fromFirestore` / `toFirestore`)
+2. Services (auth / firestore / storage)
+3. Repositories (auth / product / store)
+4. Auth flow: สมัคร / ล็อกอิน / ออก / redirect ตาม role
+5. Product CRUD + variant + อัปโหลดหลายรูป
+6. Error handling ครบ 4 สถานะทุกหน้า
+
+---
+
 ## 📌 วิธีอัปเดตสถานะทุกสัปดาห์
 
 ทุกสัปดาห์ต้องเพิ่มหัวข้อลงล่างในไฟล์นี้ และ commit ด้วยข้อความรูปแบบ:
@@ -112,3 +152,6 @@ week4(chat): แชทลูกค้า-ร้าน + ส่งรูป
 | 6 | 27 ก.ย. | `:image_picker_android:compileDebugKotlin` | `package android.annotation does not exist`, `Cannot access 'java.lang.Class'` | `JAVA_HOME` ว่าง → Gradle จับ Oracle JDK 23 ซึ่งใหม่เกินสำหรับ AGP 9.0.1 | ติดตั้ง Microsoft OpenJDK 17 + pin `org.gradle.java.home` ใน `android/gradle.properties` | ✅ แก้แล้ว |
 | 7 | 27 ก.ย. | `:app:mergeDebugJavaResource` | `VerifyException (no error message)` | Windows ตั้งภาษาไทย → JVM ใช้ `sun.util.BuddhistCalendar` → `YEAR=2569` เกินช่วง MS-DOS (1980–2107) ที่ AGP `MsDosDateTimeUtils` ยอมรับ | บังคับ `-Duser.language=en -Duser.country=US` ใน `org.gradle.jvmargs` | ✅ แก้แล้ว |
 | 8 | 27 ก.ย. | Gradle cache | `Remove-Item -Recurse` ลบไม่หมด, `build/` เหลือ 3,020 ไฟล์ | Windows MAX_PATH (260 ตัว) | ใช้ `Remove-Item -LiteralPath "\\?\$path" -Recurse -Force` | ✅ แก้แล้ว |
+| 9 | 28 ก.ย. | `app_enums.dart` | จังหวัดตัวอย่างภาคตะวันตกซ้ำกับภาคตะวันออก (`ระยอง`) | คัดลอกรายชื่อจังหวัดผิดภาค | เปลี่ยนเป็น `กาญจนบุรี ราชบุรี เพชรบุรี` | ✅ แก้แล้ว |
+| 10 | 28 ก.ย. | `firestore.rules` (ร่างแรก) | helper function เรียกข้าม `match` block ไม่ได้ และใช้ `get(...)` ผิดรูป | เขียน function ไว้ใน scope ของ collection | ย้าย helper ทั้งหมดขึ้นระดับ `documents` และใช้ `get(/databases/$(database)/documents/...)` | ✅ แก้แล้ว |
+| 11 | 28 ก.ย. | Firebase CLI | `firestore:databases:create` บอก `missing required argument 'database'` | ต้องระบุ database id และค่า `(default)` ถูก cmd.exe กินวงเล็บ | เรียก Firestore Admin REST API โดยส่ง `?databaseId=(default)` จาก Node | ✅ แก้แล้ว |
