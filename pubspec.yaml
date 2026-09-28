@@ -17,7 +17,14 @@ dependencies:
   firebase_core: ^4.15.0          # ตัวเริ่มต้น Firebase SDK
   firebase_auth: ^6.7.0           # ระบบสมาชิก: สมัคร / ล็อกอิน / รีเซ็ตรหัสผ่าน
   cloud_firestore: ^6.10.0        # Cloud Database: สินค้า ร้าน ออเดอร์ แชท คูปอง
-  firebase_storage: ^13.6.0       # อัปโหลดรูปสินค้า (หลายรูป) และรูปในแชท
+
+  # --- เก็บรูปภาพ ---
+  # ไม่ใช้ Firebase Storage เพราะต้องผูกบัตรเครดิต (Cloud Storage for Firebase
+  # ใช้ได้เฉพาะแผน Blaze) จึงย้ายไปใช้ Cloudinary free tier แทน
+  # ถ้าภายหลังอยากย้ายกลับ: ใส่ firebase_storage กลับในบรรทัดนี้
+  http: ^1.2.2                    # ยิง REST API ไป Cloudinary
+  crypto: ^3.0.6                  # คำนวณ SHA-1 signature (ตอน dev เท่านั้น)
+
 
   # --- Localization ---
   # เหตุผล: แอปเป็น Thai-first ต้องแสดงวันที่/ตัวเลข/วันในสัปดาห์เป็นภาษาไทย
@@ -35,6 +42,7 @@ dependencies:
 
   # --- Device ---
   image_picker: ^1.2.3            # เลือกรูปจากเครื่อง/กล้อง (สินค้า + แชท)
+  cross_file: ^0.3.5+4            # ชนิดไฟล์ข้ามแพลตฟอร์ม (Android/iOS/Web) ใช้ร่วมกับ image_picker
 
 dev_dependencies:
   flutter_test:
