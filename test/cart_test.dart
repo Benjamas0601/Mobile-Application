@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thai_otop_marketplace/core/constants/app_enums.dart';
+import 'package:thai_otop_marketplace/core/utils/shipping.dart' as shipping;
 import 'package:thai_otop_marketplace/models/product_model.dart';
 import 'package:thai_otop_marketplace/providers/cart_provider.dart';
 
@@ -9,9 +10,10 @@ ProductModel _product({
   required String name,
   required double price,
   int stock = 10,
+  String storeId = 's1',
 }) => ProductModel(
   id: id,
-  storeId: 's1',
+  storeId: storeId,
   name: name,
   description: '',
   price: price,
@@ -127,6 +129,97 @@ void main() {
     test('the total adds the fee to the subtotal', () {
       expect(getCartTotal(480), 480 + kShippingFee);
       expect(getCartTotal(1200), 1200);
+    });
+
+    test('the cart and the order repository agree on the same threshold', () {
+      // Two copies of the free-shipping number would eventually disagree and
+      // produce an order whose total differs from the checkout the buyer saw.
+      expect(getShippingFee(999), shipping.shippingFeeFor(999));
+      expect(getCartTotal(999), shipping.totalFor(999));
+    });
+  });
+
+  group('one order is one store', () {
+    late ProviderContainer container;
+
+    setUp(() => container = ProviderContainer());
+    tearDown(() => container.dispose());
+
+    test('the cart reports the store it belongs to', () {
+      expect(_cart(container).storeId, isNull, reason: 'empty cart has no store');
+
+      _cart(container).add(
+        _product(id: 'p1', name: 'กาแฟ', price: 120, storeId: 's1'),
+      );
+      expect(_cart(container).storeId, 's1');
+    });
+
+    test('a product from a second store is refused', () {
+      // firestore.rules resolves the seller with `order.storeId`, so a
+      // two-store cart could not be written as a single order.
+      _cart(container).add(
+        _product(id: 'p1', name: 'กาแฟ', price: 120, storeId: 's1'),
+      );
+
+      final CartAddResult result = _cart(container).add(
+        _product(id: 'p2', name: 'ผ้าไหม', price: 450, storeId: 's2'),
+      );
+
+      expect(result, CartAddResult.differentStore);
+      expect(
+        container.read(cartProvider),
+        hasLength(1),
+        reason: 'the existing line must be kept, not replaced',
+      );
+    });
+
+    test('another product from the same store is accepted', () {
+      _cart(container).add(
+        _product(id: 'p1', name: 'กาแฟ', price: 120, storeId: 's1'),
+      );
+
+      final CartAddResult result = _cart(container).add(
+        _product(id: 'p2', name: 'เค้ก', price: 90, storeId: 's1'),
+      );
+
+      expect(result, CartAddResult.added);
+      expect(container.read(cartProvider), hasLength(2));
+      expect(_cart(container).storeId, 's1');
+    });
+
+    test('clearing the cart releases the store so any shop can be used', () {
+      _cart(container).add(
+        _product(id: 'p1', name: 'กาแฟ', price: 120, storeId: 's1'),
+      );
+      _cart(container).clear();
+
+      expect(_cart(container).storeId, isNull);
+      expect(
+        _cart(container).add(
+          _product(id: 'p2', name: 'ผ้าไหม', price: 450, storeId: 's2'),
+        ),
+        CartAddResult.added,
+      );
+    });
+
+    test('the refusal reasons are distinguishable from success', () {
+      expect(
+        _cart(container).add(_product(id: 'p1', name: 'หมด', price: 10, stock: 0)),
+        CartAddResult.outOfStock,
+      );
+
+      _cart(container).add(
+        _product(id: 'p2', name: 'กาแฟ', price: 120, stock: 2),
+      );
+      _cart(container).add(
+        _product(id: 'p2', name: 'กาแฟ', price: 120, stock: 2),
+      );
+      expect(
+        _cart(container).add(
+          _product(id: 'p2', name: 'กาแฟ', price: 120, stock: 2),
+        ),
+        CartAddResult.atStockLimit,
+      );
     });
   });
 }
