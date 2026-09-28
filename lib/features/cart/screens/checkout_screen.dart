@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/routes/app_router.dart';
+import '../../../providers/order_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -128,7 +129,7 @@ class _CheckoutForm extends ConsumerStatefulWidget {
 
 class _CheckoutFormState extends ConsumerState<_CheckoutForm> {
   final TextEditingController _address = TextEditingController();
-  bool _busy = false;
+  String? _addressError;
 
   @override
   void dispose() {
@@ -156,9 +157,17 @@ class _CheckoutFormState extends ConsumerState<_CheckoutForm> {
           TextField(
             controller: _address,
             maxLines: 3,
-            decoration: const InputDecoration(
+            onChanged: (_) {
+              // Clear the error as soon as the buyer starts fixing it, rather
+              // than making them resubmit to find out it was accepted.
+              if (_addressError != null) {
+                setState(() => _addressError = null);
+              }
+            },
+            decoration: InputDecoration(
               hintText: AppStrings.addressHint,
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
+              errorText: _addressError,
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -220,17 +229,8 @@ class _CheckoutFormState extends ConsumerState<_CheckoutForm> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: _busy ? null : _placeOrder,
-              child: _busy
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text(AppStrings.placeOrder),
+              onPressed: _placeOrder,
+              child: const Text(AppStrings.goToPayment),
             ),
           ),
         ],
@@ -251,19 +251,23 @@ class _CheckoutFormState extends ConsumerState<_CheckoutForm> {
     );
   }
 
-  Future<void> _placeOrder() async {
-    setState(() => _busy = true);
-    // Writing the order document and taking payment are Week 4 work; the
-    // flow reaches the confirmation step so the gate can be demonstrated.
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    ref.read(cartProvider.notifier).clear();
-    // Grab the messenger first: this widget is torn down by the navigation
-    // below, so looking it up afterwards would hit a deactivated context.
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(
-      const SnackBar(content: Text(AppStrings.orderPlaced)),
-    );
-    context.go(AppRoutes.home);
+  /// Hands the agreed address to the payment step.
+  ///
+  /// Nothing is written here: confirming an address is a decision about the
+  /// goods, not about money, so the order document is only created once the
+  /// buyer has picked a payment method. That also means a buyer who backs out
+  /// of the payment screen keeps the address they typed.
+  void _placeOrder() {
+    if (_address.text.trim().isEmpty) {
+      setState(() => _addressError = AppStrings.errRequired);
+      return;
+    }
+    final String? storeId = ref.read(cartProvider.notifier).storeId;
+    if (storeId == null) return;
+
+    ref
+        .read(checkoutDraftProvider.notifier)
+        .start(storeId: storeId, shippingAddress: _address.text);
+    context.push(AppRoutes.payment);
   }
 }

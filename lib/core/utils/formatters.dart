@@ -44,10 +44,12 @@ class Fmt {
     int? count,
     String? amount,
     String? rate,
+    String? status,
   }) {
     return template
         .replaceAll('{count}', '$count')
         .replaceAll('{amount}', amount ?? '')
-        .replaceAll('{rate}', rate ?? '');
+        .replaceAll('{rate}', rate ?? '')
+        .replaceAll('{status}', status ?? '');
   }
 }

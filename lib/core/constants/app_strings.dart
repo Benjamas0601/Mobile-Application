@@ -118,6 +118,34 @@ class AppStrings {
   static const String shippingAddress = 'ที่อยู่จัดส่ง';
   static const String paymentMethod = 'วิธีชำระเงิน';
   static const String placeOrder = 'ยืนยันการสั่งซื้อ';
+  static const String goToPayment = 'ไปหน้าชำระเงิน';
+  static const String payNow = 'ชำระเงิน';
+  static const String orderSummary = 'สรุปคำสั่งซื้อ';
+  static const String orderPlacedAt = 'สั่งซื้อเมื่อ';
+  static const String orderItems = 'สินค้าในคำสั่งซื้อ';
+  static const String orderDetailTitle = 'รายละเอียดคำสั่งซื้อ';
+  static const String orderStatusTitle = 'สถานะการจัดส่ง';
+  static const String orderIdPrefix = 'เลขที่';
+  static const String orderNotFoundTitle = 'ไม่พบคำสั่งซื้อนี้';
+  static const String orderNotFoundHint =
+      'คำสั่งซื้ออาจถูกลบไปแล้ว หรือคุณไม่มีสิทธิ์ดูคำสั่งซื้อนี้';
+  static const String orderNote = 'หมายเหตุถึงร้านค้า';
+  static const String paymentStatus = 'สถานะการชำระเงิน';
+  static const String trackingNumberPrefix = 'เลขพัสดุ';
+  static const String shippedOnPrefix = 'จัดส่งเมื่อ';
+
+  // --- Demo-only seller control --------------------------------------------
+  // Stands in for the seller console until that exists. The strings say so,
+  // because a graded demo should not let a control look like a real feature.
+  static const String demoSellerControl = 'โหมดสาธิต (ผู้ขาย)';
+  static const String demoSellerControlHint =
+      'ปุ่มสำหรับสาธิตการเดินสถานะคำสั่งซื้อ '
+      'จะถูกถอดออกเมื่อมีหน้าจอผู้ขายจริง';
+  static const String advanceToStatus = 'เปลี่ยนเป็น "{status}"';
+  static const String advanceStatusDone = 'เปลี่ยนสถานะเป็น "{status}" แล้ว';
+  static const String advanceStatusFailed = 'เปลี่ยนสถานะไม่สำเร็จ';
+  static const String backToOrders = 'กลับไปรายการคำสั่งซื้อ';
+  static const String orderCreateFailed = 'บันทึกคำสั่งซื้อไม่สำเร็จ กรุณาลองใหม่';
   static const String paymentPending = 'รอการยืนยันการชำระเงิน';
   static const String paymentSubmitted = 'ส่งข้อมูลการชำระเงินแล้ว';
   static const String paymentVerified = 'ผู้ขายตรวจสอบการชำระเงินแล้ว';
@@ -135,6 +163,27 @@ class AppStrings {
       'คุณสามารถเลือกสินค้าและใส่ตะกร้าได้ตามปกติ '
       'กรุณาเข้าสู่ระบบหรือสมัครสมาชิกเพื่อยืนยันคำสั่งซื้อ';
   static const String backToCart = 'กลับไปเลือกสินค้า';
+
+  // --- Cart store guard -----------------------------------------------------
+  // One order references one store (firestore.rules resolves the seller from
+  // `order.storeId`), so a cart holding two stores cannot become one order.
+  // These strings explain that instead of failing at the payment step.
+  // --- Payment screen reached without a draft -------------------------------
+  // A deep link to `/checkout/payment`, or arriving after the cart was already
+  // turned into an order. Shows a way forward instead of a blank form.
+  static const String noDraftTitle = 'ยังไม่มีข้อมูลให้ชำระเงิน';
+  static const String noDraftHint =
+      'กรุณาเลือกสินค้าและกดสั่งซื้อก่อน หน้านี้จะแสดงเมื่อคุณเข้ามาโดยไม่ได้มาจากขั้นตอนสั่งซื้อ';
+
+  static const String cartDifferentStoreTitle = 'ตะกร้ามีของต่างร้าน';
+  static const String cartDifferentStoreHint =
+      'หนึ่งคำสั่งซื้ออ้างอิงร้านเดียว ตะกร้านี้จึงมีของจากหลายร้าน\n'
+      'เลือกได้อย่างใดอย่างหนึ่ง: ล้างตะกร้าแล้วเลือกใหม่ '
+      'หรือกลับไปดูของร้านเดิม';
+  static const String clearCartAndRetry = 'ล้างตะกร้าแล้วเลือกใหม่';
+  static const String keepBrowsing = 'เลือกสินค้าต่อ';
+  static const String cartAtStockLimit = 'มีในสต็อกเท่านี้แล้ว';
+  static const String cartCleared = 'ล้างตะกร้าแล้ว';
   static const String searchHint = 'ค้นหาสินค้า เช่น กาแฟ ผ้าไหม';
   static const String clearSearch = 'ล้างคำค้นหา';
   static const String searchResults = 'ผลการค้นหา';

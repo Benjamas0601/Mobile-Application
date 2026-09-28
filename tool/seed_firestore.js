@@ -265,6 +265,60 @@ const VARIANTS = [
 ];
 
 // ------------------------------------------------------------------ //
+// Demo orders — ให้หน้าประวัติ/สถานะมีข้อมูลให้ดูทุกสถานะ (เขียนผ่าน
+// Admin API ซึ่งข้าม firestore.rules ได้ เพราะลูกค้าทั่วไปจะสร้างแค่
+// status == 'pending_payment' เท่านั้น)
+// ------------------------------------------------------------------ //
+const ORDERS = [
+  {
+    id: 'o-demo-1', storeId: 'store-singthai', method: 'promptpay',
+    status: 'completed', paymentStatus: 'verified', days: 30,
+    shippedAt: daysAgo(24), tracking: 'TH2219067845123',
+    items: [
+      { productId: 'p-silk-scarf-red', name: 'ผ้าไหมแดงลายไทย', price: 1290, quantity: 1 },
+      { productId: 'p-thai-linen', name: 'ผ้าลินินไทยลายจก', price: 890, quantity: 1 },
+    ],
+  },
+  {
+    id: 'o-demo-2', storeId: 'store-langdoi', method: 'bank_transfer',
+    status: 'shipped', paymentStatus: 'verified', days: 20,
+    shippedAt: daysAgo(8), tracking: 'TH2219067891234',
+    items: [
+      { productId: 'p-arabica-1kg', name: 'กาแฟอาราบิก้าดอย 1 กิโลกรัม (คั่วตอนสั่งซื้อ)', price: 1450, quantity: 1 },
+    ],
+  },
+  {
+    id: 'o-demo-3', storeId: 'store-langdoi', method: 'promptpay',
+    status: 'awaiting_shipment', paymentStatus: 'verified', days: 12,
+    items: [
+      { productId: 'p-arabica-250', name: 'กาแฟอาราบิก้าดอย 250 กรัม', price: 420, quantity: 2 },
+    ],
+  },
+  {
+    id: 'o-demo-4', storeId: 'store-sawatdee', method: 'promptpay',
+    status: 'paid', paymentStatus: 'awaiting_transfer', days: 6,
+    items: [
+      { productId: 'p-khanom-thai', name: 'ขนมไทยชุดรับเยี่ยม 6 ชนิด', price: 380, quantity: 2 },
+    ],
+  },
+  {
+    id: 'o-demo-5', storeId: 'store-langdoi', method: 'promptpay',
+    status: 'pending_payment', paymentStatus: 'awaiting_transfer', days: 2,
+    items: [
+      { productId: 'p-cold-brew', name: 'กาแฟสกัดเย็น 250 มล. (ขวดแก้ว)', price: 120, quantity: 6 },
+    ],
+  },
+  {
+    id: 'o-demo-6', storeId: 'store-tanwa', method: 'promptpay',
+    status: 'cancelled', paymentStatus: 'awaiting_transfer', days: 1,
+    skipPayment: true,
+    items: [
+      { productId: 'p-palm-sugar', name: 'น้ำตาลปี๊บธรรมชาติ 1 กก.', price: 150, quantity: 2 },
+    ],
+  },
+];
+
+// ------------------------------------------------------------------ //
 // Auth + Firestore helpers
 // ------------------------------------------------------------------ //
 async function getToken(tokens) {
@@ -437,6 +491,52 @@ async function ensureAuthUser(token, user) {
     });
   }
 
+  // ออเดอร์ตัวอย่างของบัญชี demo customer — หลากหลายสถานะเพื่อสาธิตหน้า
+  // ประวัติ/ไทม์ไลน์ และปุ่มผู้ขาย (มี sellerNorth เป็นเจ้าของ store-singthai
+  // และ store-langdoi จึงเดินสถานะออเดอร์เหล่านั้นได้)
+  console.log('\n2.5) demo orders for the demo customer');
+  const storeNames = Object.fromEntries(STORES.map((s) => [s.id, s.name]));
+  let ordersCount = 0;
+  let paymentsCount = 0;
+  for (const o of ORDERS) {
+    const subtotal = o.items.reduce((s, i) => s + i.price * i.quantity, 0);
+    const shipping = subtotal >= 1000 ? 0 : 50;
+    const total = subtotal + shipping;
+    add('orders', o.id, {
+      buyerUid: uids['customer'],
+      buyerName: 'ณัฐวุฒิ วัฒนกิจ',
+      storeId: o.storeId,
+      storeName: storeNames[o.storeId],
+      items: o.items.map((i) => ({ ...i })),
+      subtotal: subtotal,
+      shippingFee: shipping,
+      total: total,
+      status: o.status,
+      paymentMethod: o.method,
+      paymentStatus: o.paymentStatus,
+      shippingAddress: { full: '99/1 ถนนราชดำริ แขวงลุมพินี เขตปทุมวัน กรุงเทพมหานคร 10330' },
+      note: null,
+      createdAt: daysAgo(o.days),
+      ...(o.shippedAt ? { shippedAt: o.shippedAt, trackingNumber: o.tracking } : {}),
+    });
+    ordersCount += 1;
+
+    if (o.method !== 'cash_on_delivery' && !o.skipPayment) {
+      add('payments', 'pay-' + o.id, {
+        orderId: o.id,
+        buyerUid: uids['customer'],
+        method: o.method,
+        amount: total,
+        status: o.paymentStatus,
+        createdAt: daysAgo(o.days),
+        ...(o.paymentStatus === 'verified'
+          ? { verifiedAt: daysAgo(Math.max(1, o.days - 1)) }
+          : {}),
+      });
+      paymentsCount += 1;
+    }
+  }
+
   console.log('3) batchWrite ' + writes.length + ' documents');
   const res = await api(docsBase + ':batchWrite', token, {
     method: 'POST',
@@ -454,6 +554,8 @@ async function ensureAuthUser(token, user) {
   console.log('  stores              ' + STORES.length);
   console.log('  products            ' + PRODUCTS.length);
   console.log('  product_variants    ' + VARIANTS.length);
+  console.log('  orders              ' + ordersCount);
+  console.log('  payments            ' + paymentsCount);
   console.log('\ndemo accounts (password: ' + DEMO_PASSWORD + ')');
   for (const u of USERS) {
     console.log('  ' + u.roles.join('+').padEnd(16) + u.email);

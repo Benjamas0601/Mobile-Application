@@ -77,12 +77,18 @@ class HomeScreen extends ConsumerWidget {
               ),
             )
           // Sign-out only makes sense when there is a session to end.
-          else
+          else ...<Widget>[
+            IconButton(
+              tooltip: AppStrings.navOrders,
+              icon: const Icon(Icons.receipt_long_outlined),
+              onPressed: () => context.push(AppRoutes.orders),
+            ),
             IconButton(
               tooltip: AppStrings.logout,
               icon: const Icon(Icons.logout_rounded),
               onPressed: () => ref.read(authRepositoryProvider).signOut(),
             ),
+          ],
         ],
       ),
       body: RefreshIndicator(

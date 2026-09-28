@@ -6,7 +6,10 @@ import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/cart/screens/cart_screen.dart';
 import '../../features/cart/screens/checkout_screen.dart';
+import '../../features/cart/screens/payment_screen.dart';
 import '../../features/home/screens/home_screen.dart';
+import '../../features/orders/screens/order_detail_screen.dart';
+import '../../features/orders/screens/order_list_screen.dart';
 import '../../features/products/screens/product_detail_screen.dart';
 import '../../features/stores/screens/stores_screen.dart';
 import '../../providers/auth_provider.dart';
@@ -27,10 +30,14 @@ class AppRoutes {
   static const String ordersHistory = '/order-history';
   static const String cart = '/cart';
   static const String checkout = '/checkout';
+  static const String payment = '/checkout/payment';
   static const String profile = '/profile';
 
   /// Takes the product id as a path parameter: `/product/p-silk-scarf-red`.
   static String productDetail(String productId) => '/product/$productId';
+
+  /// Takes the order id: `/order/abc123`.
+  static String orderDetail(String orderId) => '/order/$orderId';
 }
 
 /// Decides whether the current location is allowed, returning a replacement
@@ -109,10 +116,32 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
         builder: (BuildContext context, GoRouterState state) =>
             const CheckoutScreen(),
       ),
+      // Step two of checkout. Reads what it needs from providers, so the URL
+      // stays a plain path and a reload mid-flow loses nothing.
+      GoRoute(
+        path: AppRoutes.payment,
+        builder: (BuildContext context, GoRouterState state) =>
+            const PaymentScreen(),
+      ),
       GoRoute(
         path: AppRoutes.stores,
         builder: (BuildContext context, GoRouterState state) =>
             const StoresScreen(),
+      ),
+      // Account-bound, and guarded: orders name a person. `/checkout` stays
+      // unguarded because it renders its own gate.
+      GoRoute(
+        path: AppRoutes.orders,
+        builder: (BuildContext context, GoRouterState state) =>
+            const OrderListScreen(),
+      ),
+      // Deep link from the payment confirmation, so the buyer lands on the
+      // order they just made rather than a list they have to search.
+      GoRoute(
+        path: '/order/:orderId',
+        builder: (BuildContext context, GoRouterState state) => OrderDetailScreen(
+          orderId: state.pathParameters['orderId'] ?? '',
+        ),
       ),
     ],
   );

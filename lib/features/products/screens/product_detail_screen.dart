@@ -373,18 +373,66 @@ class ProductDetailScreen extends ConsumerWidget {
   }
 
   void _addToCart(BuildContext context, WidgetRef ref, ProductModel product) {
-    ref.read(cartProvider.notifier).add(product);
+    final CartAddResult result = ref.read(cartProvider.notifier).add(product);
     final int count = ref.read(cartCountProvider);
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('${AppStrings.addedToCart} ($count)'),
-          action: SnackBarAction(
-            label: AppStrings.cart,
-            onPressed: () => context.push(AppRoutes.cart),
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context)
+      ..clearSnackBars();
+
+    switch (result) {
+      case CartAddResult.added:
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('${AppStrings.addedToCart} ($count)'),
+            action: SnackBarAction(
+              label: AppStrings.cart,
+              onPressed: () => context.push(AppRoutes.cart),
+            ),
           ),
-        ),
-      );
+        );
+      case CartAddResult.differentStore:
+        // One order maps to one store, so this cannot be resolved by silently
+        // dropping the earlier line. Offer the two real options instead.
+        _showDifferentStoreDialog(context, ref);
+      case CartAddResult.atStockLimit:
+        messenger.showSnackBar(
+          SnackBar(content: Text(AppStrings.cartAtStockLimit)),
+        );
+      case CartAddResult.outOfStock:
+        messenger.showSnackBar(
+          const SnackBar(content: Text(AppStrings.outOfStock)),
+        );
+    }
+  }
+
+  Future<void> _showDifferentStoreDialog(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final bool? clear = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text(AppStrings.cartDifferentStoreTitle),
+        content: const Text(AppStrings.cartDifferentStoreHint),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text(AppStrings.keepBrowsing),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text(AppStrings.clearCartAndRetry),
+          ),
+        ],
+      ),
+    );
+
+    // `null` means the dialog was dismissed; `false` means keep browsing.
+    if (clear != true || !context.mounted) return;
+
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    ref.read(cartProvider.notifier).clear();
+    messenger.showSnackBar(
+      const SnackBar(content: Text(AppStrings.cartCleared)),
+    );
   }
 }

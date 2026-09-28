@@ -222,7 +222,15 @@ service cloud.firestore {
     match /orders/{orderId} {
 
       // ลูกค้าเห็นของตัวเอง / ผู้ขายเห็นเฉพาะร้านตัวเอง / แอดมินเห็นหมด
-      allow read: if isOrderParty(orderId);
+      //
+      // แยก `get` กับ `list`: เงื่อนไขแบบ `list` ต้องอ้างอิงได้เฉพาะ
+      // resource.data/request เพราะถ้าเข้า `get()`/`exists()` ข้าม collection
+      // Firestore จะปฏิเสธทั้ง query (ตัดสินทีละ doc ไม่ได้) — ผู้ขาย/แอดมิน
+      // เข้าถึงออเดอร์แบบทีละ doc ได้จาก `get` ส่วนการ list เป็นของลูกค้า
+      // (กรอง `buyerUid == request.auth.uid` ได้ที่ระดับ query)
+      allow get: if isOrderParty(orderId);
+      allow list: if isSignedIn()
+        && (resource.data.buyerUid == request.auth.uid || isAdmin());
 
       // ⚠️ ข้อจำกัดของ Rules: เขียนยอดรวมที่ขอมาเองได้
       //    การตรวจราคาจริงต้องทำใน Cloud Function (ตามเอกสารสถาปัตยกรรม)
