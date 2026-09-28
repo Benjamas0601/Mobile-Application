@@ -100,15 +100,59 @@
 | 11 | ผูกไฟล์ทั้งหมดใน `firebase.json` | เดิมมีแค่ส่วน `flutter` → เพิ่ม `firestore` + `storage` | ✅ |
 | 12 | เพิ่ม enum ที่ยังขาด | `PaymentMethod`, `MessageType`, `NotificationType` ใน `app_enums.dart` | ✅ |
 
-### ⏳ เหลือ 2 อย่างที่ทำผ่าน API ไม่ได้ (ต้องกดเองใน Browser)
+### 🌱 Seed ข้อมูลตั้งต้น (เสร็จ 28 ก.ย. 2569)
 
-| # | งาน | ทำไมทำแทนไม่ได้ | ลิงก์ |
-|---|---|---|---|
-| 1 | เปิด Auth provider **Email/Password** | Identity Toolkit config resource ยังไม่ถูกสร้าง และ API ไม่มีเมธอดสร้างได้ (`CONFIGURATION_NOT_FOUND` / `INVALID_PROVIDER_ID`) ต้องให้ Console เป็นผู้ initialize | https://console.firebase.google.com/project/thaiotop-587f1/authentication/providers |
-| 2 | **Get Started** Firebase Storage | ยังไม่มี default bucket — ต้องกด Get Started เพื่อสร้าง bucket | https://console.firebase.google.com/project/thaiotop-587f1/storage |
+ใส่ข้อมูลผ่าน Admin API (`tool/seed_firestore.js`) เพราะเขียนจากแอปตอนนี้ยังไม่มีโค้ด และ Admin API ให้สร้างบัญชี Auth ได้พร้อมกัน
 
-> ทั้งสองอย่างเป็นการกด 1 คลิก ใช้เวลารวมประมาณ 1–2 นาที
-> หลังจากนั้น deploy storage rules ได้ด้วย `firebase deploy --only storage`
+| Collection | จำนวน | หมายเหตุ |
+|---|---|---|
+| `users` | 5 | สร้าง Firebase Auth จริง ล็อกอินได้ทันที |
+| `categories` | 10 | หมวด OTOP ตามตารางในเอกสารออกแบบ |
+| `stores` | 4 | ชิงไทย / ลาดดอย / สวัสดี / ตำรับ — ครบ 3 ภาค |
+| `products` | 11 | มี `story{}` ครบทั้ง 4 ช่อง |
+| `product_variants` | 9 | แยกสต็อกตามสี/ขนาด |
+
+**บัญชีสาธิต** (รหัสผ่านเดียวกันทั้งหมด: `OtopDemo123`)
+
+| Email | Role | ใช้สาธิตอะไร |
+|---|---|---|
+| `seller.north@example.com` | customer + seller | ร้านชิงไทร + ลาดดอย (2 ร้าน) |
+| `seller.central@example.com` | customer + seller | ร้านสวัสดี |
+| `seller.south@example.com` | customer + seller | ร้านตำรับ |
+| `customer@example.com` | customer | ซื้อ/ตะกร้า/รีวิว |
+| `admin@example.com` | customer + admin | จัดการหมวด/คูปอง |
+
+> ⚠️ บัญชีเหล่านี้เป็นบัญชีสาธิต **ถ้าจะเอาโปรเจกต์ไปใช้จริงต้องลบทิ้งก่อน** โดยเฉพาะ `admin`
+
+### 🔐 ผลทดสอบ Security Rules ด้วยสิทธิ์ผู้ใช้จริง
+
+ทดสอบโดย `signInWithPassword` แล้วยิง Firestore ด้วย `idToken` ของผู้ใช้ (ไม่ใช่ Admin) — พิสูจน์ว่า Rules ทำงานจริง ไม่ใช่แค่ compile ผ่าน
+
+| การทดสอบ | ผล | ถูกตามที่ออกแบบ |
+|---|---|---|
+| ยังไม่ล็อกอิน → อ่าน `products` / `stores` / `categories` | อ่านได้ | ✅ |
+| ยังไม่ล็อกอิน → อ่าน `users` / `orders` / `cart_items` | ถูกบล็อก | ✅ |
+| ล็อกอิน → อ่านโปรไฟล์ตัวเอง และของผู้ขาย | อ่านได้ | ✅ |
+| ลูกค้าพยายามสร้างสินค้า | **403 ถูกบล็อก** | ✅ ปิด privilege escalation |
+| อ่านออเดอร์ของคนอื่น | ถูกบล็อก | ✅ |
+
+### 🖼️ เปลี่ยนเก็บรูปจาก Firebase Storage เป็น Cloudinary
+
+| เรื่อง | รายละเอียด |
+|---|---|
+| เหตุผล | Cloud Storage for Firebase ใช้ได้เฉพาะแผน **Blaze** → ต้องผูกบัตรเครดิต ผู้ใช้ไม่ต้องการ |
+| ทางเลือกที่เลือก | **Cloudinary free tier** — 25 GB / 25 GB ต่อเดือน / 25,000 transforms ไม่ต้องผูกบัตร |
+| สิ่งที่ยังใช้ Firebase | Auth + Firestore เหมือนเดิม เปลี่ยนเฉพาะส่วนเก็บรูป |
+| โค้ด | `ImageStorageService` (interface) + `CloudinaryImageService` — สลับผู้ให้บริการได้โดยแก้บรรทัดเดียว |
+| เก็บค่า credential | ผ่าน `--dart-define` ไม่ hardcode ใน source |
+| รูปแบบโฟลเดอร์ | ออกแบบตรงกับ `storage.rules` เดิม → ย้ายกลับ Firebase Storage ทีหลังได้โดยไม่ต้องแก้ฐานข้อมูล |
+| รูปใน seed | ใช้ `picsum.photos` เป็นรูปตัวอย่างชั่วคราว (เปลี่ยนเป็นรูปจริงตอนผู้ขายอัปโหลด) |
+
+### ⏳ เหลือ 1 อย่างที่ทำผ่าน API ไม่ได้
+
+| งาน | ทำไมทำแทนไม่ได้ | สถานะ |
+|---|---|---|
+| **Get Started** Firebase Storage | ยังไม่มี default bucket — ต้องกด Get Started เพื่อสร้าง bucket | ⏸️ ไม่จำเป็นแล้ว เพราะเปลี่ยนไปใช้ Cloudinary |
 
 ### ต่อไปในสัปดาห์นี้
 
@@ -155,3 +199,8 @@ week4(chat): แชทลูกค้า-ร้าน + ส่งรูป
 | 9 | 28 ก.ย. | `app_enums.dart` | จังหวัดตัวอย่างภาคตะวันตกซ้ำกับภาคตะวันออก (`ระยอง`) | คัดลอกรายชื่อจังหวัดผิดภาค | เปลี่ยนเป็น `กาญจนบุรี ราชบุรี เพชรบุรี` | ✅ แก้แล้ว |
 | 10 | 28 ก.ย. | `firestore.rules` (ร่างแรก) | helper function เรียกข้าม `match` block ไม่ได้ และใช้ `get(...)` ผิดรูป | เขียน function ไว้ใน scope ของ collection | ย้าย helper ทั้งหมดขึ้นระดับ `documents` และใช้ `get(/databases/$(database)/documents/...)` | ✅ แก้แล้ว |
 | 11 | 28 ก.ย. | Firebase CLI | `firestore:databases:create` บอก `missing required argument 'database'` | ต้องระบุ database id และค่า `(default)` ถูก cmd.exe กินวงเล็บ | เรียก Firestore Admin REST API โดยส่ง `?databaseId=(default)` จาก Node | ✅ แก้แล้ว |
+| 12 | 28 ก.ย. | Identity Toolkit | เปิด Email/Password ผ่าน API ไม่ได้ | `CONFIGURATION_NOT_FOUND` — config resource ต้องให้ Console เป็นผู้ initialize | ผู้ใช้เปิดเองใน Console แล้วตรวจยืนยัน `email enabled=true` | ✅ แก้แล้ว |
+| 13 | 28 ก.ย. | Cloudinary SDK | `depend_on_referenced_packages` — import `cross_file` แต่ไม่ได้ประกาศใน pubspec | `image_picker` มีแต่ re-export ตัว package ให้เรียกใช้โดยตรง | เพิ่ม `cross_file` ใน `dependencies` | ✅ แก้แล้ว |
+| 14 | 28 ก.ย. | `tool/seed_firestore.js` | `Document name ".../documents/users/xxx" lacks "projects" at index 0` | ใส่ document name เป็น URL เต็ม | เปลี่ยนเป็น relative path `projects/{p}/databases/(default)/documents/...` | ✅ แก้แล้ว |
+| 15 | 28 ก.ย. | `tool/seed_firestore.js` | `setPassword failed (404)` | Identity Toolkit v1 ไม่มีเมธอดนี้ | เปลี่ยนเป็น `accounts:update` และให้ล้มเหลวได้โดยไม่ทำให้ seed พัง | ✅ แก้แล้ว |
+| 16 | 28 ก.ย. | สคริปต์ทดสอบ Rules | `products` ตอบ `INVALID_ARGUMENT` ทั้งที่ Rules อนุญาต | ต่อ `?pageSize=100` ทับ query string ที่มีอยู่แล้ว → ได้ `?` สองตัว | ตรวจ `includes('?')` ก่อนต่อพารามิเตอร์ | ✅ แก้แล้ว |
