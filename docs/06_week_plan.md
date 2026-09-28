@@ -11,7 +11,7 @@
 | สัปดาห์ | ส่ง | สถานะ |
 |---|---|---|
 | Week 2 | 30 ก.ย. 2569 | ✅ **เสร็จ** |
-| Week 3 | 7 ต.ค. 2569 | 🔄 **กำลังทำ** |
+| Week 3 | 7 ต.ค. 2569 | 🔄 **กำลังทำ** (เสร็จ 6/9 ของรายการ — เหลือ Product CRUD) |
 | Week 4 | 14 ต.ค. 2569 | ⏳ |
 | Week 5 | 21 ต.ค. 2569 | ⏳ |
 | Week 6 | 4 พ.ย. 2569 | ⏳ |
@@ -165,19 +165,97 @@
 
 ---
 
+## 🔄 Vertical Slice + Guest Flow (เสร็จ 28 ก.ย. 2569)
+
+ต่อ Firebase จริงให้เป็น flow เดียวที่เดินได้ครบตั้งแต่เปิดแอปจนถึงกดสั่งซื้อ
+โดยคิดจากคนใช้จริงว่า **คนที่ยังไม่มีบัญชีต้องดูของได้ก่อน** — ไม่บังคับ login ตอนเปิดแอป
+
+### ขอบเขตที่ทำเสร็จ
+
+| # | งาน | ผล | สถานะ |
+|---|---|---|---|
+| 1 | Models ทั้งหมด | `category/product/store/user_model.dart` + `firestore_codec.dart` ช่วย decode | ✅ |
+| 2 | Repositories | `catalog_repository.dart` (public read), `auth_repository.dart` (login/register/logout) | ✅ |
+| 3 | Providers (Riverpod แบบไม่ใช้ code gen) | `catalog_provider.dart`, `auth_provider.dart`, `cart_provider.dart` | ✅ |
+| 4 | Home อ่านข้อมูลจริง | หมวดหมู่ 10 หมวด · สินค้า 11 ชิ้น · เลือกภาค | ✅ |
+| 5 | Product Story / detail | อ่าน store + variant + story ครบ 4 ช่อง | ✅ |
+| 6 | Register | เขียน `users/{uid}` profile หลังสมัครสำเร็จ | ✅ |
+| 7 | Local guest cart | เพิ่ม/ลด/ลบ/ล้าง + clamp ไม่เกินสต็อก + ค่าส่ง ฿50 / ฟรีเมื่อครบ ฿500 | ✅ |
+| 8 | Checkout auth gate | 3 ปุ่ม: เข้าสู่ระบบ · สมัครสมาชิก · กลับไปเลือกสินค้า | ✅ |
+| 9 | Redirect กลับมา flow เดิม | Login/Register รับ `?redirect=` แล้วกลับ `/checkout` ไม่ใช่ Home | ✅ |
+| 10 | Guest search | ค้นหาใน Home debounce 350 ms คง category/region เดิม | ✅ |
+| 11 | Stores directory | ดูร้านทั้ง 4 ร้าน (ตัวเอง) ได้โดยไม่ login | ✅ |
+| 12 | Error/Empty/Skeleton views | `widgets/state_views.dart` — เครื่องมือพร้อม แต่ยังไม่ครบทุกหน้า | ⚠️ |
+| 13 | iOS deployment target | 13.0 → 15.0 + photo/camera permission | ✅ |
+
+### เหตุผลที่ออกแบบเป็น guest-first
+
+โจทย์คือ marketplace ของ OTOP คนส่วนใหญ่เข้ามาเพื่อ "ดูของ" ก่อน
+ถ้าบังคับ login ตอนเปิดแอป conversion จะตกทันที จึงแยกเป็น:
+
+- **อ่านอย่างเดียว** (หมวด/ภาค/ร้าน/สินค้า/ค้นหา) → ไม่ต้องมีบัญชี
+- **มีสินค้าในมือ** (ตะกร้า) → local state ไม่ต้องมีบัญชี ผู้ใช้เริ่มได้ทันที
+- **ต้องมีบัญชีตอนซื้อเท่านั้น** → gate ที่ checkout ไม่ใช่ตอนเข้าแอป
+
+ข้อดีที่ได้: ไม่ต้องเขียน `cart_items` ใน Firestore เลยตอนนี้ และ Firestore Rules
+ที่เปิด public read อยู่แล้วรองรับ flow นี้พอดีโดยไม่ต้องแก้
+
+### ✅ หลักฐานว่ารันได้จริง (28 ก.ย. 2569)
+
+| คำสั่ง / การทดสอบ | ผลลัพธ์ |
+|---|---|
+| `flutter analyze --no-pub` | `No issues found!` |
+| `flutter test --no-pub` | **42/42 ผ่าน** (5 ไฟล์) |
+| `flutter build apk --debug` | สำเร็จ → `app-debug.apk` |
+| เปิดบน Android emulator | Guest เข้า Home เห็นหมวด/ภาค/search/ปุ่ม "เข้าสู่ระบบ" |
+| เพิ่มลงตะกร้า | Snackbar `เพิ่มลงตะกร้าแล้ว (1)` |
+| Cart | สินค้า ฿480 + ค่าส่ง ฿50 = **฿530** |
+| กดสั่งซื้อ | เจอ gate ครบ 3 ปุ่ม |
+| Logcat | ไม่มี `E/flutter` / `FATAL EXCEPTION` |
+
+### ✅ Test (ทำเกินแผน — แผนวางไว้ Week 5)
+
+| ไฟล์ | เคส | ครอบคลุม |
+|---|---|---|
+| `test/app_router_test.dart` | 12 | guest เข้าได้ทุกหน้า · orders/profile ถูกกัน · redirect กลับ |
+| `test/cart_test.dart` | 12 | เพิ่ม/ลด/ลบ/ล้าง · clamp สต็อก · ยอด · ค่าส่ง |
+| `test/checkout_gate_test.dart` | 5 | gate ครบ 3 ปุ่ม · ไม่ redirect หนีตอนยังไม่ login |
+| `test/product_filter_test.dart` | 9 | category/region/search + จำนวนผลลัพธ์ |
+| `test/home_search_test.dart` | 4 | debounce 350 ms · ล้างคำค้น · หัวข้อ "ผลการค้นหา" |
+
+### ⏳ เหลือใน Week 3
+
+1. **Product CRUD ฝั่งผู้ขาย** — เพิ่ม/แก้/ลบสินค้า + variant + สต็อก + อัปโหลดหลายรูป
+   (ยังไม่เริ่ม · เป็นงานใหญ่สุดที่เหลือ · ต่อ `CloudinaryImageService` ที่เขียนเตรียมไว้แล้ว)
+2. **อัปโหลดรูปจริง** — รอผู้ใช้ตั้ง `CLOUDINARY_CLOUD_NAME` + `CLOUDINARY_UPLOAD_PRESET`
+   (ตอนนี้ seed ใช้ `picsum.photos` เป็นรูปตัวอย่าง)
+3. **Error/Empty state ครบทุกหน้า** — มี `state_views.dart` แล้ว แต่ยังไม่ได้ไปเรียกใช้ครบ
+
+### ⏳ ต้องทำนอกเครื่องนี้
+
+| งาน | ทำไมทำตอนนี้ไม่ได้ |
+|---|---|
+| build/run จริงบน iOS | เครื่องเป็น Windows ไม่มี Xcode · ต้อง `pod install` ครั้งแรก (ยังไม่มี `ios/Podfile`) |
+
+---
+
 ## 📌 วิธีอัปเดตสถานะทุกสัปดาห์
 
 ทุกสัปดาห์ต้องเพิ่มหัวข้อลงล่างในไฟล์นี้ และ commit ด้วยข้อความรูปแบบ:
 
 ```
-week3(auth): เชื่อม Firebase Auth + เขียน Security Rules
-week3(products): CRUD สินค้า + variant + อัปโหลดรูป
-week4(chat): แชทลูกค้า-ร้าน + ส่งรูป
-...
+feat(week3): <สิ่งที่ทำในสัปดาห์นั้น>
+fix(week3): <บั๊กที่เจอ>
+docs(week3): <เอกสาร>
 ```
 
 **เกณฑ์วัดว่า process แข็งแรง:** commit สม่ำเสมอทุกวัน/สัปดาห์
 ไม่ใช่ 1 commit ใหญ่ตอนใกล้ส่ง · มี bug log ที่แก้จริง · มี commit ที่ย้อนกลับได้
+
+> ⚠️ **ความผิดพลาดในการติดตาม process** — commit `ec90123` ตั้งชื่อว่า
+> `feat(week4)` แต่งานในนั้นเป็นขอบเขตของ **Week 3** (Week 4 ตามแผนคือระบบแชท)
+> เนื่องจาก push ไปแล้วจึงไม่แก้ประวัติซ้ำ แต่บันทึกไว้ตรงนี้เพื่อให้ตรวจสอบย้อนหลังได้
+> และเป็นตัวอย่างว่าต้องอ่าน `06_week_plan.md` ก่อนตั้งชื่อ commit ทุกครั้ง
 
 ---
 
@@ -204,3 +282,15 @@ week4(chat): แชทลูกค้า-ร้าน + ส่งรูป
 | 14 | 28 ก.ย. | `tool/seed_firestore.js` | `Document name ".../documents/users/xxx" lacks "projects" at index 0` | ใส่ document name เป็น URL เต็ม | เปลี่ยนเป็น relative path `projects/{p}/databases/(default)/documents/...` | ✅ แก้แล้ว |
 | 15 | 28 ก.ย. | `tool/seed_firestore.js` | `setPassword failed (404)` | Identity Toolkit v1 ไม่มีเมธอดนี้ | เปลี่ยนเป็น `accounts:update` และให้ล้มเหลวได้โดยไม่ทำให้ seed พัง | ✅ แก้แล้ว |
 | 16 | 28 ก.ย. | สคริปต์ทดสอบ Rules | `products` ตอบ `INVALID_ARGUMENT` ทั้งที่ Rules อนุญาต | ต่อ `?pageSize=100` ทับ query string ที่มีอยู่แล้ว → ได้ `?` สองตัว | ตรวจ `includes('?')` ก่อนต่อพารามิเตอร์ | ✅ แก้แล้ว |
+| 17 | 28 ก.ย. | `catalog_repository.dart` | หมวดหมู้บน Home ว่างทั้ง 10 หมวด (แต่ Firestore มีข้อมูลจริง) | query `where('active', == true).orderBy('sortOrder')` ต้องใช้ **composite index ของ `categories`** — ใน `firestore.indexes.json` มี 10 index แต่ไม่มีของ `categories` เลย → Firestore ตอบ `FAILED_PRECONDITION` แล้ว provider fallback เป็นรายการว่าง | เปลี่ยนเป็น `orderBy('sortOrder')` แล้วกรอง `active` ฝั่ง Dart (หมวดมีแค่ ~10 รายการ อ่านทั้งหมดแล้วค่อยกรองไม่แพง) | ✅ แก้แล้ว · ยืนยันบน emulator เห็นครบ |
+| 18 | 28 ก.ย. | `app_router.dart` | กด "สั่งซื้อ" แล้วถูกดันไปหน้า Login ทันที ทั้งที่ออกแบบให้เห็น gate 3 ปุ่ม | `/checkout` อยู่ในชุด `accountRequired` ซึ่ง redirect ตอน build ตาม auth stream — พอ auth ยังไม่ resolve ก็เด้งออกก่อน gate มีโอกาสแสดง | ย้าย `/checkout` ออกจาก `accountRequired` เหลือเฉพาะ orders / order-history / profile แล้วให้ gate จัดการเอง | ✅ แก้แล้ว · มี test `checkout_gate_test.dart` กันซ้ำ |
+| 19 | 28 ก.ย. | `checkout_screen.dart` | `Looking up a deactivated widget's ancestor is unsafe` ตอนกดสั่งซื้อ | เรียก `ScaffoldMessenger.of(context)` **หลัง** `context.go()` — widget ถูกถอดออกจาก tree ไปแล้วจึงหา ancestor ไม่เจอ | เก็บ `ScaffoldMessengerState` ไว้ก่อน แล้วค่อย navigate | ✅ แก้แล้ว |
+| 20 | 28 ก.ย. | `product_detail_screen.dart` | `ref` ไม่อยู่ใน scope ของ `_bottomBar()` / `_addToCart()` | ปุ่มอยู่ใน build method ที่ไม่ใช่ `ConsumerWidget` จึงไม่มี `WidgetRef` ให้ใช้ | ส่ง `WidgetRef` เข้าไปเป็น parameter ของทั้งสองเมธอด | ✅ แก้แล้ว |
+| 21 | 28 ก.ย. | Android emulator | เปิด AVD ไม่ได้ `skin path not found` | `skin` ใน `config.ini` ชี้ path ที่ไม่มีอยู่จริง | เปลี่ยนเป็น path ที่มีจริงใน SDK | ✅ แก้แล้ว |
+| 22 | 28 ก.ย. | `ios/Runner.xcodeproj` | iOS จะ build ไม่ผ่าน | `IPHONEOS_DEPLOYMENT_TARGET = 13.0` ต่ำกว่าที่ Firebase Apple SDK ต้อง (15.0) | ยกเป็น 15.0 ทั้ง 3 จุด + เพิ่ม `NSPhotoLibrary` / `NSCamera` usage description | ✅ แก้แล้ว · ยังต้อง build บน Mac เพื่อพิสูจน์ |
+
+> หมายเหตุ bug #17 เคยถูกวินิจฉัยผิดตอนแรกว่า "seed ไม่มี field `active`"
+> ตรวจซ้ำแล้วพบว่า seed **มี** `active: true` อยู่แล้ว (`tool/seed_firestore.js:381`)
+> สาเหตุจริงคือ composite index ที่ยังไม่ได้สร้าง — บันทึกไว้เพื่อกันไม่ให้
+> ใครเข้าใจผิดตามต่อไป
+
