@@ -136,23 +136,49 @@
 | ลูกค้าพยายามสร้างสินค้า | **403 ถูกบล็อก** | ✅ ปิด privilege escalation |
 | อ่านออเดอร์ของคนอื่น | ถูกบล็อก | ✅ |
 
-### 🖼️ เปลี่ยนเก็บรูปจาก Firebase Storage เป็น Cloudinary
+### 🖼️ เก็บรูปด้วย Cloudinary (Firebase Storage ใช้ไม่ได้โดยไม่ผูกบัตร)
 
 | เรื่อง | รายละเอียด |
 |---|---|
-| เหตุผล | Cloud Storage for Firebase ใช้ได้เฉพาะแผน **Blaze** → ต้องผูกบัตรเครดิต ผู้ใช้ไม่ต้องการ |
-| ทางเลือกที่เลือก | **Cloudinary free tier** — 25 GB / 25 GB ต่อเดือน / 25,000 transforms ไม่ต้องผูกบัตร |
+| เหตุผล | Cloud Storage for Firebase บังคับให้โปรเจกต์อยู่บนแผน **Blaze** ตั้งแต่ 3 ก.พ. 2569 → ต้องผูกบัตรเครดิต ซึ่งไม่ใช่ข้อกำหนดของโปรเจกต์นี้ (อ้างอิง: `firebase.google.com/docs/storage/faqs-storage-changes-announced-sept-2024`) |
+| ทางเลือกที่เลือก | **Cloudinary free** — 25 credits/เดือน ไม่มีวันหมดอายุ ใช้ production ได้ตามโควตา และ**ไม่ต้องผูกบัตร** (ยืนยันจาก `cloudinary.com/documentation/billing_and_plans`) |
+| ทางเลือกที่ตก | Supabase Storage free (1 GB, ไม่ต้องบัตร) — ตกเพราะต้องสมัครบัญชีใหม่ และโปรเจกต์ฟรีถูก pause ถ้าไม่มี activity 7 วัน รูปจะ 404 ตอนเดโม |
 | สิ่งที่ยังใช้ Firebase | Auth + Firestore เหมือนเดิม เปลี่ยนเฉพาะส่วนเก็บรูป |
 | โค้ด | `ImageStorageService` (interface) + `CloudinaryImageService` — สลับผู้ให้บริการได้โดยแก้บรรทัดเดียว |
-| เก็บค่า credential | ผ่าน `--dart-define` ไม่ hardcode ใน source |
-| รูปแบบโฟลเดอร์ | ออกแบบตรงกับ `storage.rules` เดิม → ย้ายกลับ Firebase Storage ทีหลังได้โดยไม่ต้องแก้ฐานข้อมูล |
+| เก็บค่า credential | `defaultValue` ใน `cloudinary_config.dart` (ทั้งสองค่าเป็น public โดยธรรมชาติ) + override ด้วย `--dart-define` |
+| รูปแบบโฟลเดอร์ | ตรงกับ `storage.rules` เดิม → ถ้าวันไหนย้ายกลับ Firebase Storage จึงไม่ต้องแก้ฐานข้อมูล (`storage.rules` ยังอยู่ในโปรเจกต์ แต่ **ยังไม่ deploy** และ deploy ไม่ได้จนกว่าจะขึ้นแผน Blaze) |
 | รูปใน seed | ใช้ `picsum.photos` เป็นรูปตัวอย่างชั่วคราว (เปลี่ยนเป็นรูปจริงตอนผู้ขายอัปโหลด) |
 
-### ⏳ เหลือ 1 อย่างที่ทำผ่าน API ไม่ได้
+> **หมายเหตุ:** `firebase.json` ยังอ้าง `storage.rules` อยู่ ถ้าสั่ง `firebase deploy` แบบไม่ระบุเป้าหมาย
+> มันจะพยายาม deploy storage rules และ**ล้มเหลว** (เพราะยังไม่มี bucket) ให้ใช้
+> `firebase deploy --only firestore` เสมอ
 
-| งาน | ทำไมทำแทนไม่ได้ | สถานะ |
-|---|---|---|
-| **Get Started** Firebase Storage | ยังไม่มี default bucket — ต้องกด Get Started เพื่อสร้าง bucket | ⏸️ ไม่จำเป็นแล้ว เพราะเปลี่ยนไปใช้ Cloudinary |
+### ✅ คืน Cloudinary + harden path (29 ก.ย. 2569)
+
+| งาน | รายละเอียด |
+|---|---|
+| เปลี่ยนกลับจาก Firebase Storage | ลองต่อ `firebase_storage` แล้วค้าง เพราะโปรเจกต์อยู่บน Spark และ **default bucket ไม่เคยถูกสร้าง** — ยืนยันจากการอัปโหลดจริงบนเครื่องที่ได้ `object-not-found` ทุก path (รวม path ที่ rules อนุญาต) จึงเป็นปัญหา bucket ไม่ใช่กฎ |
+| เก็บงานที่ดีจากรอบนั้น | `ImageUploadPolicy.sanitizeFolder()` — กัน `..` ใน path (ตัว Cloudinary เดิมไม่ได้กัน) |
+| เก็บ guard ที่แก้ไว้ | เช็ค `_cloudName`/`_uploadPreset` ของ instance ตัวเอง แทนที่จะเช็ค config global |
+
+### ✅ Cloudinary credential + smoke test (29 ก.ย. 2569)
+
+| ค่า | ผลการตรวจ |
+|---|---|
+| `CLOUDINARY_CLOUD_NAME` | `zqaixbny` — ยืนยันด้วย `GET /v1_1/zqaixbny/image/upload` ได้ *"Upload preset must be specified"* (คนละ error กับ cloud ปลอมที่ตอบ *"Unknown API key"*) |
+| `CLOUDINARY_UPLOAD_PRESET` | `otop_shop` — POST แล้วได้ *"Missing required parameter - file"* → preset มีจริงและเปิด **Unsigned** แล้ว |
+| Upload จริง | สำเร็จ — `secure_url` + `public_id` ตรงรูปแบบที่ `UploadedImage` คาด |
+| Delivery URL | `HTTP 200 image/jpeg` |
+| Transform ตาม `buildUrl()` | `c_fill,g_auto,w_300,h_200,q_auto,f_auto` → `HTTP 200` |
+
+**ฝัง default ลง source แล้ว (29 ก.ย. 2569)** — เดิมส่งค่าเข้ามาตอน build ด้วย
+`--dart-define` ทำให้ build ที่ลืม flag ออกมาเป็นแอปที่ปุ่มอัปโหลดกดแล้วไม่ทำอะไร
+และไม่มีทางบอกว่าขาดอะไร จึงย้ายไป `defaultValue` ใน
+`lib/core/config/cloudinary_config.dart` (สองค่านี้ไม่ใช่ความลับ · เหตุผลเต็มอยู่ใน `docs/07_cloudinary_setup.md`)
+ยัง override ด้วย `--dart-define` ได้ถ้าจะชี้ cloud อื่น
+วิธีหาค่า + วิธีเช็คว่าค่าถูกเขียนไว้ที่ `docs/07_cloudinary_setup.md`
+
+> ✅ รูป smoke test ลบออกจาก Media Library แล้ว (29 ก.ย. 2569) — delivery ตอบ `404`
 
 ### ต่อไปในสัปดาห์นี้
 
@@ -329,18 +355,19 @@ docs(week3): <เอกสาร>
 
 | ไฟล์ | เคส | ครอบคลุม |
 |---|---|---|
-| `test/payment_and_order_test.dart` | 14 | 3 วิธีชำระ+ยอดรวม · แจ้งไม่ต่อ gateway · COD ซ่อน QR · ไร้ draft ถูกรอ · สั่งสำเร็จล้างตะกร้า · เขียนพลาดเก็บ cart+draft+แสดงข้อความ · ตะกร้าว่าง/ที่อยู่เปล่าไม่แตะ repo · timeline/ยกเลิก · ลูกค้า vs ผู้ขาย control · advance เขียน 1 สเต็ป · ปุ่ม "กลับไปรายการคำสั่งซื้อ" |
+| `test/payment_and_order_test.dart` | 17 | 3 วิธีชำระ+ยอดรวม · แจ้งไม่ต่อ gateway · COD ซ่อน QR · ไร้ draft ถูกรอ · สั่งสำเร็จล้างตะกร้า · เขียนพลาดเก็บ cart+draft+แสดงข้อความ · ตะกร้าว่าง/ที่อยู่เปล่าไม่แตะ repo · timeline/ยกเลิก · ลูกค้า vs ผู้ขาย control · advance เขียน 1 สเต็ป · ปุ่ม "กลับไปรายการคำสั่งซื้อ" · ไม่ตั้งค่า → บอกตรง ๆ / ตั้งค่าแล้ว → ไม่โชว์คำเตือน · inbox ผู้ขายอ่านด้วย storeId · เลขพัสดุถึง repository |
 | `test/order_model_test.dart` | 14 | state machine `allowedNext` · happy path 4 สเต็ป · terminal · fromFirestore + doc เก่า · timeline ย่อเมื่อยกเลิก · item snapshot ครบ |
-| `test/image_storage_test.dart` | 9 | ต่อ Cloudinary จริง + override fake ได้ · ไม่ตั้งค่า → `ImageUploadException` พร้อมชื่อ flag · folder path ตรง Firestore · extension case-insensitive |
+| `test/image_storage_test.dart` | 15 | ต่อ Cloudinary จริง + override fake ได้ · config ค่า default ตั้งแล้วเป็น configured · ปิดทั้งค่า → `ImageUploadException` พร้อมบอก flag · folder path ตรง Firestore · `..` ถูกตัด · extension case-insensitive |
 | `test/cart_test.dart` | 18 | + single-store: ปฏิเสธต่างร้าน · ล้างแล้วเพิ่มร้านใหม่ · outOfStock/atStockLimit · parity `getShippingFee` |
 | `integration_test/login_and_purchase_flow_test.dart` | 1 | E2E: login → ประวัติ seeded → timeline → ซื้อจริง → ออเดอร์ใหม่ในประวัติ |
 
-### ⚠️ ข้อจำกัดที่เหลือ
+### ⚠️ ข้อจำกัดที่เหลือ (แก้ไข 29 ก.ย. 2569)
 
-1. **เงินยังเป็น mock** — สลิปพร้อมเพย์จริงต้อง Cloudinary creds (`CLOUDINARY_CLOUD_NAME` + `CLOUDINARY_UPLOAD_PRESET`) → รอผู้ใช้ตั้งค่า
-2. **ผู้ขายเดินสถานะยังไม่พิสูจน์แบบ E2E** — ครอบด้วย unit/widget test + rules ตรวจซ้ำ (payments update ผ่าน `isOrderSeller`)
-3. **Product CRUD ฝั่งผู้ขาย** ยังไม่เริ่ม (งานใหญ่สุดที่เหลือจาก Week 3)
-4. ออเดอร์ที่ E2E สร้าง (pending ฿1,290) ถูกทิ้งไว้ใน Firestore จริง — seed ไม่ตัดลบออเดอร์พิเศษ ถ้าต้องการข้อมูลสะอาดให้ลบ doc พวกนี้เอง
+1. ~~**เงินยังเป็น mock** — รอ Cloudinary creds~~ → **✅ creds พร้อม ฝัง default แล้ว และอัปโหลดจริงผ่านจาก emulator** (ดูหัวข้อ Cloudinary ด้านบน) · เงินยังเป็น mock เพราะยังไม่ต่อ gateway จริง ซึ่งเป็น scope ที่โจทย์อนุญาต
+2. **ผู้ขายเดินสถานะยังไม่พิสูจน์แบบ E2E** — ครอบด้วย unit/widget test แล้ว แต่ยังไม่ได้เดินบน emulator → งานถัดไป
+3. **Seller Product CRUD** → **✅ เสร็จ** พร้อม E2E `create → edit price → delete` (ดูหัวข้อถัดไป)
+4. **ข้อมูลขยะใน Firestore จาก E2E** — 41 เอกสาร (orders 10 · products 11 · product_variants 11 · payments 9) เกินจากที่ seed สร้าง สังเกตได้จาก id ที่ไม่ใช่ `o-demo-*` / `p-*` / `pay-*` → ลบเองหรือรัน seed ใหม่
+5. ~~รูป smoke test บน Cloudinary~~ → **✅ ลบจาก Media Library แล้ว** (unsigned preset ลบไฟล์จริงไม่ได้ เพราะต้องมี API secret)
 
 ### 📋 Bug Log เพิ่ม
 
@@ -351,4 +378,92 @@ docs(week3): <เอกสาร>
 | 25 | 28 ก.ย. | Empty views | หน้าไร้ข้อมูลกดปุ่มแล้ว nothing happen | EmptyView บางจุดไม่มี `onAction` | ใส่ `onAction: () => context.go(...)` (home / orders) | ✅ แก้แล้ว |
 | 26 | 28 ก.ย. | `firestore.rules` `orders.read` | list ออเดอร์ตัวเองโดน `PERMISSION_DENIED` ทั้งที่ `get` ทีละ doc ผ่าน | read ใช้ `isOrderParty` ซึ่งเรียก `get()`/`exists()` ไปเอกสารอื่น → **list query ถูกปฏิเสธทั้ง query** | แยก `allow get` (ใช้ cross-doc ได้) กับ `allow list` (อ้างเฉพาะ `resource.data.buyerUid`) | ✅ แก้แล้ว · deploy + E2E ผ่าน |
 | 27 | 28 ก.ย. | `order_detail_screen.dart` | หลังสั่งซื้อ `context.go(orderDetail)` แล้วไม่มีทางกลับถึงประวัติ (ไม่มี back button) | detail เปิดเป็นหน้าเดียวใน stack → AppBar ไม่มี leading | เพิ่มปุ่มท้ายหน้า "กลับไปรายการคำสั่งซื้อ" — `canPop()` ? pop : `context.go(orders)` | ✅ แก้แล้ว · test + E2E ผ่าน |
+| 28 | 29 ก.ย. | `seller_store_edit_screen.dart` `_upload` | ปุ่มเดียวใช้ทั้ง cover และ logo → รูปโลโก้หายเมื่อกดขึ้น cover และโฟลเดอร์ถูกใช้ผิด | ฟังก์ชันเดียวเดาว่าจะอัปโหลดอะไรแทนที่จะรับเป้าหมายจากผู้เรียก | ส่ง `TextEditingController` เป้าหมายเข้าไป + แยก `folderForStoreLogo` ออกจาก cover | ✅ แก้แล้ว · test จับแล้ว |
+| 29 | 29 ก.ย. | `firestore.rules` `stores.update` | เจ้าของร้านแก้ฟิลด์ตัวเองแล้วถูกปฏิเสธ เพราะกฎเดิมอนุญาตทุกฟิลด์ → กลัวว่าจะเขียนทับซ้ำ | กฎเดิมก็อนุญาตการเขียน `ownerUid`/`ratingAvg`/`commissionRate` ซึ่งควรเป็นของระบบ | อนุญาตเฉพาะฟิลด์ที่คนแก้ได้ + ให้ `updatedAt` เสมอ | ✅ แก้แล้ว |
+| 30 | 29 ก.ย. | `seller_catalog_repository.dart` `updateStoreProfile` | กดลบโลโก้แล้วรูปเดิมยังอยู่ | เขียน `logoUrl` เฉพาะเมื่อมีค่า → ล้างค่าแล้วเป็น no-op | เขียน `logoUrl` เสมอ (ค่าว่าง = ลบ) | ✅ แก้แล้ว |
+| 31 | 29 ก.ย. | `_ShipTrackingSheet` | ปิด dialog แล้ว Riverpod รายงาน `used after being disposed` | controller ถูกสร้างใน method ของ parent แล้ว dispose ตาม route ที่ถูก pop ทิ้ง | ย้าย controller เข้า `StatefulWidget` ที่ dialog เพื่อให้ dispose พร้อมตัว dialog | ✅ แก้แล้ว · test จับแล้ว |
+| 32 | 29 ก.ย. | `test/seller_hub_test.dart` | เคสชื่อ "a cancelled order offers no step" แต่ fixture เป็น `completed` → ปกปิด regression ของสอง terminal state | เขียนชื่อเคสก่อนแก้ fixture | แยกเป็นสองเคส: `cancelled` กับ `completed` | ✅ แก้แล้ว |
+| 33 | 29 ก.ย. | `test/seller_hub_test.dart` store form | กด Save ไม่ได้ แม้ validation ผ่าน | Scroll view สูง 2000px ทำให้ Save button อยู่นอก viewport ของ test | เพิ่ม `surface` param ใน `_pump` → กำหนด viewport สูงพอสำหรับฟอร์ม | ✅ แก้แล้ว |
+| 34 | 29 ก.ย. | Cloudinary credential | ส่งค่าผิดสองรอบ: URL ของ console และ UUID → ทั้งคู่ตอบ *"Unknown API key"* เหมือน cloud ที่ไม่มีจริง | ค่า cloud name กับค่า ID ภายใน console เป็นคนละช่อง และ flag เป็นของ Vite (`VITE_`) ไม่ใช่ Flutter | เพิ่มวิธีแยกค่าที่สับสน + วิธี verify ด้วย `GET /v1_1/<cloud>/image/upload` ใน `docs/07_cloudinary_setup.md` | ✅ แก้แล้ว · smoke test ผ่าน |
+
+---
+
+## 🏪 Seller Hub + Order Status + Store Profile (เสร็จ 29 ก.ย. 2569)
+
+> ปิดงานที่เหลือจาก Week 3 — ผู้ขายดูออเดอร์ เดินสถานะ กรอกเลขพัสดุ
+> และแก้โปรไฟล์ร้าน โดยไม่ต้องใช้ Firestore admin SDK
+
+### ขอบเขตที่ทำเสร็จ
+
+| # | งาน | ผล | สถานะ |
+|---|---|---|---|
+| 1 | Seller home `/seller` | ทางเข้า 3 ทาง: ออเดอร์ · สินค้า · โปรไฟล์ร้าน | ✅ |
+| 2 | Order inbox `/seller/orders` | กรองตาม storeId + status · loading/error/empty ครบ | ✅ |
+| 3 | Role gate | ทุก route `/seller` ต้อง login และมี role `seller`/`admin` | ✅ test ครบทุก route |
+| 4 | เดินสถานะ + เลขพัสดุ | ตอนจะเปลี่ยนเป็น `shipped` ถามเลขพัสดุ (ว่างได้ · ยกเลิกได้) | ✅ |
+| 5 | แสดงเลขพัสดุ | บนแถวออเดอร์ เห็นทันทีว่าส่งอะไรไป | ✅ |
+| 6 | Store profile `/seller/store` | แก้ข้อมูลร้าน + อัปโหลด cover และโลโก้แยกโฟลเดอร์กัน | ✅ |
+| 7 | Rules ปิดช่องอันตราย | `stores.update` ห้ามแตะ `ownerUid`/`ratingAvg`/`commissionRate`/`otopCertified` | ✅ |
+| 8 | Cloudinary | creds ตรวจแล้ว · upload/transform ผ่าน · ไม่ hardcode ใน source | ✅ |
+
+### ✅ หลักฐาน
+
+| คำสั่ง / การทดสอบ | ผลลัพธ์ |
+|---|---|
+| `flutter analyze --no-pub` | `No issues found!` |
+| `flutter test --no-pub` | **129/129 ผ่าน** |
+| `flutter test --no-pub test\seller_hub_test.dart` | **18/18 ผ่าน** |
+| `flutter test integration_test -d emulator-5554` | Seller Product CRUD ผ่าน (`create → edit price → delete`) |
+| `curl` upload จริง | ได้ `secure_url` + `public_id` · delivery 200 · transform `c_fill,g_auto,w_300,h_200,q_auto,f_auto` 200 |
+
+### ✅ Test ของสัปดาห์นี้
+
+| ไฟล์ | ครอบคลุม |
+|---|---|
+| `test/seller_hub_test.dart` | Seller home 3 ทาง · role gate · order filters · เดินสถานะ · ส่งเลขพัสดุ/ว่าง/ยกเลิก · terminal state (`cancelled` + `completed`) · store form validation · upload แยก cover-logo · Cloudinary ไม่ได้ตั้งค่า |
+| `test/app_router_test.dart` | redirect ทุก seller route → login เมื่อไม่มีบัญชี |
+
+### ⚠️ ข้อจำกัดที่เหลือ
+
+1. **ผู้ขายหลายร้าน** — order inbox เลือกร้านได้แล้ว แต่ store profile ยังแก้ `stores.first` อย่างเดียว → ตัดสินใจทำ store picker หรือไม่
+2. **E2E ฝั่งผู้ขาย** — Product CRUD มีแล้ว แต่ order status + store profile ยังไม่ได้เดินบน emulator
+3. **`firestore.rules` ยังไม่ deploy** — กฎใหม่เขียนเสร็จแต่ยังไม่ทดสอบกับ emulator จริง
+4. **ข้อมูลขยะ 41 เอกสาร** — ค้างใน Firestore จากรอบ E2E (ดูหัวข้อข้างบน)
+
+---
+
+## 🚀 Cloudinary default + เครื่องมือรัน (29 ก.ย. 2569)
+
+> ปิดช่องที่ `git clone` มาแล้ว build ได้แต่ปุ่มอัปโหลดทำงานไม่ได้
+
+### ขอบเขตที่ทำเสร็จ
+
+| # | งาน | ผล | สถานะ |
+|---|---|---|---|
+| 1 | ฝัง default ลง `cloudinary_config.dart` | `zqaixbny` + `otop_shop` เป็น `defaultValue` — build ไม่ต้องส่ง flag | ✅ |
+| 2 | แก้ guard ใน service | เดิมเช็ค `CloudinaryConfig` (global) แต่ตัดสินกับ `_cloudName` (instance) → พอมี default แล้ว instance ที่ค่าว่างหลุดไปยิง URL ไม่มีชื่อ cloud | ✅ bug จริง |
+| 3 | เอา flag ซ้ำออกจาก `run.ps1` + `launch.json` | เหลือจุดค่าเดียว คือ `cloudinary_config.dart` | ✅ |
+| 4 | `tool/run.ps1` | จุดเดียวสำหรับ `up / start / stop / build / install / launch / logs / status` | ✅ |
+| 5 | `.vscode/launch.json` | กด F5 ได้เลย (emulator / Chrome) | ✅ |
+| 6 | `README.md` | เขียนใหม่ทั้งไฟล์ (เดิมเป็น stub ของ `flutter create`) | ✅ |
+
+### ✅ หลักฐานการเชื่อม Cloudinary จริง
+
+build **ไม่มี flag เลยสักตัว** แล้วอัปโหลดจาก emulator:
+
+| ขั้น | ผล |
+|---|---|
+| build ไม่มี `--dart-define` | สำเร็จ 33.5 วิ |
+| ค่าในไฟล์ที่ส่งลงเครื่อง | พบ `zqaixbny` + `otop_shop` ใน `kernel_blob.bin` (grep ไบต์ดิบ) |
+| upload จากเครื่อง | `https://res.cloudinary.com/zqaixbny/image/upload/v1790676577/smoke-test/probe/....png` |
+| delivery | `HTTP 200 image/png` |
+| ลบรูปทิ้ง | ✅ `404` (Media Library) |
+
+> ไฟล์ probe ถูกลบออกจาก `integration_test/` แล้ว เพราะรันทีไรก็สร้าง asset จริงทุกครั้ง
+
+### ⚠️ ข้อจำกัดที่เหลือ
+
+1. **`firestore.rules` ยังไม่ deploy** — กฎ `stores.update` ใหม่ยังไม่มีผลกับ Firestore จริง
+2. **เครื่องมี Android Studio 2 ตัว** (`Android Studio` กับ `Android Studio1`) — ตัวที่ยังไม่เคยเปิดไม่มี config จะเห็น 0 AVD
+3. **ยังไม่ได้ deploy** — ต้องขออนุมัติก่อน
 

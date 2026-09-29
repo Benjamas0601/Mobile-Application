@@ -139,10 +139,20 @@ service cloud.firestore {
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.createdAt == request.time;
 
-      // แก้ได้เฉพาะเจ้าของ และห้ามย้ายเจ้าของ (ย้ายร้าน = ปิดร้านเดิมแล้วเปิดใหม่)
+      // แก้ได้เฉพาะเจ้าของ และห้ามแตะฟิลด์ที่ระบบเป็นเจ้าของ
+      // (ย้ายเจ้าของ = ปิดร้านเดิมแล้วเปิดใหม่; คะแนน/ค่าคอมมิชชั่น/การรับรอง
+      // เขียนโดย Cloud Function) — ฟอร์มโปรไฟล์ร้านไม่มีช่องให้แก้
+      // แต่กฎคือชั้นความปลอดภัยจริง ไม่ใช่แค่ซ่อนปุ่ม
       allow update: if ownsStore(storeId)
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(
-             ['ownerUid', 'createdAt']
+             [
+               'ownerUid',
+               'createdAt',
+               'ratingAvg',
+               'ratingCount',
+               'commissionRate',
+               'otopCertified',
+             ]
            );
 
       // ลบร้าน = แอดมินเท่านั้น (เจ้าของใช้ archived แทน เพื่อไม่ให้ออเดอร์ที่
@@ -223,14 +233,27 @@ service cloud.firestore {
 
       // ลูกค้าเห็นของตัวเอง / ผู้ขายเห็นเฉพาะร้านตัวเอง / แอดมินเห็นหมด
       //
-      // แยก `get` กับ `list`: เงื่อนไขแบบ `list` ต้องอ้างอิงได้เฉพาะ
-      // resource.data/request เพราะถ้าเข้า `get()`/`exists()` ข้าม collection
-      // Firestore จะปฏิเสธทั้ง query (ตัดสินทีละ doc ไม่ได้) — ผู้ขาย/แอดมิน
-      // เข้าถึงออเดอร์แบบทีละ doc ได้จาก `get` ส่วนการ list เป็นของลูกค้า
-      // (กรอง `buyerUid == request.auth.uid` ได้ที่ระดับ query)
+      // แยก `get` กับ `list` เพราะ Rules ตัดสินคนละแบบ:
+      //
+      //  * `get` — อ่านเอกสารจริงทีละอัน จึงเรียก get()/exists() ข้ามเอกสารได้
+      //    (จึง hop ไปที่ store เพื่อรู้ว่าเป็นเจ้าของร้านไหน)
+      //  * `list` — Rules ไม่ใช่ตัวกรอง: ต้องพิสูจน์เงื่อนไขจาก query
+      //    เท่านั้น ไม่ได้อ่านค่าจริงในทุกเอกสาร ถ้าพิสูจน์ไม่ได้ = ปฏิเสธทั้ง query
+      //    (ดู https://firebase.google.com/docs/firestore/security/rules-query)
+      //
+      // จึงต้องให้ *query* มาเป็นตัวพิสูจน์:
+      //
+      //  * ลูกค้า  → where('buyerUid','==',auth.uid)  พิสูจน์ข้อ 1 ได้
+      //  * ผู้ขาย → where('storeId','==',storeId)    พิสูจน์ข้อ 2 ได้
+      //    โดย `sellsInStore` อ่าน *เอกสารร้าน* (ไม่ใช่เอกสารที่ query) จึงใช้ได้
+      //  * query ที่ไม่มีเงื่อนไขกรอง → ไม่มีข้อไหนพิสูจน์ได้ → ถูกปฏิเสธ (ถูกต้อง)
       allow get: if isOrderParty(orderId);
-      allow list: if isSignedIn()
-        && (resource.data.buyerUid == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (
+        resource.data.buyerUid == request.auth.uid
+        || (resource.data.storeId is string
+          && sellsInStore(resource.data.storeId))
+        || isAdmin()
+      );
 
       // ⚠️ ข้อจำกัดของ Rules: เขียนยอดรวมที่ขอมาเองได้
       //    การตรวจราคาจริงต้องทำใน Cloud Function (ตามเอกสารสถาปัตยกรรม)
