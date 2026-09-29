@@ -6,6 +6,9 @@ import 'package:thai_otop_marketplace/core/routes/app_router.dart';
 import 'package:thai_otop_marketplace/features/auth/screens/login_screen.dart';
 import 'package:thai_otop_marketplace/features/auth/screens/register_screen.dart';
 
+import 'package:thai_otop_marketplace/core/constants/app_enums.dart';
+import 'package:thai_otop_marketplace/models/user_model.dart';
+
 void main() {
   group('authRedirect', () {
     test('a guest may browse the whole catalogue', () {
@@ -44,6 +47,30 @@ void main() {
       },
     );
 
+    test('a guest is sent to login for every seller route', () {
+      // The seller console is guarded by prefix, so a new `/seller/...` screen
+      // is covered without anyone remembering to add it to a list.
+      for (final String location in <String>[
+        AppRoutes.sellerRoot,
+        AppRoutes.sellerProducts,
+        AppRoutes.sellerOrders,
+        AppRoutes.sellerStoreProfile,
+        AppRoutes.sellerProductNew('s1'),
+        AppRoutes.sellerProductEdit('p1'),
+      ]) {
+        expect(
+          authRedirect(signedIn: false, location: location),
+          '${AppRoutes.login}?redirect=$location',
+          reason: '$location must send a signed-out visitor to login',
+        );
+        expect(
+          authRedirect(signedIn: true, location: location),
+          isNull,
+          reason: 'a signed-in user must reach $location',
+        );
+      }
+    });
+
     test('the login screen itself is never redirected', () {
       expect(authRedirect(signedIn: false, location: AppRoutes.login), isNull);
       expect(
@@ -52,7 +79,13 @@ void main() {
       );
     });
 
-    test('a signed-in user reaches everything', () {
+    test('a signed-in customer reaches everything', () {
+      const customer = UserModel(
+        uid: 'c1',
+        displayName: 'Customer',
+        email: 'customer@test.com',
+        roles: <UserRole>[UserRole.customer],
+      );
       for (final String location in <String>[
         AppRoutes.home,
         AppRoutes.login,
@@ -62,8 +95,40 @@ void main() {
         AppRoutes.orders,
         AppRoutes.profile,
       ]) {
-        expect(authRedirect(signedIn: true, location: location), isNull);
+        expect(
+          authRedirect(signedIn: true, location: location, user: customer),
+          isNull,
+        );
       }
+    });
+
+    test('a signed-in seller is redirected to /seller on home, login, register', () {
+      const seller = UserModel(
+        uid: 's1',
+        displayName: 'Seller',
+        email: 'seller@test.com',
+        roles: <UserRole>[UserRole.seller],
+      );
+      expect(
+        authRedirect(signedIn: true, location: AppRoutes.home, user: seller),
+        AppRoutes.sellerRoot,
+      );
+      expect(
+        authRedirect(signedIn: true, location: AppRoutes.login, user: seller),
+        AppRoutes.sellerRoot,
+      );
+      expect(
+        authRedirect(signedIn: true, location: AppRoutes.register, user: seller),
+        AppRoutes.sellerRoot,
+      );
+      expect(
+        authRedirect(signedIn: true, location: AppRoutes.sellerRoot, user: seller),
+        isNull,
+      );
+      expect(
+        authRedirect(signedIn: true, location: AppRoutes.sellerProducts, user: seller),
+        isNull,
+      );
     });
 
     test('an unknown path is not guarded', () {

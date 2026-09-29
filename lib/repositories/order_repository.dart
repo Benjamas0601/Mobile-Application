@@ -141,6 +141,41 @@ class OrderRepository {
         );
   }
 
+  /// The orders of one store, newest first — the seller's inbox.
+  ///
+  /// The `where('storeId', ...)` clause is not an optimisation, it is what
+  /// makes the read possible at all: `firestore.rules` evaluates a `list`
+  /// against the query's *potential* result set, not the real documents, so a
+  /// rule clause can only be satisfied when a query constraint proves it. The
+  /// `orders.allow list` seller branch is exactly `sellsInStore(storeId)`,
+  /// which is what this filter supplies. A seller with several stores calls
+  /// this once per store, or drops the filter and uses an `in` query.
+  ///
+  /// Sorted in Dart instead of `orderBy` for the same reason as the seller's
+  /// product list: `storeId == x` + `createdAt` ordering would need a
+  /// composite index, and a store's recent orders are few enough to cap.
+  Stream<List<OrderModel>> watchStoreOrders(String storeId) {
+    return _ordersCol
+        .where('storeId', isEqualTo: storeId)
+        .limit(200)
+        .snapshots()
+        .map((QuerySnapshot<Map<String, dynamic>> snap) {
+          final List<OrderModel> orders = snap.docs
+              .map(
+                (QueryDocumentSnapshot<Map<String, dynamic>> d) =>
+                    OrderModel.fromFirestore(d.id, d.data()),
+              )
+              .toList();
+          orders.sort((OrderModel a, OrderModel b) {
+            // `OrderModel.createdAt` is non-nullable (it falls back to the
+            // epoch), so a missing timestamp sorts last instead of throwing.
+            final int byTime = b.createdAt.compareTo(a.createdAt);
+            return byTime != 0 ? byTime : a.id.compareTo(b.id);
+          });
+          return orders;
+        });
+  }
+
   Stream<OrderModel?> watchOrder(String orderId) {
     return _ordersCol.doc(orderId).snapshots().map((snap) {
       final Map<String, dynamic>? data = snap.data();
@@ -153,7 +188,15 @@ class OrderRepository {
   ///
   /// The guard is duplicated in `firestore.rules`; this copy exists so the
   /// caller gets a sentence it can show, instead of a raw permission error.
-  Future<void> advanceStatus(String orderId, OrderStatus next) async {
+  ///
+  /// [trackingNumber] is written only alongside `shipped`: an OTOP seller often
+  /// delivers by hand and has no courier number, so it stays optional — but
+  /// when the seller does have one, the buyer needs it in the order history.
+  Future<void> advanceStatus(
+    String orderId,
+    OrderStatus next, {
+    String? trackingNumber,
+  }) async {
     final DocumentSnapshot<Map<String, dynamic>> snap = await _ordersCol
         .doc(orderId)
         .get();
@@ -169,9 +212,13 @@ class OrderRepository {
 
     // `shippedAt` is written alongside the status so the timeline has a real
     // date; the rules explicitly allow both fields to change together.
+    final String? tracking = trackingNumber?.trim();
     final Map<String, dynamic> update = <String, dynamic>{
       'status': next.value,
-      if (next == OrderStatus.shipped) 'shippedAt': FieldValue.serverTimestamp(),
+      if (next == OrderStatus.shipped) ...<String, dynamic>{
+        'shippedAt': FieldValue.serverTimestamp(),
+        if (tracking != null && tracking.isNotEmpty) 'trackingNumber': tracking,
+      },
     };
 
     // Paying moves the payment record too, so the seller sees the money state

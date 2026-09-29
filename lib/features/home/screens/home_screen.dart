@@ -78,6 +78,17 @@ class HomeScreen extends ConsumerWidget {
             )
           // Sign-out only makes sense when there is a session to end.
           else ...<Widget>[
+            // Seller console — only meaningful to an account that can write a
+            // store, so it joins the cart button behind the sign-in wall. It
+            // opens the hub, not the product list, so the seller's orders and
+            // store profile are one tap away instead of buried in a route
+            // nobody would guess.
+            if (user.isSeller || user.isAdmin)
+              IconButton(
+                tooltip: AppStrings.navSellerDashboard,
+                icon: const Icon(Icons.storefront_outlined),
+                onPressed: () => context.push(AppRoutes.sellerRoot),
+              ),
             IconButton(
               tooltip: AppStrings.navOrders,
               icon: const Icon(Icons.receipt_long_outlined),

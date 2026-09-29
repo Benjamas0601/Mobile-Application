@@ -57,7 +57,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     try {
-      await ref
+      final user = await ref
           .read(authRepositoryProvider)
           .signIn(
             email: _emailController.text,
@@ -65,11 +65,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           );
       if (!mounted) return;
 
-      // Resume the interrupted flow when there was one; otherwise land on the
-      // catalogue, which is the app's home for everyone.
+      // Resume the interrupted flow when there was one; otherwise sellers go
+      // to Seller Hub and buyers go to marketplace home.
       final String? redirect = widget.redirect;
       if (redirect != null && redirect.isNotEmpty) {
         context.go(redirect);
+      } else if (user.isSeller || user.isAdmin) {
+        context.go(AppRoutes.sellerRoot);
       } else {
         context.go(AppRoutes.home);
       }

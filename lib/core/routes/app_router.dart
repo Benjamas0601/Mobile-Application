@@ -11,7 +11,13 @@ import '../../features/home/screens/home_screen.dart';
 import '../../features/orders/screens/order_detail_screen.dart';
 import '../../features/orders/screens/order_list_screen.dart';
 import '../../features/products/screens/product_detail_screen.dart';
+import '../../features/seller/screens/product_edit_screen.dart';
+import '../../features/seller/screens/seller_home_screen.dart';
+import '../../features/seller/screens/seller_order_list_screen.dart';
+import '../../features/seller/screens/seller_product_list_screen.dart';
+import '../../features/seller/screens/seller_store_edit_screen.dart';
 import '../../features/stores/screens/stores_screen.dart';
+import '../../models/user_model.dart';
 import '../../providers/auth_provider.dart';
 
 /// Every route path lives here as a constant.
@@ -33,11 +39,25 @@ class AppRoutes {
   static const String payment = '/checkout/payment';
   static const String profile = '/profile';
 
+  /// Seller console root — every `/seller/...` route is account-bound.
+  static const String sellerRoot = '/seller';
+  static const String sellerProducts = '/seller/products';
+  static const String sellerOrders = '/seller/orders';
+  static const String sellerStoreProfile = '/seller/store';
+
   /// Takes the product id as a path parameter: `/product/p-silk-scarf-red`.
   static String productDetail(String productId) => '/product/$productId';
 
   /// Takes the order id: `/order/abc123`.
   static String orderDetail(String orderId) => '/order/$orderId';
+
+  /// Create form for one store: `/seller/products/new?storeId=store-singthai`.
+  static String sellerProductNew(String storeId) =>
+      '/seller/products/new?storeId=$storeId';
+
+  /// Edit form for one product: `/seller/products/p-xyz`.
+  static String sellerProductEdit(String productId) =>
+      '/seller/products/$productId';
 }
 
 /// Decides whether the current location is allowed, returning a replacement
@@ -51,23 +71,49 @@ class AppRoutes {
 ///  * signed in  -> may reach everything
 ///  * loading    -> treated as signed out, so a guarded screen never flashes
 ///                  before the auth stream has reported
-String? authRedirect({required bool signedIn, required String location}) {
+String? authRedirect({
+  required bool signedIn,
+  required String location,
+  UserModel? user,
+}) {
   // Checkout is deliberately absent: it renders its own gate so the guest sees
   // the choice (sign in / register / keep shopping) instead of a bare redirect,
   // and so signing in can resume it without a redirect race against the auth
   // stream. Guarding it here would also bounce the user straight back to login
   // while the profile is still loading.
+  // The seller console is covered by the prefix check below, so it is absent
+  // here on purpose — one list of account-required paths, and one prefix rule
+  // that cannot be forgotten when a new `/seller/...` screen is added.
   const Set<String> accountRequired = <String>{
     AppRoutes.orders,
     AppRoutes.ordersHistory,
     AppRoutes.profile,
   };
 
-  if (!accountRequired.contains(location)) return null;
-  if (signedIn) return null;
-  // Hand the destination to the login screen as `redirect` so signing in
-  // resumes the original flow instead of dumping the user on Home.
-  return '${AppRoutes.login}?redirect=$location';
+  // Path-parameter routes (e.g. `/seller/products/p-x`) arrive here with the
+  // real id substituted, so membership in the set above is not enough — check
+  // the whole seller console by prefix.
+  final bool isSellerRoute = location.startsWith('${AppRoutes.sellerRoot}/') ||
+      location == AppRoutes.sellerRoot;
+
+  if (!signedIn) {
+    if (!accountRequired.contains(location) && !isSellerRoute) return null;
+    // Hand the destination to the login screen as `redirect` so signing in
+    // resumes the original flow instead of dumping the user on Home.
+    return '${AppRoutes.login}?redirect=$location';
+  }
+
+  // When signed in as a Seller or Admin, navigating to /home, /login, or /register
+  // redirects directly to Seller Dashboard.
+  if (user != null && (user.isSeller || user.isAdmin)) {
+    if (location == AppRoutes.home ||
+        location == AppRoutes.login ||
+        location == AppRoutes.register) {
+      return AppRoutes.sellerRoot;
+    }
+  }
+
+  return null;
 }
 
 /// The router instance.
@@ -82,6 +128,7 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
       // when signed out, and this guard only needs "are we definitely in?".
       signedIn: ref.read(authUserProvider).asData?.value != null,
       location: state.matchedLocation,
+      user: ref.read(authUserProvider).asData?.value,
     ),
     routes: <RouteBase>[
       GoRoute(
@@ -141,6 +188,41 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
         path: '/order/:orderId',
         builder: (BuildContext context, GoRouterState state) => OrderDetailScreen(
           orderId: state.pathParameters['orderId'] ?? '',
+        ),
+      ),
+      // Seller console: account-bound (redirect above) and role-gated inside
+      // the screens, because a role lives in Firestore, not in the route.
+      GoRoute(
+        path: AppRoutes.sellerRoot,
+        builder: (BuildContext context, GoRouterState state) =>
+            const SellerHomeScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.sellerOrders,
+        builder: (BuildContext context, GoRouterState state) =>
+            const SellerOrderListScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.sellerStoreProfile,
+        builder: (BuildContext context, GoRouterState state) =>
+            const SellerStoreEditScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.sellerProducts,
+        builder: (BuildContext context, GoRouterState state) =>
+            const SellerProductListScreen(),
+      ),
+      GoRoute(
+        path: '/seller/products/new',
+        builder: (BuildContext context, GoRouterState state) =>
+            ProductEditScreen(
+              storeId: state.uri.queryParameters['storeId'],
+            ),
+      ),
+      GoRoute(
+        path: '/seller/products/:productId',
+        builder: (BuildContext context, GoRouterState state) => ProductEditScreen(
+          productId: state.pathParameters['productId'] ?? '',
         ),
       ),
     ],

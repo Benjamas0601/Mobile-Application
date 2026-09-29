@@ -210,4 +210,101 @@ class AppStrings {
       'โครงสร้างค่าธรรมเนียมของแพลตฟอร์มปรับให้เหมาะกับผู้ประกอบการไทย '
       'โดยร้านค้าตั้งค่าได้เอง และแสดงยอดค่าคอมมิชชันอย่างโปร่งใส';
   static const String commissionRate = 'ค่าคอมมิชชัน {rate}';
+
+  // --- Seller: order inbox --------------------------------------------------
+  // The real seller console for orders, replacing the demo advance control on
+  // the buyer's order detail screen.
+  static const String sellerOrders = 'คำสั่งซื้อของร้าน';
+  static const String sellerNoOrders = 'ยังไม่มีคำสั่งซื้อเข้าร้าน';
+  static const String sellerNoOrdersHint =
+      'เมื่อมีลูกค้าสั่งซื้อ รายการจะปรากฏที่นี่ทันที';
+  static const String sellerOrderNeedsAction = 'ต้องดำเนินการ';
+  static const String sellerOrderAwaitingPayment = 'รอผู้ซื้อชำระเงิน';
+  static const String sellerOrderItems = '{count} ชิ้น';
+  static const String sellerOrderAdvance = 'เดินสถานะ';
+  static const String sellerOrderCancelledNote =
+      'ออเดอร์นี้ถูกยกเลิกแล้ว ประวัติยังเก็บไว้ตรวจย้อนหลัง';
+  static const String sellerOrderFilterAll = 'ทั้งหมด';
+  static const String sellerShipTrackingTitle = 'ใส่เลขพัสดุ';
+  static const String sellerShipTrackingLabel = 'เลขพัสดุ (ถ้ามี)';
+  static const String sellerShipTrackingHint =
+      'ถ้าส่งเองหรือใช้รถส่งของ ไม่ต้องกรอกก็ได้';
+  static const String sellerShipConfirm = 'ยืนยันการจัดส่ง';
+  static const String sellerShipCancel = 'ยกเลิก';
+
+  // --- Seller: hub & store profile -----------------------------------------
+  static const String sellerProductsHint =
+      'เพิ่ม แก้ไข และลบสินค้า รวมตัวเลือกสี/ขนาดและสต็อก';
+  static const String sellerOrdersHint = 'ดูออเดอร์ที่เข้าร้านและเดินสถานะ';
+  static const String sellerStoreProfileHint =
+      'ชื่อร้าน ที่ตั้ง เรื่องราว และรูปปก';
+  static const String sellerStoreProfileTitle = 'ข้อมูลร้าน';
+  static const String sellerStoreNameLabel = 'ชื่อร้าน';
+  static const String sellerStoreDescriptionLabel = 'เกี่ยวกับร้าน';
+  static const String sellerStoreProvinceLabel = 'จังหวัด';
+  static const String sellerStoreRegionLabel = 'ภูมิภาค';
+  static const String sellerStoreCommunityLabel = 'ชุมชนผู้ผลิต';
+  static const String sellerStoreCoverLabel = 'รูปปกร้าน';
+  static const String sellerStoreLogoLabel = 'โลโก้ร้าน';
+  static const String sellerStoreSaved = 'บันทึกข้อมูลร้านแล้ว';
+  static const String sellerStoreSaveFailed = 'บันทึกข้อมูลร้านไม่สำเร็จ กรุณาลองใหม่';
+  static const String sellerStoreNameRequired = 'กรุณากรอกชื่อร้าน';
+  static const String sellerStoreNotEditable = 'แก้ไขข้อมูลร้านนี้ไม่ได้';
+
+  // --- Seller: product management -----------------------------------------
+  // The seller console's first screen: manage the catalogue of the seller's
+  // own store(s). Drafts are listed here even though customers never see them.
+  static const String sellerProducts = 'จัดการสินค้า';
+  static const String sellerAddProduct = 'เพิ่มสินค้า';
+  static const String sellerEditProduct = 'แก้ไขสินค้า';
+  static const String sellerNoStoreTitle = 'ยังไม่มีร้านค้า';
+  static const String sellerNoStoreHint =
+      'ต้องมีร้านค้าก่อนจึงจะเพิ่มสินค้าได้ กรุณาติดต่อผู้ดูแลระบบ';
+  static const String sellerNoProducts = 'ยังไม่มีสินค้า';
+  static const String sellerNoProductsHint =
+      'กดปุ่ม "เพิ่มสินค้า" เพื่อเริ่มต้นสินค้าชิ้นแรก';
+  static const String sellerPickStore = 'เลือกร้านค้า';
+  static const String deleteProductConfirm = 'ลบสินค้านี้?';
+  static const String deleteProductHint =
+      'สินค้าและตัวเลือกทั้งหมดจะถูกลบ ประวัติคำสั่งซื้อเก่าจะยังอยู่';
+  static const String productSaved = 'บันทึกสินค้าแล้ว';
+  static const String productDeleted = 'ลบสินค้าแล้ว';
+  static const String saveProductFailed = 'บันทึกสินค้าไม่สำเร็จ กรุณาลองใหม่';
+  static const String deleteProductFailed = 'ลบสินค้าไม่สำเร็จ กรุณาลองใหม่';
+
+  // --- Seller: product form ------------------------------------------------
+  static const String productNameLabel = 'ชื่อสินค้า';
+  static const String productNameHint = 'เช่น ผ้าไหมแดงลายไทย';
+  static const String productDescriptionLabel = 'รายละเอียดสินค้า';
+  static const String productPriceLabel = 'ราคา (บาท)';
+  static const String productCategoryLabel = 'หมวดหมู่';
+  static const String productStatusLabel = 'สถานะการขาย';
+  static const String productImages = 'รูปสินค้า';
+  static const String addImageByUrl = 'เพิ่มลิงก์รูป';
+  static const String uploadFromDevice = 'อัปโหลดจากเครื่อง';
+  static const String imageUrlHint = 'https://...';
+  static const String addImage = 'เพิ่มรูป';
+  static const String variantsSection = 'ตัวเลือกสินค้า (สี/ขนาด)';
+  static const String variantsSectionHint =
+      'ผู้ซื้อเลือกจากตัวเลือกเหล่านี้ สต็อกทั้งหมดคือผลรวมของทุกตัวเลือก';
+  static const String addVariant = 'เพิ่มตัวเลือก';
+  static const String variantNameHint = 'ชื่อตัวเลือก';
+  static const String variantColorHint = 'สี';
+  static const String variantSizeHint = 'ขนาด';
+  static const String variantPriceDeltaHint = 'ราคาเพิ่ม (บาท)';
+  static const String variantStockHint = 'สต็อก';
+  static const String removeVariant = 'ลบตัวเลือก';
+  static const String stockTotalLabel = 'สต็อกทั้งหมด';
+  static const String errCategoryRequired = 'กรุณาเลือกหมวดหมู่';
+  static const String errPriceInvalid = 'กรุณากรอกราคาเป็นตัวเลข';
+  static const String errImageUrl = 'กรุณากรอกลิงก์รูปให้ถูกต้อง';
+  static const String productDescriptionHint =
+      'เล่าเรื่องสินค้า รายละเอียดวัสดุ วิธีใช้';
+  static const String productImagesEmptyHint =
+      'ยังไม่มีรูป — เพิ่มลิงก์หรืออัปโหลดจากเครื่อง';
+  static const String imageFallbackHint =
+      'ตอนนี้ใช้ลิงก์รูปจากอินเทอร์เน็ตได้ก่อน';
+  static const String uploadingImage = 'กำลังอัปโหลดรูป...';
+  static const String uploadFailed = 'อัปโหลดรูปไม่สำเร็จ';
+  static const String variantNameExample = 'เช่น สีแดง / กล่อง 1 เดือน';
 }

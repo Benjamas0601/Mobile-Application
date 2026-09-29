@@ -11,6 +11,8 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../models/product_model.dart';
 import '../../../models/store_model.dart';
+import '../../../models/user_model.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../providers/catalog_provider.dart';
 import '../../../widgets/state_views.dart';
@@ -26,8 +28,28 @@ class ProductDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final product = ref.watch(productProvider(productId));
 
+    // The edit pencil is the seller console's deep link: only the owner of
+    // the product's store (or an admin) should ever see it.
+    final UserModel? user = ref.watch(authUserProvider).asData?.value;
+    final StoreModel? store = product.asData?.value == null
+        ? null
+        : ref.watch(storeProvider(product.asData!.value!.storeId)).asData?.value;
+    final bool canEdit =
+        user != null && store != null && store.ownerUid == user.uid;
+
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.productStory)),
+      appBar: AppBar(
+        title: const Text(AppStrings.productStory),
+        actions: <Widget>[
+          if (canEdit)
+            IconButton(
+              tooltip: AppStrings.sellerEditProduct,
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () =>
+                  context.push(AppRoutes.sellerProductEdit(productId)),
+            ),
+        ],
+      ),
       body: product.isLoading
           ? const LoadingView()
           : product.hasError

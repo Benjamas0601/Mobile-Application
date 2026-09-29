@@ -30,6 +30,22 @@ final orderProvider = StreamProvider.autoDispose.family<OrderModel?, String>((
   return repository.watchOrder(orderId);
 });
 
+/// The orders of one store — the seller's inbox.
+///
+/// Keyed by store id rather than merged across the seller's stores, because the
+/// rule that makes the read possible is satisfied by a
+/// `where('storeId', ...)` constraint; a filter-less `in` query over several
+/// stores would need a different rule. The list screen therefore watches one
+/// store at a time and re-keys when the seller picks another.
+final storeOrdersProvider =
+    StreamProvider.autoDispose.family<List<OrderModel>, String>((
+      Ref ref,
+      String storeId,
+    ) {
+      final OrderRepository repository = ref.watch(orderRepositoryProvider);
+      return repository.watchStoreOrders(storeId);
+    });
+
 /// Turns the local cart into the snapshot written onto the order.
 ///
 /// Kept here rather than in the repository so the repository never learns about
@@ -131,7 +147,8 @@ checkoutDraftProvider =
       CheckoutDraftController.new,
     );
 
-/// Advances an order one step, for the demo seller control.
+/// Advances an order one step, for the demo seller control and the seller
+/// console.
 ///
 /// The state machine is checked in the repository as well as here, so a
 /// double-tap or a stale screen cannot skip a stage.
@@ -139,11 +156,17 @@ class AdvanceOrderStatusController extends Notifier<bool> {
   @override
   bool build() => false;
 
-  Future<void> advance(String orderId, OrderStatus next) async {
+  Future<void> advance(
+    String orderId,
+    OrderStatus next, {
+    String? trackingNumber,
+  }) async {
     if (state) return;
     state = true;
     try {
-      await ref.read(orderRepositoryProvider).advanceStatus(orderId, next);
+      await ref
+          .read(orderRepositoryProvider)
+          .advanceStatus(orderId, next, trackingNumber: trackingNumber);
     } finally {
       state = false;
     }
