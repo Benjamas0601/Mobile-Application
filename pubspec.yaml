@@ -19,9 +19,10 @@ dependencies:
   cloud_firestore: ^6.10.0        # Cloud Database: สินค้า ร้าน ออเดอร์ แชท คูปอง
 
   # --- เก็บรูปภาพ ---
-  # ไม่ใช้ Firebase Storage เพราะต้องผูกบัตรเครดิต (Cloud Storage for Firebase
-  # ใช้ได้เฉพาะแผน Blaze) จึงย้ายไปใช้ Cloudinary free tier แทน
-  # ถ้าภายหลังอยากย้ายกลับ: ใส่ firebase_storage กลับในบรรทัดนี้
+  # ใช้ Cloudinary free tier (25 credits/เดือน ไม่มีวันหมดอายุ ไม่ต้องผูกบัตร)
+  # เพราะ Cloud Storage for Firebase บังคับให้โปรเจกต์อยู่บนแผน Blaze ตั้งแต่ 3 ก.พ. 2569
+  # (ยืนยันจาก firebase.google.com/docs/storage/faqs-storage-changes-announced-sept-2024)
+  # ข้อแลกเปลี่ยน: ต้องดูแลบัญชีคนละเจ้า และโค้ดฝังค่า preset ลงแอป (ซึ่งไม่ใช่ secret)
   http: ^1.2.2                    # ยิง REST API ไป Cloudinary
   crypto: ^3.0.6                  # คำนวณ SHA-1 signature (ตอน dev เท่านั้น)
 

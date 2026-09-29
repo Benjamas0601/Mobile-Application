@@ -75,8 +75,9 @@ class ImageUploadPolicy {
 
   /// แปลง path ของแอปให้เป็นโฟลเดอร์ของ Cloudinary
   ///
-  /// ออกแบบให้ตรงกับโครงสร้างที่วางไว้ใน `storage.rules` เพื่อให้ย้ายกลับไป
-  /// Firebase Storage ทีหลังได้โดยไม่ต้องแก้ฐานข้อมูล
+  /// โครงสร้าง path ชุดนี้วางไว้ให้ตรงกับ `storage.rules` ตั้งแต่ตอนที่ยังวางแผนจะ
+  /// ใช้ Firebase Storage ไว้ ถ้าวันไหนย้ายกลับจึงไม่ต้องแก้ฐานข้อมูล แต่ตอนนี้ใช้
+  /// Cloudinary free (Firebase Storage บังคับแผน Blaze) จึงเป็นแค่ข้อตกลงร่วมกัน
   static String folderForProduct({
     required String storeId,
     required String productId,
@@ -84,6 +85,10 @@ class ImageUploadPolicy {
 
   static String folderForStoreCover({required String storeId}) =>
       'stores/$storeId/cover';
+
+  /// โฟลเดอร์แยกจาก cover เพื่อให้ลบ/หมุนรูปโลโก้ได้โดยไม่กระทบภาพครอบ
+  static String folderForStoreLogo({required String storeId}) =>
+      'stores/$storeId/logo';
 
   static String folderForProfile({required String uid}) => 'users/$uid/profile';
 
@@ -94,6 +99,25 @@ class ImageUploadPolicy {
 
   static String folderForReview({required String reviewId}) =>
       'reviews/$reviewId';
+
+  /// ตัดชิ้นส่วน path ที่อาจหลุดมาจากข้อมูลที่ผู้ใช้ควบคุม เช่น `..` หรือช่องว่าง
+  ///
+  /// โฟลเดอร์ปลายทางประกอบจาก id ที่สุดท้ายมาจาก Firestore จึงถือเป็นข้อมูลที่
+  /// เขียนเองได้ ต้องกันไว้ที่ฝั่งแอป ไม่ใช่พึ่งฝั่งเซิร์ฟเวอร์อย่างเดียว — ไม่งั้น
+  /// ผู้ใช้จะเขียนไฟล์ออกนอกโฟลเดอร์ที่แอปตั้งใจได้
+  static String sanitizeFolder(String folder) {
+    final List<String> parts = folder
+        .split('/')
+        .map((String part) => part.trim())
+        .where(
+          (String part) => part.isNotEmpty && part != '.' && part != '..',
+        )
+        .toList();
+    if (parts.isEmpty) {
+      throw const ImageUploadException('ยังไม่ได้ระบุตำแหน่งเก็บรูป');
+    }
+    return parts.join('/');
+  }
 }
 
 /// ข้อผิดพลาดที่คาดว่าจะเกิด ควรเอาไปแสดงผลให้ผู้ใช้อ่านได้

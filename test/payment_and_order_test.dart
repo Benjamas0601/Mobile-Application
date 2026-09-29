@@ -16,6 +16,7 @@ import 'package:thai_otop_marketplace/models/user_model.dart';
 import 'package:thai_otop_marketplace/providers/auth_provider.dart';
 import 'package:thai_otop_marketplace/providers/cart_provider.dart';
 import 'package:thai_otop_marketplace/providers/catalog_provider.dart';
+import 'package:thai_otop_marketplace/providers/image_storage_provider.dart';
 import 'package:thai_otop_marketplace/providers/order_provider.dart';
 import 'package:thai_otop_marketplace/repositories/order_repository.dart';
 
@@ -90,6 +91,7 @@ class _OrderDetailStub extends StatelessWidget {
 class _FakeOrderRepository implements OrderRepository {
   final List<String> created = <String>[];
   final List<String> advanced = <String>[];
+  final List<String> storeQueries = <String>[];
   Object? failWith;
 
   @override
@@ -108,13 +110,30 @@ class _FakeOrderRepository implements OrderRepository {
   }
 
   @override
-  Future<void> advanceStatus(String orderId, OrderStatus next) async {
-    advanced.add('$orderId:${next.value}');
+  Future<void> advanceStatus(
+    String orderId,
+    OrderStatus next, {
+    String? trackingNumber,
+  }) async {
+    // Only the tracking number is appended, and only when the seller supplies
+    // one — so a status change that carries no number still records the bare
+    // step and the assertion below stays readable.
+    advanced.add(
+      trackingNumber == null
+          ? '$orderId:${next.value}'
+          : '$orderId:${next.value}|$trackingNumber',
+    );
   }
 
   @override
   Stream<List<OrderModel>> watchMyOrders() =>
       Stream<List<OrderModel>>.value(<OrderModel>[_order()]);
+
+  @override
+  Stream<List<OrderModel>> watchStoreOrders(String storeId) {
+    storeQueries.add(storeId);
+    return Stream<List<OrderModel>>.value(<OrderModel>[_order()]);
+  }
 
   @override
   Stream<OrderModel?> watchOrder(String orderId) =>
@@ -128,7 +147,11 @@ class _CancelledOrderRepository extends _FakeOrderRepository {
       Stream<OrderModel?>.value(_order(status: OrderStatus.cancelled));
 }
 
-ProviderContainer _container(_FakeOrderRepository repo, {UserModel? user}) {
+ProviderContainer _container(
+  _FakeOrderRepository repo, {
+  UserModel? user,
+  bool? cloudinaryConfigured,
+}) {
   final ProviderContainer container = ProviderContainer(
     overrides: [
       authUserProvider.overrideWith(
@@ -136,6 +159,8 @@ ProviderContainer _container(_FakeOrderRepository repo, {UserModel? user}) {
       ),
       orderRepositoryProvider.overrideWithValue(repo),
       storeProvider.overrideWith((Ref ref, String id) async => _store),
+      if (cloudinaryConfigured != null)
+        cloudinaryConfiguredProvider.overrideWithValue(cloudinaryConfigured),
     ],
   );
   addTearDown(container.dispose);
@@ -219,7 +244,12 @@ void main() {
     testWidgets('states plainly that no gateway is connected', (
       WidgetTester tester,
     ) async {
-      final ProviderContainer container = _container(_FakeOrderRepository())
+      // A build with no Cloudinary config has to admit it on the slip tab
+      // rather than pretend an upload will succeed.
+      final ProviderContainer container = _container(
+        _FakeOrderRepository(),
+        cloudinaryConfigured: false,
+      )
         ..read(cartProvider.notifier).add(_product);
       container.read(checkoutDraftProvider.notifier).start(
         storeId: 's1',
@@ -238,6 +268,31 @@ void main() {
       );
       await _scrollTo(tester, find.text(AppStrings.mvpPaymentNotice));
       expect(find.text(AppStrings.mvpPaymentNotice), findsOneWidget);
+    });
+
+    testWidgets('offers the slip tab once Cloudinary is configured', (
+      WidgetTester tester,
+    ) async {
+      // The mirror image of the case above: with credentials in place the app
+      // must not keep showing the "not configured" apology, or sellers will
+      // believe uploading is broken.
+      final ProviderContainer container = _container(
+        _FakeOrderRepository(),
+        cloudinaryConfigured: true,
+      )
+        ..read(cartProvider.notifier).add(_product);
+      container.read(checkoutDraftProvider.notifier).start(
+        storeId: 's1',
+        shippingAddress: 'เชียงใหม่ 50100',
+      );
+
+      await _pumpPayment(tester, container);
+
+      expect(
+        find.text(PaymentStrings.slipNotAvailableHint),
+        findsNothing,
+        reason: 'the config is present, so the warning would be a lie',
+      );
     });
 
     testWidgets('cash on delivery hides the QR and instructions', (
@@ -376,6 +431,40 @@ void main() {
 
       expect(id, isNull);
       expect(repo.created, isEmpty);
+    });
+  });
+
+  group('a seller only ever sees their own store orders', () {
+    // The seller inbox reads through `watchStoreOrders(storeId)` rather than
+    // `watchMyOrders()`, because a seller is not the buyer of those orders.
+    // If the two ever get mixed up the seller would see an empty inbox, or
+    // worse, someone else's orders.
+    test('the store inbox is read with the store id in scope', () async {
+      final _FakeOrderRepository repo = _FakeOrderRepository();
+      final ProviderContainer container = _container(repo);
+
+      final List<OrderModel> orders = await container
+          .read(orderRepositoryProvider)
+          .watchStoreOrders('s1')
+          .first;
+
+      expect(repo.storeQueries, <String>['s1']);
+      expect(orders, hasLength(1));
+    });
+
+    test('a tracking number is forwarded when the seller ships an order', () async {
+      // Without the number reaching the repository, the buyer sees a "shipped"
+      // status with nothing to follow.
+      final _FakeOrderRepository repo = _FakeOrderRepository();
+      final ProviderContainer container = _container(repo);
+
+      await container.read(orderRepositoryProvider).advanceStatus(
+        'o-1',
+        OrderStatus.shipped,
+        trackingNumber: 'THD-123456',
+      );
+
+      expect(repo.advanced, <String>['o-1:shipped|THD-123456']);
     });
   });
 

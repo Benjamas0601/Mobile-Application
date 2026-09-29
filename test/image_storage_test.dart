@@ -35,26 +35,27 @@ void main() {
     });
   });
 
-  group('a build without credentials says so instead of failing silently', () {
-    test('isConfigured is false when no dart-define was passed', () {
-      // This test binary defines nothing, which is exactly the "forgot to pass
-      // --dart-define" case the screen has to handle.
-      expect(CloudinaryConfig.isConfigured, isFalse);
+  group('the config carries the project defaults, with a way out', () {
+    test('isConfigured is true out of the box', () {
+      // Both defaults are public by design (see cloudinary_config.dart), so a
+      // fresh clone must be able to upload without anyone remembering a flag.
+      // If this fails, the build lost its credentials and every upload breaks.
+      expect(CloudinaryConfig.cloudName, isNotEmpty);
+      expect(CloudinaryConfig.uploadPreset, isNotEmpty);
+      expect(CloudinaryConfig.isConfigured, isTrue);
     });
 
-    test('the provider reports the missing configuration', () {
+    test('the provider reports the configuration as present', () {
       final ProviderContainer container = ProviderContainer();
       addTearDown(container.dispose);
 
-      expect(container.read(cloudinaryConfiguredProvider), isFalse);
-      expect(
-        container.read(cloudinaryMissingConfigProvider),
-        CloudinaryConfig.notConfiguredMessage,
-      );
+      expect(container.read(cloudinaryConfiguredProvider), isTrue);
+      expect(container.read(cloudinaryMissingConfigProvider), isNull);
     });
 
-    test('the hint names the flags needed to fix it', () {
-      // A message that only says "not configured" leaves the developer guessing.
+    test('the hint still names the flags, as the escape hatch', () {
+      // Someone pointing a build at a different cloud needs to know which
+      // flags to pass; the message is what tells them.
       expect(
         CloudinaryConfig.notConfiguredMessage,
         contains('CLOUDINARY_CLOUD_NAME'),
@@ -85,6 +86,76 @@ void main() {
           ),
         ),
       );
+    });
+  });
+
+  group('a folder the user could tamper with cannot escape its own path', () {
+    // The folder is built from ids that end up in Firestore, so it is treated
+    // as untrusted input. Without this a crafted id could write outside the
+    // folder the app intended.
+    test('traversal segments are dropped', () {
+      expect(
+        ImageUploadPolicy.sanitizeFolder('stores/../users'),
+        'stores/users',
+      );
+    });
+
+    test('a path made only of traversal is rejected outright', () {
+      // Nothing survives the filter, so there is no safe folder left to use.
+      // Failing loudly beats uploading to the account root.
+      expect(
+        () => ImageUploadPolicy.sanitizeFolder('../..'),
+        throwsA(isA<ImageUploadException>()),
+      );
+    });
+
+    test('an empty folder is rejected', () {
+      expect(
+        () => ImageUploadPolicy.sanitizeFolder('  //  '),
+        throwsA(isA<ImageUploadException>()),
+      );
+    });
+  });
+
+  group('a rejected file never reaches the network', () {
+    test('an empty file is refused', () async {
+      // `path` as well as `name`: on the IO implementation `XFile.fromData`
+      // ignores `name` and derives it from `path`, while the web one does the
+      // opposite.
+      await expectLater(
+        ImageUploadPolicy.validate(
+          XFile.fromData(Uint8List(0), path: 'a.jpg', name: 'a.jpg'),
+        ),
+        throwsA(
+          isA<ImageUploadException>().having(
+            (ImageUploadException e) => e.message,
+            'message',
+            contains('ว่างเปล่า'),
+          ),
+        ),
+      );
+    });
+
+    test('a file over the limit is refused with its size in the message', () async {
+      final Uint8List tooBig = Uint8List(ImageUploadPolicy.maxBytes + 1);
+
+      await expectLater(
+        ImageUploadPolicy.validate(
+          XFile.fromData(tooBig, path: 'big.jpg', name: 'big.jpg'),
+        ),
+        throwsA(
+          isA<ImageUploadException>().having(
+            (ImageUploadException e) => e.message,
+            'message',
+            contains('5 MB'),
+          ),
+        ),
+      );
+    });
+
+    test('a valid image passes validation', () async {
+      // The happy path, so the guards above are not simply rejecting everything.
+      await expectLater(ImageUploadPolicy.validate(_fakeImage()), completes);
     });
   });
 
@@ -155,5 +226,6 @@ class _FakeUploader implements ImageStorageService {
 /// A file that reports its size without touching the disk.
 XFile _fakeImage() => XFile.fromData(
   Uint8List.fromList(<int>[0xFF, 0xD8, 0xFF, 0xE0]),
+  path: 'slip.jpg',
   name: 'slip.jpg',
 );

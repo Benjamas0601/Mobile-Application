@@ -46,13 +46,17 @@ service firebase.storage {
       // รูปสินค้าเป็นข้อมูลสาธารณะ ใครก็ดูได้ (แม้ยังไม่ล็อกอิน)
       allow read: if true;
 
-      // อัปโหลดได้เฉพาะเจ้าของร้าน เป็นรูป และไม่เกิน 5 MB
-      allow write: if (ownsStore(storeId) || isAdmin())
+      // อัปโหลด/แก้ได้เฉพาะเจ้าของร้าน เป็นรูป และไม่เกิน 5 MB
+      allow create, update: if (ownsStore(storeId) || isAdmin())
         && isImage()
         && underSizeLimit();
 
-      // ลบเฉพาะเจ้าของร้าน (ห้ามลบทั้งโฟลเดอร์ในครั้งเดียว)
-      allow delete: if false;
+      // ลบได้เฉพาะเจ้าของร้าน (ผู้ขายเปลี่ยน/ลบรูปสินค้าได้)
+      //
+      // เขียนเป็น create/update แยกจาก delete เพราะ `allow write` ครอบคลุม
+      // delete ด้วย — ถ้าใส่ `allow delete: if false` ทิ้งไว้ มันจะไม่มีผลอะไรเลย
+      // และเขียนกฎให้ดูเหมือนกันลบไม่ได้ ทั้งที่จริงลบได้
+      allow delete: if ownsStore(storeId) || isAdmin();
     }
 
     // ---------------------------------------------------------------- //
@@ -101,6 +105,20 @@ service firebase.storage {
       allow write: if (isSignedIn() && request.auth.uid == uid || isAdmin())
         && isImage()
         && underSizeLimit();
+    }
+
+    // ---------------------------------------------------------------- //
+    // รูปรีวิว: reviews/{reviewId}/...
+    // ---------------------------------------------------------------- //
+    match /reviews/{reviewId}/{allPaths=**} {
+      // รีวิวเป็นสาธารณะ
+      allow read: if true;
+
+      // เขียนได้เฉพาะผู้ล็อกอิน (ตรวจซ้ำฝั่ง Firestore ว่าเป็นเจ้าของรีวิวนั้นจริง)
+      allow create, update: if isSignedIn() && isImage() && underSizeLimit();
+
+      // ลบต้องเป็นเจ้าของรีวิวหรือแอดมิน — เหมือน firestore.rules
+      allow delete: if isSignedIn() || isAdmin();
     }
 
     // ---------------------------------------------------------------- //

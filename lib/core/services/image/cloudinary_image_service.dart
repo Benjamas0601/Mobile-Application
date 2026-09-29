@@ -44,17 +44,24 @@ class CloudinaryImageService implements ImageStorageService {
     required XFile file,
     required String folder,
   }) async {
-    if (!CloudinaryConfig.isConfigured && _cloudName.isEmpty) {
+    // ต้องเช็คของตัว instance นี้ ไม่ใช่ค่า global — ถ้าเช็ก `CloudinaryConfig`
+    // เมื่อค่า default ถูกฝังไว้แล้ว ค่านั้นจะเป็นจริงเสมอ แล้ว instance ที่ถูก
+    // สร้างด้วยค่าว่างจะหลุดไปยิง URL ที่ไม่มีชื่อ cloud
+    if (_cloudName.isEmpty || _uploadPreset.isEmpty) {
       throw const ImageUploadException(CloudinaryConfig.notConfiguredMessage);
     }
 
     await ImageUploadPolicy.validate(file);
 
+    // โฟลเดอร์ปลายทางประกอบจาก id ที่สุดท้ายมาจาก Firestore จึงต้องกัน
+    // `..` ก่อนส่ง ไม่งั้นผู้ใช้เขียนรูปออกนอกโฟลเดอร์ที่ตั้งใจไว้ได้
+    final String safeFolder = ImageUploadPolicy.sanitizeFolder(folder);
+
     try {
       final http.MultipartRequest request =
           http.MultipartRequest('POST', _apiUri('upload'))
             ..fields['upload_preset'] = _uploadPreset
-            ..fields['folder'] = folder
+            ..fields['folder'] = safeFolder
             ..files.add(await http.MultipartFile.fromPath('file', file.path));
 
       final http.StreamedResponse streamed = await _client.send(request);

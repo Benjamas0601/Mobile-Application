@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# รูปที่หลุดออกมาตอนรัน E2E / debug — ไม่ใช่ของจริงในโปรเจกต์
+# (E2E ตั้งชื่อสินค้าที่สร้างว่า "ผ้าไหมเทสต์ <epoch>" รูปจึงหลุดมาเป็นชื่อไฟล์แบบนี้)
+*.png
+!android/**/*.png
+!ios/**/*.png
+!assets/**/*.png
