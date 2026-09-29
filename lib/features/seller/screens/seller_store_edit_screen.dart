@@ -42,6 +42,10 @@ class _SellerStoreEditScreenState extends ConsumerState<SellerStoreEditScreen> {
   final TextEditingController _community = TextEditingController();
   final TextEditingController _cover = TextEditingController();
   final TextEditingController _logo = TextEditingController();
+  final TextEditingController _promptPayId = TextEditingController();
+  final TextEditingController _bankName = TextEditingController();
+  final TextEditingController _bankAccountName = TextEditingController();
+  final TextEditingController _bankAccountNumber = TextEditingController();
 
   String? _loadedStoreId;
   String? _error;
@@ -57,6 +61,10 @@ class _SellerStoreEditScreenState extends ConsumerState<SellerStoreEditScreen> {
       _community,
       _cover,
       _logo,
+      _promptPayId,
+      _bankName,
+      _bankAccountName,
+      _bankAccountNumber,
     ]) {
       c.dispose();
     }
@@ -78,6 +86,10 @@ class _SellerStoreEditScreenState extends ConsumerState<SellerStoreEditScreen> {
     _community.text = store.community;
     _cover.text = store.coverImageUrl;
     _logo.text = store.logoUrl ?? '';
+    _promptPayId.text = store.promptPayId;
+    _bankName.text = store.bankName;
+    _bankAccountName.text = store.bankAccountName;
+    _bankAccountNumber.text = store.bankAccountNumber;
   }
 
   @override
@@ -141,6 +153,10 @@ class _SellerStoreEditScreenState extends ConsumerState<SellerStoreEditScreen> {
             _textField(_province, AppStrings.sellerStoreProvinceLabel),
             _regionField(),
             _textField(_community, AppStrings.sellerStoreCommunityLabel),
+            _textField(_promptPayId, 'PromptPay ID สำหรับรับเงิน'),
+            _textField(_bankName, 'ธนาคาร'),
+            _textField(_bankAccountName, 'ชื่อบัญชีธนาคาร'),
+            _textField(_bankAccountNumber, 'เลขที่บัญชีธนาคาร'),
             const SizedBox(height: AppSpacing.sm),
             _imageField(
               controller: _cover,
@@ -352,6 +368,10 @@ class _SellerStoreEditScreenState extends ConsumerState<SellerStoreEditScreen> {
       region: _region.text,
       community: _community.text,
       coverImageUrl: _cover.text.trim(),
+      promptPayId: _promptPayId.text.trim(),
+      bankName: _bankName.text.trim(),
+      bankAccountName: _bankAccountName.text.trim(),
+      bankAccountNumber: _bankAccountNumber.text.trim(),
       logoUrl: _logo.text.trim(),
     );
 

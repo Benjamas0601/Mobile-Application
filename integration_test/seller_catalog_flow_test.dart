@@ -40,7 +40,9 @@ void main() {
         .toList();
     debugPrint('pumpUntil timeout. Visible text:\n${visible.join('\n')}');
     debugPrint('pumpUntil timeout. FIELD VALUES:\n${fieldValues.join('\n')}');
-    throw StateError('Timed out waiting for $finder (${reason ?? 'no reason'})');
+    throw StateError(
+      'Timed out waiting for $finder (${reason ?? 'no reason'})',
+    );
   }
 
   Future<void> pumpUntilGone(
@@ -74,7 +76,8 @@ void main() {
     final DateTime end = DateTime.now().add(const Duration(seconds: 5));
     while (DateTime.now().isBefore(end)) {
       await tester.pump(const Duration(milliseconds: 100));
-      final double bottom = MediaQuery.maybeOf(
+      final double bottom =
+          MediaQuery.maybeOf(
             tester.element(find.byType(Scaffold).first),
           )?.viewInsets.bottom ??
           0;
@@ -101,7 +104,11 @@ void main() {
 
     final FirebaseStartupResult startup = await FirebaseBootstrap.start();
     await tester.pumpWidget(
-      ProviderScope(child: ThaiOtopApp(startup: startup)),
+      ProviderScope(
+        child: ThaiOtopApp(
+          startup: Future<FirebaseStartupResult>.value(startup),
+        ),
+      ),
     );
 
     // --- Sign in as the seeded seller. ----------------------------------
@@ -140,10 +147,7 @@ void main() {
     await tester.enterText(find.byType(TextFormField).at(2), '1290');
 
     await tester.tap(find.byType(DropdownButtonFormField<String>));
-    await pumpUntil(
-      tester,
-      find.byType(DropdownMenuItem<String>).last,
-    );
+    await pumpUntil(tester, find.byType(DropdownMenuItem<String>).last);
     await tester.tap(find.byType(DropdownMenuItem<String>).last);
     await tester.pumpAndSettle();
 
@@ -158,9 +162,11 @@ void main() {
     await tester.tap(find.text(AppStrings.addVariant));
     await tester.pumpAndSettle();
     await tester.enterText(
-      find.byWidgetPredicate((Widget w) =>
-          w is TextField &&
-          w.decoration?.labelText == AppStrings.variantStockHint),
+      find.byWidgetPredicate(
+        (Widget w) =>
+            w is TextField &&
+            w.decoration?.labelText == AppStrings.variantStockHint,
+      ),
       '3',
     );
 

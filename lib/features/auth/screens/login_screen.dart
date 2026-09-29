@@ -70,7 +70,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final String? redirect = widget.redirect;
       if (redirect != null && redirect.isNotEmpty) {
         context.go(redirect);
-      } else if (user.isSeller || user.isAdmin) {
+      } else if (user.isAdmin) {
+        context.go(AppRoutes.adminRoot);
+      } else if (user.isSeller) {
         context.go(AppRoutes.sellerRoot);
       } else {
         context.go(AppRoutes.home);

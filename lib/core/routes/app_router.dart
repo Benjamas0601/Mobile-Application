@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/admin/screens/admin_home_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/cart/screens/cart_screen.dart';
@@ -10,6 +11,7 @@ import '../../features/cart/screens/payment_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/orders/screens/order_detail_screen.dart';
 import '../../features/orders/screens/order_list_screen.dart';
+import '../../features/orders/screens/order_tracking_screen.dart';
 import '../../features/products/screens/product_detail_screen.dart';
 import '../../features/seller/screens/product_edit_screen.dart';
 import '../../features/seller/screens/seller_home_screen.dart';
@@ -38,6 +40,7 @@ class AppRoutes {
   static const String checkout = '/checkout';
   static const String payment = '/checkout/payment';
   static const String profile = '/profile';
+  static const String adminRoot = '/admin';
 
   /// Seller console root — every `/seller/...` route is account-bound.
   static const String sellerRoot = '/seller';
@@ -50,6 +53,9 @@ class AppRoutes {
 
   /// Takes the order id: `/order/abc123`.
   static String orderDetail(String orderId) => '/order/$orderId';
+
+  /// The post-checkout destination focused on live fulfilment status.
+  static String orderTracking(String orderId) => '/order/$orderId/tracking';
 
   /// Create form for one store: `/seller/products/new?storeId=store-singthai`.
   static String sellerProductNew(String storeId) =>
@@ -89,15 +95,28 @@ String? authRedirect({
     AppRoutes.ordersHistory,
     AppRoutes.profile,
   };
+  final bool isOrderRoute = location.startsWith('/order/');
 
   // Path-parameter routes (e.g. `/seller/products/p-x`) arrive here with the
   // real id substituted, so membership in the set above is not enough — check
   // the whole seller console by prefix.
-  final bool isSellerRoute = location.startsWith('${AppRoutes.sellerRoot}/') ||
+  final bool isSellerRoute =
+      location.startsWith('${AppRoutes.sellerRoot}/') ||
       location == AppRoutes.sellerRoot;
+  final bool isAdminRoute =
+      location == AppRoutes.adminRoot ||
+      location.startsWith('${AppRoutes.adminRoot}/');
+
+  if (isAdminRoute && user?.isAdmin != true) {
+    return signedIn ? AppRoutes.home : '${AppRoutes.login}?redirect=$location';
+  }
 
   if (!signedIn) {
-    if (!accountRequired.contains(location) && !isSellerRoute) return null;
+    if (!accountRequired.contains(location) &&
+        !isSellerRoute &&
+        !isOrderRoute) {
+      return null;
+    }
     // Hand the destination to the login screen as `redirect` so signing in
     // resumes the original flow instead of dumping the user on Home.
     return '${AppRoutes.login}?redirect=$location';
@@ -105,7 +124,14 @@ String? authRedirect({
 
   // When signed in as a Seller or Admin, navigating to /home, /login, or /register
   // redirects directly to Seller Dashboard.
-  if (user != null && (user.isSeller || user.isAdmin)) {
+  if (user?.isAdmin == true &&
+      (location == AppRoutes.home ||
+          location == AppRoutes.login ||
+          location == AppRoutes.register)) {
+    return AppRoutes.adminRoot;
+  }
+
+  if (user?.isSeller == true) {
     if (location == AppRoutes.home ||
         location == AppRoutes.login ||
         location == AppRoutes.register) {
@@ -147,6 +173,11 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
             const HomeScreen(),
       ),
       GoRoute(
+        path: AppRoutes.adminRoot,
+        builder: (BuildContext context, GoRouterState state) =>
+            const AdminHomeScreen(),
+      ),
+      GoRoute(
         path: '/product/:productId',
         builder: (BuildContext context, GoRouterState state) =>
             ProductDetailScreen(
@@ -185,10 +216,14 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
       // Deep link from the payment confirmation, so the buyer lands on the
       // order they just made rather than a list they have to search.
       GoRoute(
+        path: '/order/:orderId/tracking',
+        builder: (BuildContext context, GoRouterState state) =>
+            OrderTrackingScreen(orderId: state.pathParameters['orderId'] ?? ''),
+      ),
+      GoRoute(
         path: '/order/:orderId',
-        builder: (BuildContext context, GoRouterState state) => OrderDetailScreen(
-          orderId: state.pathParameters['orderId'] ?? '',
-        ),
+        builder: (BuildContext context, GoRouterState state) =>
+            OrderDetailScreen(orderId: state.pathParameters['orderId'] ?? ''),
       ),
       // Seller console: account-bound (redirect above) and role-gated inside
       // the screens, because a role lives in Firestore, not in the route.
@@ -215,15 +250,14 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
       GoRoute(
         path: '/seller/products/new',
         builder: (BuildContext context, GoRouterState state) =>
-            ProductEditScreen(
-              storeId: state.uri.queryParameters['storeId'],
-            ),
+            ProductEditScreen(storeId: state.uri.queryParameters['storeId']),
       ),
       GoRoute(
         path: '/seller/products/:productId',
-        builder: (BuildContext context, GoRouterState state) => ProductEditScreen(
-          productId: state.pathParameters['productId'] ?? '',
-        ),
+        builder: (BuildContext context, GoRouterState state) =>
+            ProductEditScreen(
+              productId: state.pathParameters['productId'] ?? '',
+            ),
       ),
     ],
   );

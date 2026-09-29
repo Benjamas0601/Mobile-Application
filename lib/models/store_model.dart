@@ -13,6 +13,10 @@ class StoreModel {
     required this.description,
     this.coverImageUrl = '',
     this.logoUrl,
+    this.promptPayId = '',
+    this.bankName = '',
+    this.bankAccountName = '',
+    this.bankAccountNumber = '',
     this.otopCertified = false,
     this.ratingAvg = 0,
     this.ratingCount = 0,
@@ -28,6 +32,10 @@ class StoreModel {
   final String description;
   final String coverImageUrl;
   final String? logoUrl;
+  final String promptPayId;
+  final String bankName;
+  final String bankAccountName;
+  final String bankAccountNumber;
   final bool otopCertified;
   final double ratingAvg;
   final int ratingCount;
@@ -49,6 +57,10 @@ class StoreModel {
       description: r.string('description'),
       coverImageUrl: r.string('coverImageUrl'),
       logoUrl: r.stringOrNull('logoUrl'),
+      promptPayId: r.string('promptPayId'),
+      bankName: r.string('bankName'),
+      bankAccountName: r.string('bankAccountName'),
+      bankAccountNumber: r.string('bankAccountNumber'),
       otopCertified: r.boolean('otopCertified'),
       ratingAvg: r.decimal('ratingAvg'),
       ratingCount: r.integer('ratingCount'),

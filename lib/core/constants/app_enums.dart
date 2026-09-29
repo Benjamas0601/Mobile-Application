@@ -93,7 +93,7 @@ enum OrderStatus {
   paid('paid', 'ชำระแล้ว'),
   awaitingShipment('awaiting_shipment', 'รอจัดส่ง'),
   shipped('shipped', 'จัดส่งแล้ว'),
-  completed('completed', 'สำเร็จ'),
+  completed('completed', 'จัดส่งสำเร็จ'),
   cancelled('cancelled', 'ยกเลิก');
 
   const OrderStatus(this.value, this.label);

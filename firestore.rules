@@ -109,19 +109,60 @@ service cloud.firestore {
       // (เบอร์โทร/อีเมลถูกกรองออกที่ชั้น UI — UserModel.toPublicMap)
       allow read: if isSignedIn();
 
-      // สร้างตอนสมัครสมาชิก: ของตัวเองเท่านั้น และ role แรกต้องเป็น customer
+      // สมัครได้เป็นลูกค้า, ผู้ขาย หรือ Affiliate แต่ห้ามกำหนด role admin เอง
       allow create: if isSignedIn()
         && request.auth.uid == userId
-        && request.resource.data.roles == ['customer']
+        && request.resource.data.keys().hasOnly([
+             'displayName',
+             'email',
+             'roles',
+             'createdAt',
+             'phone',
+             'province',
+             'affiliatePlatform',
+             'affiliateHandle',
+             'affiliateProfileUrl',
+           ])
+        && request.resource.data.roles is list
+        && 'customer' in request.resource.data.roles
+        && request.resource.data.roles.hasOnly(
+             ['customer', 'seller', 'affiliate']
+           )
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() > 0
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() > 0
+        && request.resource.data.province is string
+        && request.resource.data.province.size() > 0
+        && (!('affiliate' in request.resource.data.roles)
+          || (request.resource.data.affiliatePlatform is string
+            && request.resource.data.affiliatePlatform.size() > 0
+            && request.resource.data.affiliateHandle is string
+            && request.resource.data.affiliateHandle.size() > 0
+            && request.resource.data.affiliateProfileUrl is string
+            && request.resource.data.affiliateProfileUrl.size() > 0))
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.createdAt == request.time;
 
       // แก้ได้เฉพาะตัวเอง (หรือแอดมิน) แต่ห้ามแตะ roles / email / createdAt
       allow update: if isSignedIn()
-        && (request.auth.uid == userId || isAdmin())
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(
-             ['roles', 'createdAt', 'email']
-           );
+        && (
+          (request.auth.uid == userId
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny(
+                 ['roles', 'createdAt', 'email']
+               ))
+          || (isAdmin()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+                 ['displayName', 'phone', 'province', 'roles', 'updatedAt']
+               )
+            && request.resource.data.roles is list
+            && request.resource.data.roles.size() > 0
+            && request.resource.data.roles.hasOnly(
+                 ['customer', 'seller', 'affiliate', 'admin']
+               )
+            && ('admin' in request.resource.data.roles)
+                 == ('admin' in resource.data.roles))
+        );
 
       // ลบบัญชีได้เฉพาะตัวเอง (ไม่ใช่แอดมิน เพื่อไม่ให้หลักฐานการซื้อขายหาย)
       allow delete: if isSignedIn() && request.auth.uid == userId;
@@ -143,7 +184,8 @@ service cloud.firestore {
       // (ย้ายเจ้าของ = ปิดร้านเดิมแล้วเปิดใหม่; คะแนน/ค่าคอมมิชชั่น/การรับรอง
       // เขียนโดย Cloud Function) — ฟอร์มโปรไฟล์ร้านไม่มีช่องให้แก้
       // แต่กฎคือชั้นความปลอดภัยจริง ไม่ใช่แค่ซ่อนปุ่ม
-      allow update: if ownsStore(storeId)
+      allow update: if (
+        ownsStore(storeId)
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(
              [
                'ownerUid',
@@ -153,7 +195,26 @@ service cloud.firestore {
                'commissionRate',
                'otopCertified',
              ]
-           );
+           )
+      ) || (
+        isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+             [
+               'name',
+               'description',
+               'province',
+               'region',
+               'community',
+               'coverImageUrl',
+               'logoUrl',
+               'promptPayId',
+               'bankName',
+               'bankAccountName',
+               'bankAccountNumber',
+               'updatedAt',
+             ]
+           )
+      );
 
       // ลบร้าน = แอดมินเท่านั้น (เจ้าของใช้ archived แทน เพื่อไม่ให้ออเดอร์ที่
       // อ้างถึงร้านเสียหาย) — ต้องลบสินค้าด้วยก่อน ให้ Cloud Function ตรวจ
@@ -295,7 +356,14 @@ service cloud.firestore {
 
       // ลูกค้าสร้างรายการชำระเอง (ยังไม่ verified)
       allow create: if isSignedIn()
-        && request.resource.data.status in ['awaiting_transfer', 'submitted'];
+        && request.resource.data.status in ['awaiting_transfer', 'submitted']
+        && request.resource.data.orderId is string
+        && request.resource.data.buyerUid == request.auth.uid
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && (request.resource.data.status != 'submitted'
+          || (request.resource.data.slipUrl is string
+            && request.resource.data.slipUrl.matches('https://.+')));
 
       // ผู้ขาย/แอดมินเท่านั้นที่เปลี่ยนสถานะเป็น verified / failed
       allow update: if isSignedIn() && (

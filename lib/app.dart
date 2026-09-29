@@ -15,15 +15,88 @@ import 'widgets/bootstrap_gate.dart';
 ///  2. theme          — light + dark from the design tokens
 ///  3. startup gate   — blocks the app with a readable message if Firebase
 ///                      could not start, so we never render a white screen
-class ThaiOtopApp extends ConsumerWidget {
+class ThaiOtopApp extends StatelessWidget {
   const ThaiOtopApp({super.key, required this.startup});
+
+  final Future<FirebaseStartupResult> startup;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<FirebaseStartupResult>(
+      future: startup,
+      builder:
+          (
+            BuildContext context,
+            AsyncSnapshot<FirebaseStartupResult> snapshot,
+          ) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const _StartupStatusApp();
+            }
+
+            final FirebaseStartupResult? result = snapshot.data;
+            if (result is FirebaseReady) {
+              return _ReadyThaiOtopApp(startup: result);
+            }
+
+            return _StartupStatusApp(
+              startup:
+                  result ??
+                  FirebaseUnavailable(
+                    snapshot.error?.toString() ?? 'ไม่สามารถเริ่มต้นแอปได้',
+                  ),
+            );
+          },
+    );
+  }
+}
+
+class _StartupStatusApp extends StatelessWidget {
+  const _StartupStatusApp({this.startup});
+
+  final FirebaseStartupResult? startup;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget home = startup == null
+        ? const Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('กำลังเตรียมแอป...'),
+                ],
+              ),
+            ),
+          )
+        : BootstrapGate(startup: startup!, child: null);
+
+    return MaterialApp(
+      title: 'Thai OTOP Marketplace',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.system,
+      locale: const Locale('th', 'TH'),
+      supportedLocales: const <Locale>[Locale('th', 'TH'), Locale('en', 'US')],
+      localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      home: home,
+    );
+  }
+}
+
+class _ReadyThaiOtopApp extends ConsumerWidget {
+  const _ReadyThaiOtopApp({required this.startup});
 
   final FirebaseStartupResult startup;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watching the router provider rebuilds navigation when the auth stream
-    // changes, which is what keeps the redirect honest after sign-out.
     final GoRouter router = ref.watch(routerProvider);
 
     return MaterialApp.router(

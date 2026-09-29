@@ -116,6 +116,7 @@ class _FakeOrderRepository implements OrderRepository {
     required String buyerName,
     required String shippingAddress,
     required PaymentMethod method,
+    String? slipUrl,
     String? note,
   }) async => 'new-order-id';
 }
@@ -133,7 +134,8 @@ class _FakeSellerCatalogRepository implements SellerCatalogRepository {
   Object? failWith;
 
   @override
-  Future<StoreModel?> getMyStore() async => stores.isEmpty ? null : stores.first;
+  Future<StoreModel?> getMyStore() async =>
+      stores.isEmpty ? null : stores.first;
 
   @override
   Future<List<StoreModel>> listMyStores() async => stores;
@@ -242,8 +244,11 @@ void main() {
     testWidgets('a customer is gated out', (WidgetTester tester) async {
       await _pump(
         tester,
-        _container(_FakeSellerCatalogRepository(), _FakeOrderRepository(),
-            user: _customer),
+        _container(
+          _FakeSellerCatalogRepository(),
+          _FakeOrderRepository(),
+          user: _customer,
+        ),
         const SellerHomeScreen(),
       );
 
@@ -295,8 +300,11 @@ void main() {
     testWidgets('a customer is gated out', (WidgetTester tester) async {
       await _pump(
         tester,
-        _container(_FakeSellerCatalogRepository(), _FakeOrderRepository(),
-            user: _customer),
+        _container(
+          _FakeSellerCatalogRepository(),
+          _FakeOrderRepository(),
+          user: _customer,
+        ),
         const SellerOrderListScreen(),
       );
 
@@ -363,7 +371,9 @@ void main() {
       ]);
     });
 
-    testWidgets('a cancelled order offers no step', (WidgetTester tester) async {
+    testWidgets('a cancelled order offers no step', (
+      WidgetTester tester,
+    ) async {
       await _pump(
         tester,
         _container(
@@ -399,9 +409,7 @@ void main() {
       WidgetTester tester,
     ) async {
       final _FakeOrderRepository repo = _FakeOrderRepository(
-        orders: <OrderModel>[
-          _order(status: OrderStatus.awaitingShipment),
-        ],
+        orders: <OrderModel>[_order(status: OrderStatus.awaitingShipment)],
       );
       await _pump(
         tester,
@@ -434,9 +442,7 @@ void main() {
       WidgetTester tester,
     ) async {
       final _FakeOrderRepository repo = _FakeOrderRepository(
-        orders: <OrderModel>[
-          _order(status: OrderStatus.awaitingShipment),
-        ],
+        orders: <OrderModel>[_order(status: OrderStatus.awaitingShipment)],
       );
       await _pump(
         tester,
@@ -467,9 +473,7 @@ void main() {
       WidgetTester tester,
     ) async {
       final _FakeOrderRepository repo = _FakeOrderRepository(
-        orders: <OrderModel>[
-          _order(status: OrderStatus.awaitingShipment),
-        ],
+        orders: <OrderModel>[_order(status: OrderStatus.awaitingShipment)],
       );
       await _pump(
         tester,
@@ -581,10 +585,7 @@ void main() {
       );
 
       await tester.tap(
-        find.widgetWithText(
-          OutlinedButton,
-          AppStrings.uploadFromDevice,
-        ).first,
+        find.widgetWithText(OutlinedButton, AppStrings.uploadFromDevice).first,
       );
       await tester.pumpAndSettle();
 

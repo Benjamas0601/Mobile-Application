@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../core/config/cloudinary_config.dart';
 import '../core/services/image/cloudinary_image_service.dart';
@@ -13,9 +14,7 @@ import '../core/services/image/image_storage_service.dart';
 /// Overridden in tests with a fake, which is also how the not-configured path
 /// is exercised without network access.
 final Provider<ImageStorageService> imageStorageServiceProvider =
-    Provider<ImageStorageService>(
-      (Ref ref) => CloudinaryImageService(),
-    );
+    Provider<ImageStorageService>((Ref ref) => CloudinaryImageService());
 
 /// Whether upload credentials were compiled into this build.
 ///
@@ -26,8 +25,26 @@ final Provider<bool> cloudinaryConfiguredProvider = Provider<bool>(
 );
 
 /// Reason to show when uploads are unavailable, empty when they are available.
-final Provider<String?> cloudinaryMissingConfigProvider = Provider<String?>((
-  Ref ref,
-) => ref.watch(cloudinaryConfiguredProvider)
-    ? null
-    : CloudinaryConfig.notConfiguredMessage);
+final Provider<String?> cloudinaryMissingConfigProvider = Provider<String?>(
+  (Ref ref) => ref.watch(cloudinaryConfiguredProvider)
+      ? null
+      : CloudinaryConfig.notConfiguredMessage,
+);
+
+abstract interface class PaymentSlipPicker {
+  Future<XFile?> pickImage();
+}
+
+class GalleryPaymentSlipPicker implements PaymentSlipPicker {
+  GalleryPaymentSlipPicker({ImagePicker? picker})
+    : _picker = picker ?? ImagePicker();
+
+  final ImagePicker _picker;
+
+  @override
+  Future<XFile?> pickImage() =>
+      _picker.pickImage(source: ImageSource.gallery, imageQuality: 88);
+}
+
+final Provider<PaymentSlipPicker> paymentSlipPickerProvider =
+    Provider<PaymentSlipPicker>((Ref ref) => GalleryPaymentSlipPicker());

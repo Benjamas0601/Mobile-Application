@@ -12,13 +12,6 @@ class PaymentStrings {
   static const String bankTransferHint = 'โอนผ่านเลขบัญชีของร้านค้า';
   static const String codHint = 'รับสินค้าแล้วจ่ายเงินสดที่ร้าน';
 
-  /// Placeholder for the PromptPay QR. A static string rather than a drawn
-  /// code, because rendering a scannable-looking pattern that is not a real
-  /// payload would be worse than saying it is not wired up yet.
-  static const String promptPayQrPlaceholder = 'QR พร้อมเพย์ (ยังไม่ได้เชื่อม Gateway)';
-  static const String bankAccountPlaceholder =
-      'เลขบัญชี: 000-000-0000 (ข้อมูลตัวอย่าง)';
-
   // --- Slip ----------------------------------------------------------------
   static const String slipUploadHint = 'แนบสลิปเพื่อให้ร้านตรวจสอบเร็วขึ้น';
   static const String slipNotAvailableHint =
@@ -39,7 +32,7 @@ class PaymentStrings {
   static const String statusPaid = 'ชำระแล้ว';
   static const String statusAwaitingShipment = 'รอผู้ขายจัดส่ง';
   static const String statusShipped = 'จัดส่งแล้ว';
-  static const String statusDelivered = 'สำเร็จ';
+  static const String statusDelivered = 'จัดส่งสำเร็จ';
   static const String statusCancelled = 'ยกเลิกแล้ว';
   static const String statusCancelledHint = 'คำสั่งซื้อนี้ถูกยกเลิกแล้ว';
   static const String statusAwaitingTransfer = 'รอโอนเงิน';

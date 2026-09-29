@@ -80,6 +80,7 @@ class PlaceOrderController extends Notifier<bool> {
     required String buyerName,
     required String shippingAddress,
     required PaymentMethod method,
+    String? slipUrl,
     String? note,
   }) async {
     // The screen-facing guard, so an invalid draft produces a clean message
@@ -87,6 +88,9 @@ class PlaceOrderController extends Notifier<bool> {
     // because `createOrder` is also reachable from other callers.
     if (state) return null;
     if (lines.isEmpty || storeId.isEmpty || shippingAddress.trim().isEmpty) {
+      return null;
+    }
+    if (method.requiresSlip && (slipUrl == null || slipUrl.trim().isEmpty)) {
       return null;
     }
     state = true;
@@ -98,6 +102,7 @@ class PlaceOrderController extends Notifier<bool> {
         buyerName: buyerName,
         shippingAddress: shippingAddress,
         method: method,
+        slipUrl: slipUrl,
         note: note,
       );
       ref.read(cartProvider.notifier).clear();

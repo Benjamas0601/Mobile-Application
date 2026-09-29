@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:thai_promptpay/thai_promptpay.dart';
 
 import '../../../core/constants/app_enums.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/payment_strings.dart';
 import '../../../core/routes/app_router.dart';
+import '../../../core/services/image/image_storage_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -69,6 +73,10 @@ class PaymentScreen extends ConsumerWidget {
       user: user,
       storeId: draft.storeId,
       storeName: store?.name ?? '',
+      promptPayId: store?.promptPayId ?? '',
+      bankName: store?.bankName ?? '',
+      bankAccountName: store?.bankAccountName ?? '',
+      bankAccountNumber: store?.bankAccountNumber ?? '',
       shippingAddress: draft.shippingAddress,
     );
   }
@@ -80,6 +88,10 @@ class _PaymentForm extends ConsumerStatefulWidget {
     required this.user,
     required this.storeId,
     required this.storeName,
+    required this.promptPayId,
+    required this.bankName,
+    required this.bankAccountName,
+    required this.bankAccountNumber,
     required this.shippingAddress,
   });
 
@@ -87,6 +99,10 @@ class _PaymentForm extends ConsumerStatefulWidget {
   final UserModel user;
   final String storeId;
   final String storeName;
+  final String promptPayId;
+  final String bankName;
+  final String bankAccountName;
+  final String bankAccountNumber;
   final String shippingAddress;
 
   @override
@@ -95,7 +111,9 @@ class _PaymentForm extends ConsumerStatefulWidget {
 
 class _PaymentFormState extends ConsumerState<_PaymentForm> {
   PaymentMethod _method = PaymentMethod.promptPay;
+  String? _slipUrl;
   String? _error;
+  bool _uploadingSlip = false;
 
   static const List<PaymentMethod> _methods = <PaymentMethod>[
     PaymentMethod.promptPay,
@@ -111,6 +129,11 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
       (double sum, CartLine l) => sum + l.lineTotal,
     );
     final double total = getCartTotal(subtotal);
+    final int totalSatang = (total * 100).round();
+    final bool destinationReady = _destinationReady(totalSatang);
+    final bool canConfirm =
+        _method == PaymentMethod.cashOnDelivery ||
+        (destinationReady && _slipUrl != null && !_uploadingSlip);
 
     return Scaffold(
       appBar: AppBar(title: const Text(AppStrings.payNow)),
@@ -134,7 +157,21 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
               ),
             ),
           const SizedBox(height: AppSpacing.md),
-          _TransferInstructions(method: _method),
+          _TransferInstructions(
+            method: _method,
+            promptPayId: widget.promptPayId,
+            amountSatang: totalSatang,
+            bankName: widget.bankName,
+            bankAccountName: widget.bankAccountName,
+            bankAccountNumber: widget.bankAccountNumber,
+            slipUrl: _slipUrl,
+            uploadingSlip: _uploadingSlip,
+            onPickSlip: _pickSlip,
+            onRemoveSlip: () => setState(() {
+              _slipUrl = null;
+              _error = null;
+            }),
+          ),
           if (_error != null) ...<Widget>[
             const SizedBox(height: AppSpacing.md),
             InlineErrorBanner(message: _error!),
@@ -147,7 +184,7 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: busy ? null : _confirm,
+              onPressed: busy || !canConfirm ? null : _confirm,
               child: busy
                   ? const SizedBox(
                       width: 20,
@@ -166,6 +203,64 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
         ],
       ),
     );
+  }
+
+  bool _destinationReady(int amountSatang) {
+    if (_method == PaymentMethod.promptPay) {
+      return buildPromptPayPayload(widget.promptPayId, amountSatang) != null;
+    }
+    if (_method == PaymentMethod.bankTransfer) {
+      return widget.bankName.trim().isNotEmpty &&
+          widget.bankAccountName.trim().isNotEmpty &&
+          widget.bankAccountNumber.trim().isNotEmpty;
+    }
+    return true;
+  }
+
+  Future<void> _pickSlip() async {
+    if (!ref.read(cloudinaryConfiguredProvider)) {
+      setState(() {
+        _error =
+            ref.read(cloudinaryMissingConfigProvider) ??
+            PaymentStrings.slipRequiresConfig;
+      });
+      return;
+    }
+
+    try {
+      final XFile? file = await ref.read(paymentSlipPickerProvider).pickImage();
+      if (file == null || !mounted) return;
+      setState(() {
+        _uploadingSlip = true;
+        _error = null;
+      });
+      final UploadedImage uploaded = await ref
+          .read(imageStorageServiceProvider)
+          .uploadImage(
+            file: file,
+            folder: ImageUploadPolicy.folderForPaymentSlip(
+              paymentId:
+                  '${widget.user.uid}-${DateTime.now().microsecondsSinceEpoch}',
+            ),
+          );
+      if (!mounted) return;
+      setState(() {
+        _slipUrl = uploaded.url;
+        _uploadingSlip = false;
+      });
+    } on ImageUploadException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error.message;
+        _uploadingSlip = false;
+      });
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'แนบหลักฐานไม่สำเร็จ: $error';
+        _uploadingSlip = false;
+      });
+    }
   }
 
   Widget _orderSummaryCard(double subtotal, double total) {
@@ -267,6 +362,7 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
             buyerName: widget.user.displayName,
             shippingAddress: widget.shippingAddress,
             method: _method,
+            slipUrl: _slipUrl,
           );
     } on OrderWriteException catch (e) {
       // A full sentence about the write, not a crash: the repository already
@@ -285,8 +381,10 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
     // The messenger is captured before navigating because this widget is torn
     // down by the route change.
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(const SnackBar(content: Text(AppStrings.orderPlaced)));
-    context.go(AppRoutes.orderDetail(orderId));
+    messenger.showSnackBar(
+      const SnackBar(content: Text(AppStrings.orderPlaced)),
+    );
+    context.go(AppRoutes.orderTracking(orderId));
   }
 }
 
@@ -302,19 +400,17 @@ class _MethodTile extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  static const Map<PaymentMethod, IconData> _icons =
-      <PaymentMethod, IconData>{
-        PaymentMethod.promptPay: Icons.qr_code_2_rounded,
-        PaymentMethod.bankTransfer: Icons.account_balance_rounded,
-        PaymentMethod.cashOnDelivery: Icons.local_shipping_outlined,
-      };
+  static const Map<PaymentMethod, IconData> _icons = <PaymentMethod, IconData>{
+    PaymentMethod.promptPay: Icons.qr_code_2_rounded,
+    PaymentMethod.bankTransfer: Icons.account_balance_rounded,
+    PaymentMethod.cashOnDelivery: Icons.local_shipping_outlined,
+  };
 
-  static const Map<PaymentMethod, String> _hints =
-      <PaymentMethod, String>{
-        PaymentMethod.promptPay: 'สแกน QR ด้วยแอปธนาคาร',
-        PaymentMethod.bankTransfer: 'โอนผ่านเลขที่บัญชีของร้าน',
-        PaymentMethod.cashOnDelivery: 'จ่ายเงินสดตอนรับสินค้าที่ร้าน',
-      };
+  static const Map<PaymentMethod, String> _hints = <PaymentMethod, String>{
+    PaymentMethod.promptPay: 'สแกน QR ด้วยแอปธนาคาร',
+    PaymentMethod.bankTransfer: 'โอนผ่านเลขที่บัญชีของร้าน',
+    PaymentMethod.cashOnDelivery: 'จ่ายเงินสดตอนรับสินค้าที่ร้าน',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -368,9 +464,29 @@ class _MethodTile extends StatelessWidget {
 
 /// What to do next for the chosen method, plus the slip slot.
 class _TransferInstructions extends ConsumerWidget {
-  const _TransferInstructions({required this.method});
+  const _TransferInstructions({
+    required this.method,
+    required this.promptPayId,
+    required this.amountSatang,
+    required this.bankName,
+    required this.bankAccountName,
+    required this.bankAccountNumber,
+    required this.slipUrl,
+    required this.uploadingSlip,
+    required this.onPickSlip,
+    required this.onRemoveSlip,
+  });
 
   final PaymentMethod method;
+  final String promptPayId;
+  final int amountSatang;
+  final String bankName;
+  final String bankAccountName;
+  final String bankAccountNumber;
+  final String? slipUrl;
+  final bool uploadingSlip;
+  final VoidCallback onPickSlip;
+  final VoidCallback onRemoveSlip;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -383,15 +499,15 @@ class _TransferInstructions extends ConsumerWidget {
             Icons.info_outline_rounded,
             color: AppColors.info,
           ),
-          title: Text(
-            PaymentStrings.codHint,
-            style: AppTextStyles.bodyMedium,
-          ),
+          title: Text(PaymentStrings.codHint, style: AppTextStyles.bodyMedium),
         ),
       );
     }
 
     final bool canUpload = ref.watch(cloudinaryConfiguredProvider);
+    final String? qrPayload = method == PaymentMethod.promptPay
+        ? buildPromptPayPayload(promptPayId, amountSatang)
+        : null;
 
     return Card(
       child: Padding(
@@ -399,18 +515,107 @@ class _TransferInstructions extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
+            if (method == PaymentMethod.promptPay) ...<Widget>[
+              if (qrPayload == null)
+                const _PaymentSetupHint(
+                  message: 'ร้านยังไม่ได้ตั้งค่า PromptPay ID ที่ถูกต้อง',
+                  detail:
+                      'ให้ผู้ขายเพิ่มเบอร์ PromptPay หรือเลขรับเงินในโปรไฟล์ร้าน',
+                )
+              else ...<Widget>[
+                Center(
+                  child: QrImageView(
+                    data: qrPayload,
+                    version: QrVersions.auto,
+                    size: 220,
+                    backgroundColor: Colors.white,
+                    semanticsLabel:
+                        'QR PromptPay สำหรับยอดชำระของคำสั่งซื้อนี้',
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Center(
+                  child: Text(
+                    'PromptPay: $promptPayId',
+                    style: AppTextStyles.bodySmall,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ] else if (bankName.trim().isEmpty ||
+                bankAccountName.trim().isEmpty ||
+                bankAccountNumber.trim().isEmpty)
+              const _PaymentSetupHint(
+                message: 'ร้านยังไม่ได้ตั้งค่าบัญชีธนาคาร',
+                detail: 'ให้ผู้ขายเพิ่มข้อมูลบัญชีในโปรไฟล์ร้าน',
+              )
+            else
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.account_balance_outlined),
+                title: Text(bankName),
+                subtitle: Text('$bankAccountName\n$bankAccountNumber'),
+                isThreeLine: true,
+              ),
+            const Divider(height: AppSpacing.lg),
+            Text('แนบหลักฐานการชำระเงิน', style: AppTextStyles.labelMedium),
+            const SizedBox(height: AppSpacing.xs),
             Text(
-              method == PaymentMethod.promptPay
-              ? PaymentStrings.promptPayQrPlaceholder
-              : PaymentStrings.bankAccountPlaceholder,
-              style: AppTextStyles.bodyMedium,
+              'รองรับ JPG, PNG, WebP หรือ HEIC ขนาดไม่เกิน 5 MB',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.inkMuted,
+              ),
             ),
-            const SizedBox(height: AppSpacing.md),
-            if (canUpload)
-              // Wired up but disabled: the upload path needs a picked file and
-              // a real Cloudinary preset, which this build has neither of.
+            const SizedBox(height: AppSpacing.sm),
+            if (slipUrl != null)
+              Row(
+                children: <Widget>[
+                  ClipRRect(
+                    borderRadius: AppRadius.cardRadius,
+                    child: Image.network(
+                      slipUrl!,
+                      width: 72,
+                      height: 72,
+                      fit: BoxFit.cover,
+                      errorBuilder:
+                          (
+                            BuildContext context,
+                            Object error,
+                            StackTrace? stack,
+                          ) => const SizedBox.square(
+                            dimension: 72,
+                            child: Icon(Icons.receipt_long_outlined),
+                          ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  const Expanded(child: Text('แนบหลักฐานแล้ว')),
+                  IconButton(
+                    tooltip: 'เปลี่ยนหลักฐาน',
+                    onPressed: uploadingSlip ? null : onPickSlip,
+                    icon: const Icon(Icons.refresh_rounded),
+                  ),
+                  IconButton(
+                    tooltip: 'นำหลักฐานออก',
+                    onPressed: uploadingSlip ? null : onRemoveSlip,
+                    icon: const Icon(Icons.delete_outline_rounded),
+                  ),
+                ],
+              )
+            else if (uploadingSlip)
+              const Row(
+                children: <Widget>[
+                  SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  SizedBox(width: AppSpacing.sm),
+                  Text('กำลังอัปโหลดหลักฐาน...'),
+                ],
+              )
+            else if (canUpload)
               OutlinedButton.icon(
-                onPressed: null,
+                onPressed: onPickSlip,
                 icon: const Icon(Icons.attach_file_rounded, size: 18),
                 label: const Text(AppStrings.uploadSlip),
               )
@@ -422,6 +627,53 @@ class _TransferInstructions extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+class _PaymentSetupHint extends StatelessWidget {
+  const _PaymentSetupHint({required this.message, required this.detail});
+
+  final String message;
+  final String detail;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(AppSpacing.md),
+    decoration: BoxDecoration(
+      color: AppColors.warningLight,
+      borderRadius: AppRadius.cardRadius,
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(message, style: AppTextStyles.labelMedium),
+        const SizedBox(height: AppSpacing.xs),
+        Text(detail, style: AppTextStyles.bodySmall),
+      ],
+    ),
+  );
+}
+
+String? buildPromptPayPayload(String promptPayId, int amountSatang) {
+  final String id = promptPayId.trim();
+  if (id.isEmpty) return null;
+  final String digits = id.replaceAll(RegExp(r'\D'), '');
+  final PromptPayType? type = digits.length == 10 || id.startsWith('+66')
+      ? PromptPayType.mobile
+      : digits.length == 13
+      ? PromptPayType.nationalId
+      : digits.length == 15
+      ? PromptPayType.eWallet
+      : null;
+  if (type == null) return null;
+  try {
+    return encodePromptPay(
+      target: PromptPayTarget(type, id),
+      amountSatang: amountSatang,
+    );
+  } on FormatException {
+    return null;
   }
 }
 
@@ -492,7 +744,11 @@ class _MvpNotice extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Icon(Icons.info_outline_rounded, size: 18, color: AppColors.warning),
+          const Icon(
+            Icons.info_outline_rounded,
+            size: 18,
+            color: AppColors.warning,
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(

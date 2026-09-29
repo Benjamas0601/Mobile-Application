@@ -39,11 +39,16 @@ void main() {
     throw StateError('Timed out waiting for $finder');
   }
 
-  testWidgets('customer login → seeded order history → real purchase',
-      (WidgetTester tester) async {
+  testWidgets('customer login → seeded order history → real purchase', (
+    WidgetTester tester,
+  ) async {
     final FirebaseStartupResult startup = await FirebaseBootstrap.start();
     await tester.pumpWidget(
-      ProviderScope(child: ThaiOtopApp(startup: startup)),
+      ProviderScope(
+        child: ThaiOtopApp(
+          startup: Future<FirebaseStartupResult>.value(startup),
+        ),
+      ),
     );
 
     // --- App boots to the home screen as a guest. ----------------------
@@ -57,10 +62,7 @@ void main() {
       find.byType(TextFormField).at(0),
       'customer@example.com',
     );
-    await tester.enterText(
-      find.byType(TextFormField).at(1),
-      'OtopDemo123',
-    );
+    await tester.enterText(find.byType(TextFormField).at(1), 'OtopDemo123');
     await tester.tap(find.widgetWithText(FilledButton, AppStrings.login));
     await pumpUntil(tester, find.textContaining('สวัสดี'));
 
@@ -118,7 +120,10 @@ void main() {
 
     await tester.tap(find.text(AppStrings.checkout));
     await pumpUntil(tester, find.text(AppStrings.goToPayment));
-    await tester.enterText(find.byType(TextField), '99/1 ถนนสาทร กรุงเทพฯ 10120');
+    await tester.enterText(
+      find.byType(TextField),
+      '99/1 ถนนสาทร กรุงเทพฯ 10120',
+    );
     await tester.tap(find.text(AppStrings.goToPayment));
 
     // Payment screen shows the correct total before confirming.

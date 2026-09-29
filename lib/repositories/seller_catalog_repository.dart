@@ -224,6 +224,10 @@ class SellerCatalogRepository {
       'community': draft.community.trim(),
       'coverImageUrl': draft.coverImageUrl.trim(),
       'logoUrl': draft.logoUrl?.trim() ?? '',
+      'promptPayId': draft.promptPayId.trim(),
+      'bankName': draft.bankName.trim(),
+      'bankAccountName': draft.bankAccountName.trim(),
+      'bankAccountNumber': draft.bankAccountNumber.trim(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }

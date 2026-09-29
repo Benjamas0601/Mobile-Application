@@ -57,6 +57,7 @@ class OrderRepository {
     required String buyerName,
     required String shippingAddress,
     required PaymentMethod method,
+    String? slipUrl,
     String? note,
   }) async {
     if (items.isEmpty) {
@@ -68,6 +69,11 @@ class OrderRepository {
     if (shippingAddress.trim().isEmpty) {
       throw const OrderWriteException('กรุณากรอกที่อยู่จัดส่ง');
     }
+    final String? submittedSlip = slipUrl?.trim();
+    if (method.requiresSlip &&
+        (submittedSlip == null || submittedSlip.isEmpty)) {
+      throw const OrderWriteException('กรุณาแนบหลักฐานการโอนก่อนยืนยันคำสั่งซื้อ');
+    }
 
     final double subtotal = items.fold(
       0.0,
@@ -77,7 +83,7 @@ class OrderRepository {
 
     final PaymentStatus paymentStatus = method == PaymentMethod.cashOnDelivery
         ? PaymentStatus.unpaid
-        : PaymentStatus.awaitingTransfer;
+      : PaymentStatus.submitted;
 
     final Map<String, dynamic> data = <String, dynamic>{
       'buyerUid': _uid,
@@ -112,6 +118,7 @@ class OrderRepository {
           'method': method.value,
           'amount': subtotal + shippingFee,
           'status': paymentStatus.value,
+          'slipUrl': submittedSlip,
           'createdAt': FieldValue.serverTimestamp(),
         },
       );

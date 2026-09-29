@@ -94,10 +94,50 @@ class AuthRepository {
     required String email,
     required String password,
     required String displayName,
-    String phone = '',
-    String province = '',
+    required String phone,
+    required String province,
+    required UserRole accountType,
+    String storeName = '',
+    String community = '',
+    String storeDescription = '',
+    String region = '',
+    String affiliatePlatform = '',
+    String affiliateHandle = '',
+    String affiliateProfileUrl = '',
   }) async {
     final String cleanEmail = email.trim();
+    final String cleanName = displayName.trim();
+    final String cleanPhone = phone.trim();
+    final String cleanProvince = province.trim();
+    if (!<UserRole>{
+      UserRole.customer,
+      UserRole.seller,
+      UserRole.affiliate,
+    }.contains(accountType)) {
+      throw const AuthFailure('ประเภทบัญชีไม่ถูกต้อง');
+    }
+    if (cleanName.isEmpty || cleanPhone.isEmpty || cleanProvince.isEmpty) {
+      throw const AuthFailure('กรุณากรอกชื่อ โทรศัพท์ และจังหวัดให้ครบ');
+    }
+    if (accountType == UserRole.seller &&
+        (storeName.trim().isEmpty ||
+            community.trim().isEmpty ||
+            storeDescription.trim().isEmpty ||
+            ThaiRegion.fromValue(region) == null)) {
+      throw const AuthFailure('กรุณากรอกข้อมูลร้านค้าให้ครบ');
+    }
+    if (accountType == UserRole.affiliate &&
+        (affiliatePlatform.trim().isEmpty ||
+            affiliateHandle.trim().isEmpty ||
+            Uri.tryParse(affiliateProfileUrl.trim())?.host.isNotEmpty !=
+                true)) {
+      throw const AuthFailure(
+        'กรุณากรอกช่องทางและลิงก์โปรไฟล์ Affiliate ให้ครบ',
+      );
+    }
+
+    User? createdUser;
+    DocumentReference<Map<String, dynamic>>? profileRef;
     try {
       final UserCredential credential = await _auth
           .createUserWithEmailAndPassword(
@@ -106,35 +146,90 @@ class AuthRepository {
           );
 
       final String uid = credential.user!.uid;
-      await credential.user!.updateDisplayName(displayName);
+      createdUser = credential.user;
+      await createdUser!.updateDisplayName(cleanName);
+
+      final List<UserRole> roles = <UserRole>[
+        UserRole.customer,
+        if (accountType != UserRole.customer) accountType,
+      ];
 
       final Map<String, dynamic> profile = <String, dynamic>{
-        'displayName': displayName,
+        'displayName': cleanName,
         'email': cleanEmail,
-        'roles': <String>['customer'],
+        'roles': roles.map((UserRole role) => role.value).toList(),
         'createdAt': FieldValue.serverTimestamp(),
-        if (phone.isNotEmpty) 'phone': phone,
-        if (province.isNotEmpty) 'province': province,
+        'phone': cleanPhone,
+        'province': cleanProvince,
+        if (accountType == UserRole.affiliate) ...<String, dynamic>{
+          'affiliatePlatform': affiliatePlatform.trim(),
+          'affiliateHandle': affiliateHandle.trim(),
+          'affiliateProfileUrl': affiliateProfileUrl.trim(),
+        },
       };
 
-      await _db.collection(_users).doc(uid).set(profile);
+      profileRef = _db.collection(_users).doc(uid);
+      await profileRef.set(profile);
+
+      if (accountType == UserRole.seller) {
+        await _db.collection('stores').doc().set(<String, dynamic>{
+          'ownerUid': uid,
+          'name': storeName.trim(),
+          'province': cleanProvince,
+          'region': region,
+          'community': community.trim(),
+          'description': storeDescription.trim(),
+          'coverImageUrl': '',
+          'logoUrl': '',
+          'otopCertified': false,
+          'ratingAvg': 0.0,
+          'ratingCount': 0,
+          'commissionRate': 0.0,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
 
       return UserModel(
         uid: uid,
-        displayName: displayName,
+        displayName: cleanName,
         email: cleanEmail,
-        phone: phone,
-        province: province,
-        roles: const <UserRole>[UserRole.customer],
+        phone: cleanPhone,
+        province: cleanProvince,
+        roles: roles,
+        affiliatePlatform: accountType == UserRole.affiliate
+            ? affiliatePlatform.trim()
+            : '',
+        affiliateHandle: accountType == UserRole.affiliate
+            ? affiliateHandle.trim()
+            : '',
+        affiliateProfileUrl: accountType == UserRole.affiliate
+            ? affiliateProfileUrl.trim()
+            : '',
       );
     } on FirebaseAuthException catch (e) {
+      await _rollbackRegistration(createdUser, profileRef);
       throw AuthFailure(_messageFor(e));
     } on FirebaseException catch (e) {
+      await _rollbackRegistration(createdUser, profileRef);
       // The rules rejected the profile write — usually a rules/schema drift.
       throw AuthFailure('สมัครสมาชิกไม่สำเร็จ: ${e.message ?? e.code}');
     } catch (e) {
+      await _rollbackRegistration(createdUser, profileRef);
       throw AuthFailure('สมัครสมาชิกไม่สำเร็จ: $e');
     }
+  }
+
+  Future<void> _rollbackRegistration(
+    User? user,
+    DocumentReference<Map<String, dynamic>>? profileRef,
+  ) async {
+    try {
+      await profileRef?.delete();
+    } catch (_) {}
+    try {
+      await user?.delete();
+    } catch (_) {}
   }
 
   Future<void> sendPasswordReset(String email) async {

@@ -1,14 +1,21 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cross_file/cross_file.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:thai_promptpay/thai_promptpay.dart';
 import 'package:thai_otop_marketplace/core/constants/app_enums.dart';
 import 'package:thai_otop_marketplace/core/constants/app_strings.dart';
 import 'package:thai_otop_marketplace/core/constants/payment_strings.dart';
 import 'package:thai_otop_marketplace/core/routes/app_router.dart';
+import 'package:thai_otop_marketplace/core/services/image/image_storage_service.dart';
 import 'package:thai_otop_marketplace/features/cart/screens/payment_screen.dart';
 import 'package:thai_otop_marketplace/features/orders/screens/order_detail_screen.dart';
+import 'package:thai_otop_marketplace/features/orders/screens/order_tracking_screen.dart';
 import 'package:thai_otop_marketplace/models/order_model.dart';
 import 'package:thai_otop_marketplace/models/product_model.dart';
 import 'package:thai_otop_marketplace/models/store_model.dart';
@@ -57,6 +64,10 @@ const StoreModel _store = StoreModel(
   community: 'บ้านมะคำ',
   description: '',
   coverImageUrl: '',
+  promptPayId: '0812345678',
+  bankName: 'ธนาคารตัวอย่าง',
+  bankAccountName: 'ร้านชิงไทร',
+  bankAccountNumber: '1234567890',
 );
 
 OrderModel _order({OrderStatus status = OrderStatus.shipped}) => OrderModel(
@@ -77,18 +88,11 @@ OrderModel _order({OrderStatus status = OrderStatus.shipped}) => OrderModel(
   createdAt: DateTime(2026, 9, 28),
 );
 
-/// Stands in for the order detail route so the test can assert the write
-/// happened without dragging Firestore in.
-class _OrderDetailStub extends StatelessWidget {
-  const _OrderDetailStub();
-
-  @override
-  Widget build(BuildContext context) =>
-      const Scaffold(body: Center(child: Text('รายละเอียดคำสั่งซื้อ')));
-}
-
 /// Records what a screen asked the repository to do, without a Firestore.
 class _FakeOrderRepository implements OrderRepository {
+  _FakeOrderRepository({this.trackedOrderStatus = OrderStatus.shipped});
+
+  final OrderStatus trackedOrderStatus;
   final List<String> created = <String>[];
   final List<String> advanced = <String>[];
   final List<String> storeQueries = <String>[];
@@ -102,12 +106,16 @@ class _FakeOrderRepository implements OrderRepository {
     required String buyerName,
     required String shippingAddress,
     required PaymentMethod method,
+    String? slipUrl,
     String? note,
   }) async {
     if (failWith != null) throw failWith!;
     created.add('$storeId|$shippingAddress|${method.value}');
+    submittedSlips.add(slipUrl ?? '');
     return 'new-order-id';
   }
+
+  final List<String> submittedSlips = <String>[];
 
   @override
   Future<void> advanceStatus(
@@ -137,7 +145,7 @@ class _FakeOrderRepository implements OrderRepository {
 
   @override
   Stream<OrderModel?> watchOrder(String orderId) =>
-      Stream<OrderModel?>.value(_order());
+      Stream<OrderModel?>.value(_order(status: trackedOrderStatus));
 }
 
 /// An order that was cancelled, for the terminal-state case.
@@ -145,6 +153,37 @@ class _CancelledOrderRepository extends _FakeOrderRepository {
   @override
   Stream<OrderModel?> watchOrder(String orderId) =>
       Stream<OrderModel?>.value(_order(status: OrderStatus.cancelled));
+}
+
+class _FakePaymentSlipPicker implements PaymentSlipPicker {
+  @override
+  Future<XFile?> pickImage() async => XFile.fromData(
+    Uint8List.fromList(<int>[1, 2, 3]),
+    path: 'transfer-slip.jpg',
+    name: 'transfer-slip.jpg',
+  );
+}
+
+class _FakePaymentSlipStorage implements ImageStorageService {
+  @override
+  Future<UploadedImage> uploadImage({
+    required XFile file,
+    required String folder,
+  }) async => const UploadedImage(
+    url: 'https://images.example.test/transfer-slip.jpg',
+    publicId: 'payment-slip-test',
+  );
+
+  @override
+  Future<void> deleteImage(String publicId) async {}
+
+  @override
+  String buildUrl({
+    required String publicId,
+    int? width,
+    int? height,
+    String gravity = 'auto',
+  }) => 'https://images.example.test/$publicId';
 }
 
 ProviderContainer _container(
@@ -158,6 +197,8 @@ ProviderContainer _container(
         (Ref ref) => Stream<UserModel?>.value(user ?? _customer),
       ),
       orderRepositoryProvider.overrideWithValue(repo),
+      paymentSlipPickerProvider.overrideWithValue(_FakePaymentSlipPicker()),
+      imageStorageServiceProvider.overrideWithValue(_FakePaymentSlipStorage()),
       storeProvider.overrideWith((Ref ref, String id) async => _store),
       if (cloudinaryConfigured != null)
         cloudinaryConfiguredProvider.overrideWithValue(cloudinaryConfigured),
@@ -168,7 +209,10 @@ ProviderContainer _container(
 }
 
 /// Pumps [child] inside the router the payment screen navigates with.
-Future<void> _pumpPayment(WidgetTester tester, ProviderContainer container) async {
+Future<void> _pumpPayment(
+  WidgetTester tester,
+  ProviderContainer container,
+) async {
   final GoRouter router = GoRouter(
     initialLocation: AppRoutes.payment,
     routes: <RouteBase>[
@@ -178,9 +222,9 @@ Future<void> _pumpPayment(WidgetTester tester, ProviderContainer container) asyn
             const PaymentScreen(),
       ),
       GoRoute(
-        path: AppRoutes.orderDetail(':orderId'),
+        path: '/order/:orderId/tracking',
         builder: (BuildContext context, GoRouterState state) =>
-            const _OrderDetailStub(),
+            OrderTrackingScreen(orderId: state.pathParameters['orderId'] ?? ''),
       ),
     ],
   );
@@ -197,9 +241,16 @@ Future<void> _pumpPayment(WidgetTester tester, ProviderContainer container) asyn
 
 /// Pumps a single screen outside a router (the detail screen navigates only
 /// on an order-not-found action).
-Future<void> _pumpHome(WidgetTester tester, ProviderContainer container, Widget child) async {
+Future<void> _pumpHome(
+  WidgetTester tester,
+  ProviderContainer container,
+  Widget child,
+) async {
   await tester.pumpWidget(
-    UncontrolledProviderScope(container: container, child: MaterialApp(home: child)),
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(home: child),
+    ),
   );
   await tester.pumpAndSettle();
 }
@@ -208,6 +259,13 @@ Future<void> _pumpHome(WidgetTester tester, ProviderContainer container, Widget 
 /// live past the edge of the test viewport until scrolled into view.
 Future<void> _scrollTo(WidgetTester tester, Finder finder) async {
   await tester.scrollUntilVisible(finder, 300);
+  await tester.pumpAndSettle();
+}
+
+Future<void> _attachSlip(WidgetTester tester) async {
+  final Finder uploadButton = find.text(AppStrings.uploadSlip);
+  await _scrollTo(tester, uploadButton);
+  await tester.tap(uploadButton);
   await tester.pumpAndSettle();
 }
 
@@ -224,10 +282,9 @@ void main() {
     ) async {
       final ProviderContainer container = _container(_FakeOrderRepository())
         ..read(cartProvider.notifier).add(_product);
-      container.read(checkoutDraftProvider.notifier).start(
-        storeId: 's1',
-        shippingAddress: 'เชียงใหม่ 50100',
-      );
+      container
+          .read(checkoutDraftProvider.notifier)
+          .start(storeId: 's1', shippingAddress: 'เชียงใหม่ 50100');
 
       await _pumpPayment(tester, container);
 
@@ -249,12 +306,10 @@ void main() {
       final ProviderContainer container = _container(
         _FakeOrderRepository(),
         cloudinaryConfigured: false,
-      )
-        ..read(cartProvider.notifier).add(_product);
-      container.read(checkoutDraftProvider.notifier).start(
-        storeId: 's1',
-        shippingAddress: 'เชียงใหม่ 50100',
-      );
+      )..read(cartProvider.notifier).add(_product);
+      container
+          .read(checkoutDraftProvider.notifier)
+          .start(storeId: 's1', shippingAddress: 'เชียงใหม่ 50100');
 
       await _pumpPayment(tester, container);
 
@@ -279,12 +334,10 @@ void main() {
       final ProviderContainer container = _container(
         _FakeOrderRepository(),
         cloudinaryConfigured: true,
-      )
-        ..read(cartProvider.notifier).add(_product);
-      container.read(checkoutDraftProvider.notifier).start(
-        storeId: 's1',
-        shippingAddress: 'เชียงใหม่ 50100',
-      );
+      )..read(cartProvider.notifier).add(_product);
+      container
+          .read(checkoutDraftProvider.notifier)
+          .start(storeId: 's1', shippingAddress: 'เชียงใหม่ 50100');
 
       await _pumpPayment(tester, container);
 
@@ -300,22 +353,22 @@ void main() {
     ) async {
       final ProviderContainer container = _container(_FakeOrderRepository())
         ..read(cartProvider.notifier).add(_product);
-      container.read(checkoutDraftProvider.notifier).start(
-        storeId: 's1',
-        shippingAddress: 'เชียงใหม่ 50100',
-      );
+      container
+          .read(checkoutDraftProvider.notifier)
+          .start(storeId: 's1', shippingAddress: 'เชียงใหม่ 50100');
 
       await _pumpPayment(tester, container);
 
-      expect(
-        find.text(PaymentStrings.promptPayQrPlaceholder),
-        findsOneWidget,
-      );
+      expect(find.byType(QrImageView), findsOneWidget);
+      final String qrData = buildPromptPayPayload('0812345678', 53000)!;
+      final PromptPayPayload payload = decodePromptPay(qrData);
+      expect(payload.target.value, '0812345678');
+      expect(payload.amountSatang, 53000);
 
       await tester.tap(find.text(PaymentMethod.cashOnDelivery.label));
       await tester.pumpAndSettle();
 
-      expect(find.text(PaymentStrings.promptPayQrPlaceholder), findsNothing);
+      expect(find.byType(QrImageView), findsNothing);
       expect(find.text(PaymentStrings.codHint), findsOneWidget);
     });
 
@@ -339,20 +392,24 @@ void main() {
       final _FakeOrderRepository repo = _FakeOrderRepository();
       final ProviderContainer container = _container(repo)
         ..read(cartProvider.notifier).add(_product);
-      container.read(checkoutDraftProvider.notifier).start(
-        storeId: 's1',
-        shippingAddress: 'เชียงใหม่ 50100',
-      );
+      container
+          .read(checkoutDraftProvider.notifier)
+          .start(storeId: 's1', shippingAddress: 'เชียงใหม่ 50100');
 
       await _pumpPayment(tester, container);
 
+      await _attachSlip(tester);
       await _scrollTo(tester, find.byType(FilledButton));
       await tester.tap(find.byType(FilledButton));
       await tester.pumpAndSettle();
 
-      expect(repo.created, <String>[
-        's1|เชียงใหม่ 50100|promptpay',
+      expect(repo.created, <String>['s1|เชียงใหม่ 50100|promptpay']);
+      expect(repo.submittedSlips, <String>[
+        'https://images.example.test/transfer-slip.jpg',
       ]);
+      expect(find.text('ติดตามสถานะ'), findsOneWidget);
+      expect(find.text('กำลังจัดส่ง'), findsOneWidget);
+      expect(find.text('รายละเอียดคำสั่งซื้อ'), findsNothing);
       expect(
         container.read(cartProvider),
         isEmpty,
@@ -370,13 +427,13 @@ void main() {
         ..failWith = const OrderWriteException('เซิร์ฟเวอร์ไม่ตอบ');
       final ProviderContainer container = _container(repo)
         ..read(cartProvider.notifier).add(_product);
-      container.read(checkoutDraftProvider.notifier).start(
-        storeId: 's1',
-        shippingAddress: 'เชียงใหม่ 50100',
-      );
+      container
+          .read(checkoutDraftProvider.notifier)
+          .start(storeId: 's1', shippingAddress: 'เชียงใหม่ 50100');
 
       await _pumpPayment(tester, container);
 
+      await _attachSlip(tester);
       await _scrollTo(tester, find.byType(FilledButton));
       await tester.tap(find.byType(FilledButton));
       await tester.pumpAndSettle();
@@ -390,44 +447,97 @@ void main() {
     test('refuses an empty basket before touching the repository', () async {
       final _FakeOrderRepository repo = _FakeOrderRepository();
       final ProviderContainer container = _container(repo);
-      container.read(checkoutDraftProvider.notifier).start(
-        storeId: 's1',
-        shippingAddress: 'เชียงใหม่ 50100',
-      );
+      container
+          .read(checkoutDraftProvider.notifier)
+          .start(storeId: 's1', shippingAddress: 'เชียงใหม่ 50100');
 
-      final String? id = await container.read(placeOrderProvider.notifier).place(
-        lines: const <CartLine>[],
-        storeId: 's1',
-        storeName: 'ร้านชิงไทร',
-        buyerName: 'สมชาย ใจดี',
-        shippingAddress: 'เชียงใหม่ 50100',
-        method: PaymentMethod.promptPay,
-      );
+      final String? id = await container
+          .read(placeOrderProvider.notifier)
+          .place(
+            lines: const <CartLine>[],
+            storeId: 's1',
+            storeName: 'ร้านชิงไทร',
+            buyerName: 'สมชาย ใจดี',
+            shippingAddress: 'เชียงใหม่ 50100',
+            method: PaymentMethod.promptPay,
+          );
 
       expect(id, isNull);
       expect(repo.created, isEmpty);
+    });
+
+    testWidgets(
+      'non-COD confirmation stays disabled until a slip is attached',
+      (WidgetTester tester) async {
+        final ProviderContainer container = _container(_FakeOrderRepository())
+          ..read(cartProvider.notifier).add(_product);
+        container
+            .read(checkoutDraftProvider.notifier)
+            .start(storeId: 's1', shippingAddress: 'เชียงใหม่ 50100');
+
+        await _pumpPayment(tester, container);
+        await _scrollTo(tester, find.byType(FilledButton));
+        expect(
+          tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+          isNull,
+        );
+
+        await _attachSlip(tester);
+        await _scrollTo(tester, find.byType(FilledButton));
+        expect(
+          tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+          isNotNull,
+        );
+      },
+    );
+
+    testWidgets('cash on delivery can be confirmed without a slip', (
+      WidgetTester tester,
+    ) async {
+      final _FakeOrderRepository repo = _FakeOrderRepository();
+      final ProviderContainer container = _container(repo)
+        ..read(cartProvider.notifier).add(_product);
+      container
+          .read(checkoutDraftProvider.notifier)
+          .start(storeId: 's1', shippingAddress: 'เชียงใหม่ 50100');
+
+      await _pumpPayment(tester, container);
+      await tester.tap(find.text(PaymentMethod.cashOnDelivery.label));
+      await tester.pumpAndSettle();
+      await _scrollTo(tester, find.byType(FilledButton));
+      expect(
+        tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+        isNotNull,
+      );
+      await tester.tap(find.byType(FilledButton));
+      await tester.pumpAndSettle();
+
+      expect(repo.created, <String>['s1|เชียงใหม่ 50100|cash_on_delivery']);
+      expect(repo.submittedSlips, <String>['']);
     });
 
     test('a blank address is rejected without an error banner case', () async {
       final _FakeOrderRepository repo = _FakeOrderRepository();
       final ProviderContainer container = _container(repo);
 
-      final String? id = await container.read(placeOrderProvider.notifier).place(
-        lines: const <CartLine>[
-          CartLine(
-            productId: 'p1',
+      final String? id = await container
+          .read(placeOrderProvider.notifier)
+          .place(
+            lines: const <CartLine>[
+              CartLine(
+                productId: 'p1',
+                storeId: 's1',
+                name: 'กาแฟดอยอารามี',
+                price: 480,
+                quantity: 1,
+              ),
+            ],
             storeId: 's1',
-            name: 'กาแฟดอยอารามี',
-            price: 480,
-            quantity: 1,
-          ),
-        ],
-        storeId: 's1',
-        storeName: 'ร้านชิงไทร',
-        buyerName: 'สมชาย ใจดี',
-        shippingAddress: '   ',
-        method: PaymentMethod.promptPay,
-      );
+            storeName: 'ร้านชิงไทร',
+            buyerName: 'สมชาย ใจดี',
+            shippingAddress: '   ',
+            method: PaymentMethod.promptPay,
+          );
 
       expect(id, isNull);
       expect(repo.created, isEmpty);
@@ -452,20 +562,25 @@ void main() {
       expect(orders, hasLength(1));
     });
 
-    test('a tracking number is forwarded when the seller ships an order', () async {
-      // Without the number reaching the repository, the buyer sees a "shipped"
-      // status with nothing to follow.
-      final _FakeOrderRepository repo = _FakeOrderRepository();
-      final ProviderContainer container = _container(repo);
+    test(
+      'a tracking number is forwarded when the seller ships an order',
+      () async {
+        // Without the number reaching the repository, the buyer sees a "shipped"
+        // status with nothing to follow.
+        final _FakeOrderRepository repo = _FakeOrderRepository();
+        final ProviderContainer container = _container(repo);
 
-      await container.read(orderRepositoryProvider).advanceStatus(
-        'o-1',
-        OrderStatus.shipped,
-        trackingNumber: 'THD-123456',
-      );
+        await container
+            .read(orderRepositoryProvider)
+            .advanceStatus(
+              'o-1',
+              OrderStatus.shipped,
+              trackingNumber: 'THD-123456',
+            );
 
-      expect(repo.advanced, <String>['o-1:shipped|THD-123456']);
-    });
+        expect(repo.advanced, <String>['o-1:shipped|THD-123456']);
+      },
+    );
   });
 
   group('the order detail timeline', () {
@@ -495,7 +610,9 @@ void main() {
     testWidgets('a cancelled order turns the track into one terminal state', (
       WidgetTester tester,
     ) async {
-      final ProviderContainer container = _container(_CancelledOrderRepository());
+      final ProviderContainer container = _container(
+        _CancelledOrderRepository(),
+      );
 
       await _pumpHome(
         tester,
@@ -541,63 +658,96 @@ void main() {
       await _scrollTo(tester, find.text(AppStrings.demoSellerControl));
       expect(find.text(AppStrings.demoSellerControl), findsOneWidget);
       // The next legal step from `shipped` is `completed`.
-      expect(
-        find.textContaining(OrderStatus.completed.label),
-        findsOneWidget,
-      );
+      expect(find.textContaining(OrderStatus.completed.label), findsOneWidget);
     });
 
     test('advancing writes exactly one legal step', () async {
       final _FakeOrderRepository repo = _FakeOrderRepository();
       final ProviderContainer container = _container(repo);
 
-      await container.read(advanceOrderStatusProvider.notifier).advance(
-        'o1',
-        OrderStatus.completed,
-      );
+      await container
+          .read(advanceOrderStatusProvider.notifier)
+          .advance('o1', OrderStatus.completed);
 
       expect(repo.advanced, <String>['o1:completed']);
     });
 
     testWidgets(
-        'an order opened on its own (after checkout) still has a way back', (
+      'an order opened on its own (after checkout) still has a way back',
+      (WidgetTester tester) async {
+        // After placing an order the payment screen `context.go`s straight onto
+        // the detail route, leaving nothing below it — so no back arrow. The
+        // footer action must fall back to going to the order list instead.
+        final ProviderContainer container = _container(_FakeOrderRepository());
+        final GoRouter router = GoRouter(
+          initialLocation: AppRoutes.orderDetail('o1'),
+          routes: <RouteBase>[
+            GoRoute(
+              path: AppRoutes.orders,
+              builder: (BuildContext context, GoRouterState state) =>
+                  const Scaffold(body: Center(child: Text('orders-list'))),
+            ),
+            GoRoute(
+              path: AppRoutes.orderDetail(':orderId'),
+              builder: (BuildContext context, GoRouterState state) =>
+                  const OrderDetailScreen(orderId: 'o1'),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(routerConfig: router),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await _scrollTo(tester, find.text(AppStrings.backToOrders));
+        expect(find.text(AppStrings.backToOrders), findsOneWidget);
+
+        await tester.tap(find.text(AppStrings.backToOrders));
+        await tester.pumpAndSettle();
+        expect(find.text('orders-list'), findsOneWidget);
+      },
+    );
+  });
+
+  group('post-purchase status tracking', () {
+    testWidgets('shows waiting for shipment as the current status', (
       WidgetTester tester,
     ) async {
-      // After placing an order the payment screen `context.go`s straight onto
-      // the detail route, leaving nothing below it — so no back arrow. The
-      // footer action must fall back to going to the order list instead.
-      final ProviderContainer container = _container(_FakeOrderRepository());
-      final GoRouter router = GoRouter(
-        initialLocation: AppRoutes.orderDetail('o1'),
-        routes: <RouteBase>[
-          GoRoute(
-            path: AppRoutes.orders,
-            builder: (BuildContext context, GoRouterState state) =>
-                const Scaffold(body: Center(child: Text('orders-list'))),
-          ),
-          GoRoute(
-            path: AppRoutes.orderDetail(':orderId'),
-            builder: (BuildContext context, GoRouterState state) =>
-                const OrderDetailScreen(orderId: 'o1'),
-          ),
-        ],
+      final ProviderContainer container = _container(
+        _FakeOrderRepository(trackedOrderStatus: OrderStatus.awaitingShipment),
       );
-      addTearDown(router.dispose);
 
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(routerConfig: router),
-        ),
+      await _pumpHome(
+        tester,
+        container,
+        const OrderTrackingScreen(orderId: 'o1'),
       );
-      await tester.pumpAndSettle();
 
-      await _scrollTo(tester, find.text(AppStrings.backToOrders));
-      expect(find.text(AppStrings.backToOrders), findsOneWidget);
+      expect(find.text('ติดตามสถานะ'), findsOneWidget);
+      expect(find.text('รอจัดส่ง'), findsWidgets);
+      expect(find.text('จัดส่งสำเร็จ'), findsNothing);
+    });
 
-      await tester.tap(find.text(AppStrings.backToOrders));
-      await tester.pumpAndSettle();
-      expect(find.text('orders-list'), findsOneWidget);
+    testWidgets('shows successful delivery as the terminal status', (
+      WidgetTester tester,
+    ) async {
+      final ProviderContainer container = _container(
+        _FakeOrderRepository(trackedOrderStatus: OrderStatus.completed),
+      );
+
+      await _pumpHome(
+        tester,
+        container,
+        const OrderTrackingScreen(orderId: 'o1'),
+      );
+
+      expect(find.text('จัดส่งสำเร็จ'), findsWidgets);
+      expect(find.text('รอจัดส่ง'), findsWidgets);
     });
   });
 }

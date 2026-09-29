@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/constants/app_enums.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/routes/app_router.dart';
 import '../../../core/theme/app_colors.dart';
@@ -11,11 +12,8 @@ import '../../../providers/auth_provider.dart';
 import '../../../repositories/auth_repository.dart';
 import '../widgets/hero_3d.dart';
 
-/// Sign-up.
-///
-/// New accounts always start as `customer`; a seller applies for the role
-/// after the account exists, which keeps the registration form short and
-/// matches the rule that a user cannot set their own roles.
+enum _RegistrationType { customer, store, affiliate }
+
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key, this.redirect});
 
@@ -32,9 +30,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _provinceController = TextEditingController();
+  final TextEditingController _storeNameController = TextEditingController();
+  final TextEditingController _communityController = TextEditingController();
+  final TextEditingController _storeDescriptionController =
+      TextEditingController();
+  final TextEditingController _affiliateHandleController =
+      TextEditingController();
+  final TextEditingController _affiliateProfileController =
+      TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmController = TextEditingController();
 
+  _RegistrationType _registrationType = _RegistrationType.customer;
+  ThaiRegion _region = ThaiRegion.central;
+  String _affiliatePlatform = 'facebook';
   bool _busy = false;
   bool _obscure = true;
   String? _error;
@@ -44,6 +54,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _provinceController.dispose();
+    _storeNameController.dispose();
+    _communityController.dispose();
+    _storeDescriptionController.dispose();
+    _affiliateHandleController.dispose();
+    _affiliateProfileController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
     super.dispose();
@@ -65,11 +81,26 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             password: _passwordController.text,
             displayName: _nameController.text.trim(),
             phone: _phoneController.text.trim(),
+            province: _provinceController.text.trim(),
+            accountType: switch (_registrationType) {
+              _RegistrationType.customer => UserRole.customer,
+              _RegistrationType.store => UserRole.seller,
+              _RegistrationType.affiliate => UserRole.affiliate,
+            },
+            storeName: _storeNameController.text,
+            community: _communityController.text,
+            storeDescription: _storeDescriptionController.text,
+            region: _region.value,
+            affiliatePlatform: _affiliatePlatform,
+            affiliateHandle: _affiliateHandleController.text,
+            affiliateProfileUrl: _affiliateProfileController.text,
           );
       if (!mounted) return;
       final String? redirect = widget.redirect;
       if (redirect != null && redirect.isNotEmpty) {
         context.go(redirect);
+      } else if (_registrationType == _RegistrationType.store) {
+        context.go(AppRoutes.sellerRoot);
       } else {
         context.go(AppRoutes.home);
       }
@@ -101,6 +132,40 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   children: <Widget>[
                     const Center(child: Hero3d()),
                     const SizedBox(height: AppSpacing.xl),
+                    SegmentedButton<_RegistrationType>(
+                      showSelectedIcon: false,
+                      segments: const <ButtonSegment<_RegistrationType>>[
+                        ButtonSegment<_RegistrationType>(
+                          value: _RegistrationType.customer,
+                          label: Text('ลูกค้า'),
+                          icon: Icon(Icons.person_outline_rounded),
+                        ),
+                        ButtonSegment<_RegistrationType>(
+                          value: _RegistrationType.store,
+                          label: Text('ร้านค้า'),
+                          icon: Icon(Icons.storefront_outlined),
+                        ),
+                        ButtonSegment<_RegistrationType>(
+                          value: _RegistrationType.affiliate,
+                          label: Text('Affiliate'),
+                          icon: Icon(Icons.campaign_outlined),
+                        ),
+                      ],
+                      selected: <_RegistrationType>{_registrationType},
+                      onSelectionChanged: _busy
+                          ? null
+                          : (Set<_RegistrationType> selected) => setState(
+                              () => _registrationType = selected.single,
+                            ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      _registrationDescription,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.inkMuted,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
                     if (_error != null) ...<Widget>[
                       Container(
                         padding: const EdgeInsets.all(AppSpacing.md),
@@ -154,6 +219,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                       validator: _validatePhone,
                     ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _provinceController,
+                      textInputAction: TextInputAction.next,
+                      enabled: !_busy,
+                      decoration: const InputDecoration(
+                        labelText: 'จังหวัด',
+                        prefixIcon: Icon(Icons.location_on_outlined),
+                      ),
+                      validator: _validateRequired,
+                    ),
+                    ..._roleSpecificFields(),
                     const SizedBox(height: AppSpacing.md),
                     TextFormField(
                       controller: _passwordController,
@@ -218,6 +295,129 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
+  String get _registrationDescription => switch (_registrationType) {
+    _RegistrationType.customer =>
+      'สมัครเพื่อค้นหาและสั่งซื้อสินค้า OTOP ทั่วประเทศ',
+    _RegistrationType.store =>
+      'สร้างบัญชีผู้ขายพร้อมเปิดหน้าร้านสำหรับลงสินค้า',
+    _RegistrationType.affiliate =>
+      'สมัครพาร์ทเนอร์และเชื่อมช่องทางที่ใช้โปรโมตสินค้า',
+  };
+
+  List<Widget> _roleSpecificFields() {
+    return switch (_registrationType) {
+      _RegistrationType.customer => const <Widget>[],
+      _RegistrationType.store => <Widget>[
+        const SizedBox(height: AppSpacing.md),
+        TextFormField(
+          controller: _storeNameController,
+          textInputAction: TextInputAction.next,
+          enabled: !_busy,
+          decoration: const InputDecoration(
+            labelText: 'ชื่อร้าน',
+            prefixIcon: Icon(Icons.store_outlined),
+          ),
+          validator: _validateRequired,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        TextFormField(
+          controller: _communityController,
+          textInputAction: TextInputAction.next,
+          enabled: !_busy,
+          decoration: const InputDecoration(
+            labelText: 'ชุมชน / กลุ่มผู้ผลิต',
+            prefixIcon: Icon(Icons.groups_outlined),
+          ),
+          validator: _validateRequired,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        DropdownButtonFormField<ThaiRegion>(
+          initialValue: _region,
+          decoration: const InputDecoration(
+            labelText: 'ภูมิภาคของร้าน',
+            prefixIcon: Icon(Icons.map_outlined),
+          ),
+          items: ThaiRegion.values
+              .map(
+                (ThaiRegion region) => DropdownMenuItem<ThaiRegion>(
+                  value: region,
+                  child: Text(region.label),
+                ),
+              )
+              .toList(),
+          onChanged: _busy
+              ? null
+              : (ThaiRegion? value) {
+                  if (value != null) setState(() => _region = value);
+                },
+        ),
+        const SizedBox(height: AppSpacing.md),
+        TextFormField(
+          controller: _storeDescriptionController,
+          enabled: !_busy,
+          minLines: 2,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            labelText: 'เรื่องราวและรายละเอียดร้าน',
+            alignLabelWithHint: true,
+            prefixIcon: Icon(Icons.notes_outlined),
+          ),
+          validator: _validateRequired,
+        ),
+      ],
+      _RegistrationType.affiliate => <Widget>[
+        const SizedBox(height: AppSpacing.md),
+        DropdownButtonFormField<String>(
+          initialValue: _affiliatePlatform,
+          decoration: const InputDecoration(
+            labelText: 'ช่องทางหลัก',
+            prefixIcon: Icon(Icons.public_outlined),
+          ),
+          items: const <DropdownMenuItem<String>>[
+            DropdownMenuItem(value: 'facebook', child: Text('Facebook')),
+            DropdownMenuItem(value: 'instagram', child: Text('Instagram')),
+            DropdownMenuItem(value: 'tiktok', child: Text('TikTok')),
+            DropdownMenuItem(value: 'youtube', child: Text('YouTube')),
+            DropdownMenuItem(
+              value: 'website',
+              child: Text('เว็บไซต์ / อื่น ๆ'),
+            ),
+          ],
+          onChanged: _busy
+              ? null
+              : (String? value) {
+                  if (value != null) setState(() => _affiliatePlatform = value);
+                },
+        ),
+        const SizedBox(height: AppSpacing.md),
+        TextFormField(
+          controller: _affiliateHandleController,
+          textInputAction: TextInputAction.next,
+          enabled: !_busy,
+          decoration: const InputDecoration(
+            labelText: 'ชื่อบัญชี / Handle',
+            prefixIcon: Icon(Icons.alternate_email_rounded),
+          ),
+          validator: _validateRequired,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        TextFormField(
+          controller: _affiliateProfileController,
+          keyboardType: TextInputType.url,
+          textInputAction: TextInputAction.next,
+          autocorrect: false,
+          enabled: !_busy,
+          decoration: const InputDecoration(
+            labelText: 'ลิงก์โปรไฟล์สาธารณะ',
+            hintText: 'https://...',
+            prefixIcon: Icon(Icons.link_rounded),
+          ),
+          validator: _validateProfileUrl,
+        ),
+      ],
+    };
+  }
+
   static String? _validateEmail(String? value) {
     final String email = (value ?? '').trim();
     if (email.isEmpty) return AppStrings.errRequired;
@@ -236,10 +436,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   static String? _validatePhone(String? value) {
     final String phone = (value ?? '').replaceAll(RegExp(r'\s'), '');
     if (phone.isEmpty) {
-      return null; // optional field
+      return AppStrings.errRequired;
     }
     if (!RegExp(r'^0\d{8,9}$').hasMatch(phone)) {
       return AppStrings.errPhoneFormat;
+    }
+    return null;
+  }
+
+  static String? _validateRequired(String? value) =>
+      value == null || value.trim().isEmpty ? AppStrings.errRequired : null;
+
+  static String? _validateProfileUrl(String? value) {
+    final String url = (value ?? '').trim();
+    final Uri? uri = Uri.tryParse(url);
+    if (uri == null ||
+        !<String>{'http', 'https'}.contains(uri.scheme) ||
+        uri.host.isEmpty) {
+      return 'กรุณากรอกลิงก์ที่ขึ้นต้นด้วย https://';
     }
     return null;
   }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 
 import 'firebase_options.dart';
@@ -39,7 +41,7 @@ class FirebaseBootstrap {
     try {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
-      );
+      ).timeout(const Duration(seconds: 15));
       _initialised = true;
       return const FirebaseReady();
     } catch (error) {
@@ -67,6 +69,9 @@ class FirebaseBootstrap {
 
   /// Turns a raw exception into something a human can act on.
   static String _describe(Object error) {
+    if (error is TimeoutException) {
+      return 'Firebase ใช้เวลาเริ่มต้นนานเกินไป — ตรวจสอบการเชื่อมต่อแล้วลองเปิดแอปอีกครั้ง';
+    }
     if (error is FirebaseException) {
       return switch (error.code) {
         'permission-denied' =>

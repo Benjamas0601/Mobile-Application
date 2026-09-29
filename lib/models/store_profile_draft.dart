@@ -15,6 +15,10 @@ class StoreProfileDraft {
     required this.region,
     required this.community,
     required this.coverImageUrl,
+    this.promptPayId = '',
+    this.bankName = '',
+    this.bankAccountName = '',
+    this.bankAccountNumber = '',
     this.logoUrl,
   });
 
@@ -24,6 +28,10 @@ class StoreProfileDraft {
   final String region;
   final String community;
   final String coverImageUrl;
+  final String promptPayId;
+  final String bankName;
+  final String bankAccountName;
+  final String bankAccountNumber;
   final String? logoUrl;
 
   /// A store needs a name to be findable; everything else is optional, and an
@@ -37,6 +45,10 @@ class StoreProfileDraft {
     region: store.region,
     community: store.community,
     coverImageUrl: store.coverImageUrl,
+    promptPayId: store.promptPayId,
+    bankName: store.bankName,
+    bankAccountName: store.bankAccountName,
+    bankAccountNumber: store.bankAccountNumber,
     logoUrl: store.logoUrl,
   );
 }

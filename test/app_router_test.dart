@@ -38,6 +38,8 @@ void main() {
           AppRoutes.orders,
           AppRoutes.ordersHistory,
           AppRoutes.profile,
+          AppRoutes.orderDetail('o1'),
+          AppRoutes.orderTracking('o1'),
         ]) {
           expect(
             authRedirect(signedIn: false, location: location),
@@ -93,6 +95,8 @@ void main() {
         AppRoutes.cart,
         AppRoutes.checkout,
         AppRoutes.orders,
+        AppRoutes.orderDetail('o1'),
+        AppRoutes.orderTracking('o1'),
         AppRoutes.profile,
       ]) {
         expect(
@@ -102,32 +106,86 @@ void main() {
       }
     });
 
-    test('a signed-in seller is redirected to /seller on home, login, register', () {
-      const seller = UserModel(
-        uid: 's1',
-        displayName: 'Seller',
-        email: 'seller@test.com',
-        roles: <UserRole>[UserRole.seller],
+    test(
+      'a signed-in seller is redirected to /seller on home, login, register',
+      () {
+        const seller = UserModel(
+          uid: 's1',
+          displayName: 'Seller',
+          email: 'seller@test.com',
+          roles: <UserRole>[UserRole.seller],
+        );
+        expect(
+          authRedirect(signedIn: true, location: AppRoutes.home, user: seller),
+          AppRoutes.sellerRoot,
+        );
+        expect(
+          authRedirect(signedIn: true, location: AppRoutes.login, user: seller),
+          AppRoutes.sellerRoot,
+        );
+        expect(
+          authRedirect(
+            signedIn: true,
+            location: AppRoutes.register,
+            user: seller,
+          ),
+          AppRoutes.sellerRoot,
+        );
+        expect(
+          authRedirect(
+            signedIn: true,
+            location: AppRoutes.sellerRoot,
+            user: seller,
+          ),
+          isNull,
+        );
+        expect(
+          authRedirect(
+            signedIn: true,
+            location: AppRoutes.sellerProducts,
+            user: seller,
+          ),
+          isNull,
+        );
+      },
+    );
+
+    test('an admin is redirected to the admin console', () {
+      const admin = UserModel(
+        uid: 'a1',
+        displayName: 'Admin',
+        email: 'admin@test.com',
+        roles: <UserRole>[UserRole.admin],
       );
+
+      for (final String location in <String>[
+        AppRoutes.home,
+        AppRoutes.login,
+        AppRoutes.register,
+      ]) {
+        expect(
+          authRedirect(signedIn: true, location: location, user: admin),
+          AppRoutes.adminRoot,
+        );
+      }
       expect(
-        authRedirect(signedIn: true, location: AppRoutes.home, user: seller),
-        AppRoutes.sellerRoot,
-      );
-      expect(
-        authRedirect(signedIn: true, location: AppRoutes.login, user: seller),
-        AppRoutes.sellerRoot,
-      );
-      expect(
-        authRedirect(signedIn: true, location: AppRoutes.register, user: seller),
-        AppRoutes.sellerRoot,
-      );
-      expect(
-        authRedirect(signedIn: true, location: AppRoutes.sellerRoot, user: seller),
+        authRedirect(
+          signedIn: true,
+          location: AppRoutes.adminRoot,
+          user: admin,
+        ),
         isNull,
       );
+    });
+
+    test('only admins can open the admin console', () {
       expect(
-        authRedirect(signedIn: true, location: AppRoutes.sellerProducts, user: seller),
-        isNull,
+        authRedirect(signedIn: false, location: AppRoutes.adminRoot),
+        '${AppRoutes.login}?redirect=${AppRoutes.adminRoot}',
+      );
+      expect(
+        authRedirect(signedIn: true, location: AppRoutes.adminRoot),
+        AppRoutes.home,
       );
     });
 
@@ -255,6 +313,14 @@ void main() {
         'new@example.com',
       );
       await tester.enterText(
+        find.widgetWithText(TextFormField, AppStrings.phone),
+        '0812345678',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'จังหวัด'),
+        'เชียงใหม่',
+      );
+      await tester.enterText(
         find.widgetWithText(TextFormField, AppStrings.password),
         'secret123',
       );
@@ -269,6 +335,25 @@ void main() {
       expect(find.text(AppStrings.errRequired), findsNothing);
       expect(find.text(AppStrings.errPasswordMismatch), findsNothing);
       expect(find.text(AppStrings.errPasswordShort), findsNothing);
+    });
+
+    testWidgets('registration type reveals store and affiliate fields', (
+      WidgetTester tester,
+    ) async {
+      await pumpAuth(tester, const RegisterScreen());
+
+      await tester.tap(find.text('ร้านค้า'));
+      await tester.pump();
+      expect(find.text('ชื่อร้าน'), findsOneWidget);
+      expect(find.text('ชุมชน / กลุ่มผู้ผลิต'), findsOneWidget);
+      expect(find.text('เรื่องราวและรายละเอียดร้าน'), findsOneWidget);
+
+      await tester.tap(find.text('Affiliate'));
+      await tester.pump();
+      expect(find.text('ช่องทางหลัก'), findsOneWidget);
+      expect(find.text('ชื่อบัญชี / Handle'), findsOneWidget);
+      expect(find.text('ลิงก์โปรไฟล์สาธารณะ'), findsOneWidget);
+      expect(find.text('ชื่อร้าน'), findsNothing);
     });
   });
 }
