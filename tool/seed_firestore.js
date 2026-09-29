@@ -88,17 +88,10 @@ const img = (seed) => `https://picsum.photos/seed/otop-${seed}/900/900`;
 const STORES = [
   {
     id: 'store-singthai', ownerKey: 'sellerNorth',
-    name: 'ชิงไทย ผ้าไหมโบราณ',
+    name: 'ชิงไทย ผ้าไหมและของดีล้านนา',
     province: 'เชียงใหม่', region: 'north', community: 'บ้านปางลาง',
-    description: 'ชุมชนบ้านปางลาง อำเภอแม่ริม ผลิตผ้าไหมลายมือทั้งชุดมากว่า 30 ปี ย้อมสีจากรากมะม่วงและดอกอัย ทอมือทุกผืน',
+    description: 'ชุมชนบ้านปางลาง อำเภอแม่ริม ผลิตผ้าไหมลายมือ ย้อมสีธรรมชาติ และกาแฟเขาสูงคั่วไม้ ทอมือทุกผืน',
     otopCertified: true, commissionRate: 0.08, ratingAvg: 4.8, ratingCount: 214,
-  },
-  {
-    id: 'store-langdoi', ownerKey: 'sellerNorth',
-    name: 'ลาดดอย กาแฟเขาสูง',
-    province: 'เชียงใหม่', region: 'north', community: 'บ้านมะขามหวาน',
-    description: 'เกาะกาแฟพันธุ์เดิมอายุกว่า 40 ปี ปลูกที่ความสูง 1,400 เมตร คั่วเฉพาะหม้อไม้ เก็บคั่วทีละ 3 กิโลกรัม',
-    otopCertified: true, commissionRate: 0.07, ratingAvg: 4.9, ratingCount: 512,
   },
   {
     id: 'store-sawatdee', ownerKey: 'sellerCentral',
@@ -155,7 +148,7 @@ const PRODUCTS = [
     },
   },
   {
-    id: 'p-arabica-250', storeId: 'store-langdoi', categoryId: 'coffee',
+    id: 'p-arabica-250', storeId: 'store-singthai', categoryId: 'coffee',
     name: 'กาแฟอาราบิก้าดอย 250 กรัม', price: 420, stockTotal: 80, soldCount: 1204,
     ratingAvg: 4.9, ratingCount: 623, days: 25,
     description: 'เมล็ดกาแฟอาราบิก้าพันธุ์เดิม คั่วกลาง เหมาะทั้งเครื่องกรองและเอสเปรสโซ่',
@@ -167,7 +160,7 @@ const PRODUCTS = [
     },
   },
   {
-    id: 'p-arabica-1kg', storeId: 'store-langdoi', categoryId: 'coffee',
+    id: 'p-arabica-1kg', storeId: 'store-singthai', categoryId: 'coffee',
     name: 'กาแฟอาราบิก้าดอย 1 กิโลกรัม (คั่วตอนสั่งซื้อ)', price: 1450, stockTotal: 40, soldCount: 587,
     ratingAvg: 4.8, ratingCount: 341, days: 22,
     description: 'ถุงใหญ่สำหรับร้านกาแฟหรือคนที่ดื่มเอง คั่วสดตอนสั่งซื้อ ส่งถึงภายใน 5 วัน',
@@ -179,7 +172,7 @@ const PRODUCTS = [
     },
   },
   {
-    id: 'p-cold-brew', storeId: 'store-langdoi', categoryId: 'coffee',
+    id: 'p-cold-brew', storeId: 'store-singthai', categoryId: 'coffee',
     name: 'กาแฟสกัดเย็น 250 มล. (ขวดแก้ว)', price: 120, stockTotal: 150, soldCount: 2088,
     ratingAvg: 4.6, ratingCount: 912, days: 20,
     description: 'สกัดเย็นนาน 18 ชั่วโมง ไม่ใส่น้ำตาล ไม่ใส่สารอย่างอื่น ปิดแก้วและส่งเย็น',
@@ -280,7 +273,7 @@ const ORDERS = [
     ],
   },
   {
-    id: 'o-demo-2', storeId: 'store-langdoi', method: 'bank_transfer',
+    id: 'o-demo-2', storeId: 'store-singthai', method: 'bank_transfer',
     status: 'shipped', paymentStatus: 'verified', days: 20,
     shippedAt: daysAgo(8), tracking: 'TH2219067891234',
     items: [
@@ -288,7 +281,7 @@ const ORDERS = [
     ],
   },
   {
-    id: 'o-demo-3', storeId: 'store-langdoi', method: 'promptpay',
+    id: 'o-demo-3', storeId: 'store-singthai', method: 'promptpay',
     status: 'awaiting_shipment', paymentStatus: 'verified', days: 12,
     items: [
       { productId: 'p-arabica-250', name: 'กาแฟอาราบิก้าดอย 250 กรัม', price: 420, quantity: 2 },
@@ -302,7 +295,7 @@ const ORDERS = [
     ],
   },
   {
-    id: 'o-demo-5', storeId: 'store-langdoi', method: 'promptpay',
+    id: 'o-demo-5', storeId: 'store-singthai', method: 'promptpay',
     status: 'pending_payment', paymentStatus: 'awaiting_transfer', days: 2,
     items: [
       { productId: 'p-cold-brew', name: 'กาแฟสกัดเย็น 250 มล. (ขวดแก้ว)', price: 120, quantity: 6 },
@@ -492,8 +485,7 @@ async function ensureAuthUser(token, user) {
   }
 
   // ออเดอร์ตัวอย่างของบัญชี demo customer — หลากหลายสถานะเพื่อสาธิตหน้า
-  // ประวัติ/ไทม์ไลน์ และปุ่มผู้ขาย (มี sellerNorth เป็นเจ้าของ store-singthai
-  // และ store-langdoi จึงเดินสถานะออเดอร์เหล่านั้นได้)
+  // ประวัติ/ไทม์ไลน์ และปุ่มผู้ขาย (1 ผู้ขาย : 1 ร้านค้า โดย sellerNorth เป็นเจ้าของ store-singthai)
   console.log('\n2.5) demo orders for the demo customer');
   const storeNames = Object.fromEntries(STORES.map((s) => [s.id, s.name]));
   let ordersCount = 0;
