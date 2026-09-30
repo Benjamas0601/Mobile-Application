@@ -472,18 +472,37 @@ build **ไม่มี flag เลยสักตัว** แล้วอัป
 
 ## ✅ ปิดงาน: deploy กฎจริง + E2E ผู้ขาย + ล้างขยะ (29 ก.ย. 2569)
 
-### ⚠️ กฎบน cloud ไม่ตรงกับไฟล์ในเครื่องแล้ว
+### ✅ กฎชุดใหม่ deploy แล้ว
 
-commit `fd156e7` (22:09) เพิ่ม Admin Hub + order tracking + กฎ register/role
-ทำให้ `firestore.rules` ในเครื่องยาว 506 บรรทัด แต่ตัวที่ deploy ไว้ยังเป็นชุดเดิม 438 บรรทัด
-(first diff บรรทัด 112 — กฎ `users.create` ตอนสมัครสมาชิก) **ต้อง deploy กฎชุดใหม่ก่อน**
-ไม่งั้น register ที่เลือก role ได้ และ admin ที่เพิ่งเพิ่ม จะทำงานไม่ตรงกับกฎ
+commit `fd156e7` (22:09) เพิ่ม Admin Hub + order tracking + กฎ register/role ทำให้
+`firestore.rules` ยาว 506 บรรทัด แต่ตัวที่ deploy ไว้ยังเป็นชุดเดิม 438 บรรทัด
+(first diff บรรทัด 112 — กฎ `users.create` ตอนสมัครสมาชิก) ทำให้ **สมัครเป็นผู้ขาย
+หรือ affiliate ไม่ได้** เพราะกฎเก่าบังคับ `roles == ['customer']` แต่โค้ดเขียน
+`['customer','seller']` + `phone`/`province` (`auth_repository.dart:152`)
 
-กฎชุดใหม่ผ่าน Firestore Emulator 14/14 เท่าเดิม (ตรวจหลัง commit)
+หลัง deploy ใหม่ → ruleset `c04029c3-2009-43d1-baad-62eeefc641d6`
+ตรวจแล้วว่า **บน cloud ตรงกับไฟล์ในเครื่องทุกบรรทัด**
 
-### กฎที่ deploy แล้ว (ยังเป็นชุดก่อน `fd156e7`)
+เพิ่มเทสต์ `users.create` / `users.update` อีก 22 เคส (เดิมมีแค่ orders/stores 14 เคส
+คือกฎที่เพิ่ง deploy ไปไม่เคยถูกทดสอบเลย) รวมเป็น **36/36 ผ่าน**:
 
-`firestore.rules` → `projects/thaiotop-587f1/rulesets/6f6769d3-971b-4305-8e4a-3420722aad43`
+| ต้องผ่าน | ต้องถูกบล็อก |
+|---|---|
+| สมัคร `['customer']` / `['customer','seller']` | role `admin` ตั้งเอง |
+| สมัคร `['customer','affiliate']` ครบ 3 ฟิลด์ | affiliate ไม่กรอก platform/handle/url |
+| แก้ `displayName` ของตัวเอง | `['customer','superuser']` (role ไม่รู้จัก) |
+| แอดมินเพิ่ม/ลบ role ได้ | `['seller']` โดยไม่มี `customer` |
+| | `phone`/`province`/`displayName` ว่าง · ฟิลด์แปลกปลอม |
+| | แก้ `roles`/`createdAt`/`email` ของตัวเอง · แก้โปรไฟล์คนอื่น |
+| | แอดมินแตะ `email` หรือให้ `admin` |
+
+> ระหว่างเขียนเทสต์เจอกับดักสองชั้นที่ทำให้ "เคสที่ควรถูกบล็อก" ผ่านมั่วโดยไม่ได้ทดสอบอะไรเลย:
+> กฎบังคับ `request.auth.uid == userId` กับ `email == request.auth.token.email`
+> ถ้าใช้ context เดียวเขียนหลาย uid ทุกเคสจะตกที่เงื่อนไข uid ก่อน → เคสที่ควร fail จะผ่าน
+> และ `createdAt == request.time` บังคับให้ใช้ `serverTimestamp()` ค่าธรรมดาไม่ผ่าน
+
+### กฎที่ deploy แล้ว (ชุดก่อน `fd156e7`) — สำรองไว้
+`projects/thaiotop-587f1/rulesets/6f6769d3-971b-4305-8e4a-3420722aad43`
 (สำรองกฎเดิม: ruleset `b771054f-d002-42a7-a9a6-f88ea93e67ce`)
 
 | match | ที่เพิ่ม/แก้ | ผลต่อ E2E |
@@ -495,11 +514,12 @@ commit `fd156e7` (22:09) เพิ่ม Admin Hub + order tracking + กฎ reg
 
 | การทดสอบ | ผล |
 |---|---|
-| Rules unit test บน Firestore Emulator | **14/14 ผ่าน** — buyer/seller/admin/guest ทั้ง 4 มุม |
-| กฎบน cloud vs ไฟล์ในเครื่อง | ⚠️ **ไม่ตรงแล้ว** — cloud 438 บรรทัด / local 506 (commit `fd156e7` เพิ่มหลัง deploy) |
+| Rules unit test บน Firestore Emulator | **36/36 ผ่าน** — orders.list 6 · stores.update 5 · orders.get 3 · users.create 11 · users.update 6 |
+| กฎบน cloud vs ไฟล์ในเครื่อง | ตรงกันทุกบรรทัด (ruleset `c04029c3`) · สำรองชุดก่อนหน้าไว้ที่ `%TEMP%\opencode\deployed-before-cloud.firestore.json` |
 | E2E Seller CRUD บน emulator | ผ่าน (`create → edit price → delete`) |
 | `flutter analyze --no-pub` | `No issues found!` |
 | `flutter test --no-pub` | **146/146 ผ่าน** (10 ไฟล์) |
+| ข้อมูลจริงหลัง seed | ร้าน 3 (1 ผู้ขาย = 1 ร้าน) · สินค้า 11 · variant 9 · ออเดอร์ 6 · payment 5 |
 
 > Emulator ค้างครั้งแรก **ไม่ใช่** เพราะ Java — แต่เพราะ Firebase CLI ในเครื่องยังไม่ `login`
 > (ค้างรอ prompt) พอส่ง `FIREBASE_TOKEN` คู่กับ `JAVA_HOME=jdk-23` ก็รันผ่านทันที
@@ -517,13 +537,24 @@ commit `fd156e7` (22:09) เพิ่ม Admin Hub + order tracking + กฎ reg
 
 ### ⚠️ ที่ยังค้าง
 
-1. **`firestore.rules` ชุดใหม่ยังไม่ได้ deploy** — ไฟล์ในเครื่องต่างจากบน cloud (ดูหัวข้อข้างบน) ต้องรัน
-   `firebase deploy --only firestore:rules --project thaiotop-587f1` ก่อน register/role/admin ใหม่จะใช้ได้
-2. **รูป probe บน Cloudinary 2 ใบ** — `smoke-test/probe/…` และ `smoke-test/escaped/…` ลบเองไม่ได้
+1. **รูป probe บน Cloudinary 2 ใบ** — `smoke-test/probe/…` และ `smoke-test/escaped/…` ลบเองไม่ได้
    (unsigned preset ต้องใช้ API secret) · ลบผ่าน Media Library หรือส่ง secret มาให้ลบแทน
-3. **`store-langdoi` ยังอยู่ใน Firestore จริง** แต่ `tool/seed_firestore.js` ใหม่ไม่สร้างมันแล้ว
-   → ร้าน 1 สินค้า 3 และออเดอร์ 3 (`o-demo-2/3/5`) ยังผูกกับมันอยู่ ต้องรัน seed ซ้ำหรือลบออกให้เข้ากัน
-4. ~~**`storage.rules` ยังไม่ deploy**~~ → **✅ ลบไฟล์ออกแล้ว** ตอนนี้รูปทั้งหมดอยู่บน Cloudinary
-   (เดิม review delete rule กว้างเกินไป — `isSignedIn() || isAdmin()` — แต่ไม่ต้องแก้แล้วเพราะเลิกใช้ Storage)
-4. **iOS ยังไม่ได้ build** — ต้องใช้ macOS + Xcode
+2. **iOS ยังไม่ได้ build** — ต้องใช้ macOS + Xcode
+3. **เทสต์กฎ Firestore ยังอยู่นอกโปรเจกต์** — อยู่ที่ `%TEMP%\opencode\rules-test\check.js`
+   ยังไม่ได้ย้ายเข้า repo (เพราะต้องเพิ่ม npm deps `firebase` + `@firebase/rules-unit-testing`
+   ในโปรเจกต์ Flutter) → ถ้าไม่ย้าย กฎใหม่ที่เพิ่ง deploy จะไม่มี regression test
+4. **E2E ฝั่งผู้ขาย** — ทดสอบแค่ Product CRUD (`create → edit price → delete`)
+   ยังไม่ได้เดิน order status และ store profile บน emulator
+
+### ✅ ปิดแล้วในรอบนี้
+
+- deploy กฎชุดใหม่ (`c04029c3`) และยืนยันว่าตรงกับไฟล์ในเครื่องทุกบรรทัด
+- เพิ่มเทสต์กฎ `users.create`/`users.update` 22 เคส → รวม 36/36 ผ่าน
+- รัน seed ใหม่ + ลบ `store-langdoi` ที่ค้าง (เช็คทุก collection แล้วว่าไม่มีอะไรอ้างถึง)
+  → 1 ผู้ขาย = 1 ร้าน ตรงกับโค้ดแล้ว
+- ลบ `storage.rules` + ถอด block `storage` ออกจาก `firebase.json`
+  (`firebase deploy` แบบไม่ระบุเป้าหมายจะไม่พยายามแตะ Storage อีก)
+- ลบขยะ Firestore 4 เอกสารที่หลุดมาทีหลัง (รวมเป็น 51 จากรอบ E2E)
+- แก้ตัวเลขเทสต์ในเอกสาร: 139/129 → **146** (จริงคือ commit `fd156e7` เพิ่ม
+  `payment_and_order_test` จาก 14 → 21 เคส)
 
