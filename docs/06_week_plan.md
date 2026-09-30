@@ -355,7 +355,7 @@ docs(week3): <เอกสาร>
 
 | ไฟล์ | เคส | ครอบคลุม |
 |---|---|---|
-| `test/payment_and_order_test.dart` | 17 | 3 วิธีชำระ+ยอดรวม · แจ้งไม่ต่อ gateway · COD ซ่อน QR · ไร้ draft ถูกรอ · สั่งสำเร็จล้างตะกร้า · เขียนพลาดเก็บ cart+draft+แสดงข้อความ · ตะกร้าว่าง/ที่อยู่เปล่าไม่แตะ repo · timeline/ยกเลิก · ลูกค้า vs ผู้ขาย control · advance เขียน 1 สเต็ป · ปุ่ม "กลับไปรายการคำสั่งซื้อ" · ไม่ตั้งค่า → บอกตรง ๆ / ตั้งค่าแล้ว → ไม่โชว์คำเตือน · inbox ผู้ขายอ่านด้วย storeId · เลขพัสดุถึง repository |
+| `test/payment_and_order_test.dart` | 21 | 3 วิธีชำระ+ยอดรวม · แจ้งไม่ต่อ gateway · COD ซ่อน QR · ไร้ draft ถูกรอ · สั่งสำเร็จล้างตะกร้า · เขียนพลาดเก็บ cart+draft+แสดงข้อความ · ตะกร้าว่าง/ที่อยู่เปล่าไม่แตะ repo · timeline/ยกเลิก · ลูกค้า vs ผู้ขาย control · advance เขียน 1 สเต็ป · ปุ่ม "กลับไปรายการคำสั่งซื้อ" · ไม่ตั้งค่า → บอกตรง ๆ / ตั้งค่าแล้ว → ไม่โชว์คำเตือน · inbox ผู้ขายอ่านด้วย storeId · เลขพัสดุถึง repository · รายการสินค้าว่าง/ที่อยู่เว้นวรรค → ไม่สร้างออเดอร์ |
 | `test/order_model_test.dart` | 14 | state machine `allowedNext` · happy path 4 สเต็ป · terminal · fromFirestore + doc เก่า · timeline ย่อเมื่อยกเลิก · item snapshot ครบ |
 | `test/image_storage_test.dart` | 15 | ต่อ Cloudinary จริง + override fake ได้ · config ค่า default ตั้งแล้วเป็น configured · ปิดทั้งค่า → `ImageUploadException` พร้อมบอก flag · folder path ตรง Firestore · `..` ถูกตัด · extension case-insensitive |
 | `test/cart_test.dart` | 18 | + single-store: ปฏิเสธต่างร้าน · ล้างแล้วเพิ่มร้านใหม่ · outOfStock/atStockLimit · parity `getShippingFee` |
@@ -411,7 +411,7 @@ docs(week3): <เอกสาร>
 | คำสั่ง / การทดสอบ | ผลลัพธ์ |
 |---|---|
 | `flutter analyze --no-pub` | `No issues found!` |
-| `flutter test --no-pub` | **129/129 ผ่าน** |
+| `flutter test --no-pub` | **146/146 ผ่าน** (10 ไฟล์) — นับจากการรันจริงล่าสุด ไม่ใช่ตัวเลขที่เคยบันทึกไว้ก่อนหน้า |
 | `flutter test --no-pub test\seller_hub_test.dart` | **18/18 ผ่าน** |
 | `flutter test integration_test -d emulator-5554` | Seller Product CRUD ผ่าน (`create → edit price → delete`) |
 | `curl` upload จริง | ได้ `secure_url` + `public_id` · delivery 200 · transform `c_fill,g_auto,w_300,h_200,q_auto,f_auto` 200 |
@@ -425,10 +425,10 @@ docs(week3): <เอกสาร>
 
 ### ⚠️ ข้อจำกัดที่เหลือ
 
-1. **ผู้ขายหลายร้าน** — order inbox เลือกร้านได้แล้ว แต่ store profile ยังแก้ `stores.first` อย่างเดียว → ตัดสินใจทำ store picker หรือไม่
-2. **E2E ฝั่งผู้ขาย** — Product CRUD มีแล้ว แต่ order status + store profile ยังไม่ได้เดินบน emulator
-3. **`firestore.rules` ยังไม่ deploy** — กฎใหม่เขียนเสร็จแต่ยังไม่ทดสอบกับ emulator จริง
-4. **ข้อมูลขยะ 41 เอกสาร** — ค้างใน Firestore จากรอบ E2E (ดูหัวข้อข้างบน)
+1. ~~**ผู้ขายหลายร้าน**~~ → **ตัดสินใจแล้ว: 1 ผู้ขาย = 1 ร้าน** (commit `da8845c`) ร้าน `store-langdoi` ถูกรวมเข้า `store-singthai` ใน `tool/seed_firestore.js` จึงไม่ต้องมี store picker
+2. **E2E ฝั่งผู้ขาย** — Product CRUD เดินบน emulator แล้ว (`create → edit price → delete`) แต่ order status + store profile ยังไม่ได้เดิน
+3. ~~**`firestore.rules` ยังไม่ deploy**~~ → **✅ deploy แล้ว** และ emulator unit test ผ่าน 14/14 (ดูหัวข้อถัดไป)
+4. ~~**ข้อมูลขยะ 41 เอกสาร**~~ → **✅ ล้างแล้ว 51 เอกสาร** (47 จากรอบ E2E + 4 ที่หลุดมาทีหลัง)
 
 ---
 
@@ -463,7 +463,55 @@ build **ไม่มี flag เลยสักตัว** แล้วอัป
 
 ### ⚠️ ข้อจำกัดที่เหลือ
 
-1. **`firestore.rules` ยังไม่ deploy** — กฎ `stores.update` ใหม่ยังไม่มีผลกับ Firestore จริง
+1. ~~**`firestore.rules` ยังไม่ deploy**~~ → **✅ deploy แล้ว** (ruleset `6f6769d3-971b-4305-8e4a-3420722aad43`)
 2. **เครื่องมี Android Studio 2 ตัว** (`Android Studio` กับ `Android Studio1`) — ตัวที่ยังไม่เคยเปิดไม่มี config จะเห็น 0 AVD
-3. **ยังไม่ได้ deploy** — ต้องขออนุมัติก่อน
+3. ~~**ยังไม่ได้ deploy — ต้องขออนุมัติก่อน**~~ → **✅ deploy หลังได้รับอนุมัติ** · สำรองกฎเดิมไว้ที่ `%TEMP%\opencode\deployed-before-cloud.firestore.json`
+
+---
+
+## ✅ ปิดงาน: deploy กฎจริง + E2E ผู้ขาย + ล้างขยะ (29 ก.ย. 2569)
+
+### กฎที่ deploy แล้ว
+
+`firestore.rules` → `projects/thaiotop-587f1/rulesets/6f6769d3-971b-4305-8e4a-3420722aad43`
+(สำรองกฎเดิม: ruleset `b771054f-d002-42a7-a9a6-f88ea93e67ce`)
+
+| match | ที่เพิ่ม/แก้ | ผลต่อ E2E |
+|---|---|---|
+| `orders.list` | แยก `get`/`list` — ผู้ขาย list ได้เฉพาะ query ที่มี `where('storeId','==',…)` (พิสูจน์ความเป็นเจ้าของผ่าน `sellsInStore` ที่อ่าน store doc) | Seller inbox โหลดได้จริง |
+| `stores.update` | กันแก้ `ratingAvg`/`ratingCount`/`commissionRate`/`otopCertified` | ฟอร์มแก้ร้านผ่าน ส่วนฟิลด์ระบบยังถูกกัน |
+
+### หลักฐาน
+
+| การทดสอบ | ผล |
+|---|---|
+| Rules unit test บน Firestore Emulator | **14/14 ผ่าน** — buyer/seller/admin/guest ทั้ง 4 มุม |
+| กฎบน cloud vs ไฟล์ในเครื่อง | ตรงกันทุกบรรทัด (เทียบจาก `:release` ของ ruleset ที่ deploy) |
+| E2E Seller CRUD บน emulator | ผ่าน (`create → edit price → delete`) |
+| `flutter analyze --no-pub` | `No issues found!` |
+| `flutter test --no-pub` | **146/146 ผ่าน** (10 ไฟล์) |
+
+> Emulator ค้างครั้งแรก **ไม่ใช่** เพราะ Java — แต่เพราะ Firebase CLI ในเครื่องยังไม่ `login`
+> (ค้างรอ prompt) พอส่ง `FIREBASE_TOKEN` คู่กับ `JAVA_HOME=jdk-23` ก็รันผ่านทันที
+
+### ข้อมูลขยะที่ล้าง
+
+ลบไป **51 เอกสาร** รวม 2 รอบ: 47 จากรอบ E2E (orders 11 · products 13 · variants 13 · payments 10)
+และอีก 4 ที่หลุดมาทีหลัง (orders 3 · payments 1 — เป็นออเดอร์ของ demo customer
+ที่มีที่อยู่ว่างและจำนวน 1 ชิ้น ตั้งเวลาตรงกับตอนรันเทสต์บนเครื่อง)
+
+เหลือแต่ seed: products 11 · variants 9 · orders 6 · payments 5
+
+> ยืนยันแล้วว่า `flutter test` ไม่เขียนลง Firestore (นับก่อน/หลังรันเท่ากันทุก collection)
+> ขยะ 4 เอกสารจึงมาจากการเปิดแอปบน emulator ไม่ใช่จาก unit test
+
+### ⚠️ ที่ยังค้าง
+
+1. **รูป probe บน Cloudinary 2 ใบ** — `smoke-test/probe/…` และ `smoke-test/escaped/…` ลบเองไม่ได้
+   (unsigned preset ต้องใช้ API secret) · ลบผ่าน Media Library หรือส่ง secret มาให้ลบแทน
+2. **`store-langdoi` ยังอยู่ใน Firestore จริง** แต่ `tool/seed_firestore.js` ใหม่ไม่สร้างมันแล้ว
+   → ร้าน 1 สินค้า 3 และออเดอร์ 3 (`o-demo-2/3/5`) ยังผูกกับมันอยู่ ต้องรัน seed ซ้ำหรือลบออกให้เข้ากัน
+3. **`storage.rules` ยังไม่ deploy** และ review delete rule ยังกว้างเกินไป (`isSignedIn() || isAdmin()`)
+   · Firebase Storage ต้องขึ้นแผน Blaze ก่อนจึงจะ deploy ได้
+4. **iOS ยังไม่ได้ build** — ต้องใช้ macOS + Xcode
 

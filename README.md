@@ -107,7 +107,7 @@ PATH ตั้งครบแล้ว (`D:\flutter\bin`, `platform-tools`, `emu
 
 ```powershell
 flutter analyze        # ต้องเป็น No issues found!
-flutter test           # 139 เคส
+flutter test           # 146 เคส
 ```
 
 E2E ต้องใช้ emulator ที่เปิดไว้ก่อน:
