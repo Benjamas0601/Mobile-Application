@@ -471,7 +471,16 @@ build **ไม่มี flag เลยสักตัว** แล้วอัป
 
 ## ✅ ปิดงาน: deploy กฎจริง + E2E ผู้ขาย + ล้างขยะ (29 ก.ย. 2569)
 
-### กฎที่ deploy แล้ว
+### ⚠️ กฎบน cloud ไม่ตรงกับไฟล์ในเครื่องแล้ว
+
+commit `fd156e7` (22:09) เพิ่ม Admin Hub + order tracking + กฎ register/role
+ทำให้ `firestore.rules` ในเครื่องยาว 506 บรรทัด แต่ตัวที่ deploy ไว้ยังเป็นชุดเดิม 438 บรรทัด
+(first diff บรรทัด 112 — กฎ `users.create` ตอนสมัครสมาชิก) **ต้อง deploy กฎชุดใหม่ก่อน**
+ไม่งั้น register ที่เลือก role ได้ และ admin ที่เพิ่งเพิ่ม จะทำงานไม่ตรงกับกฎ
+
+กฎชุดใหม่ผ่าน Firestore Emulator 14/14 เท่าเดิม (ตรวจหลัง commit)
+
+### กฎที่ deploy แล้ว (ยังเป็นชุดก่อน `fd156e7`)
 
 `firestore.rules` → `projects/thaiotop-587f1/rulesets/6f6769d3-971b-4305-8e4a-3420722aad43`
 (สำรองกฎเดิม: ruleset `b771054f-d002-42a7-a9a6-f88ea93e67ce`)
@@ -486,7 +495,7 @@ build **ไม่มี flag เลยสักตัว** แล้วอัป
 | การทดสอบ | ผล |
 |---|---|
 | Rules unit test บน Firestore Emulator | **14/14 ผ่าน** — buyer/seller/admin/guest ทั้ง 4 มุม |
-| กฎบน cloud vs ไฟล์ในเครื่อง | ตรงกันทุกบรรทัด (เทียบจาก `:release` ของ ruleset ที่ deploy) |
+| กฎบน cloud vs ไฟล์ในเครื่อง | ⚠️ **ไม่ตรงแล้ว** — cloud 438 บรรทัด / local 506 (commit `fd156e7` เพิ่มหลัง deploy) |
 | E2E Seller CRUD บน emulator | ผ่าน (`create → edit price → delete`) |
 | `flutter analyze --no-pub` | `No issues found!` |
 | `flutter test --no-pub` | **146/146 ผ่าน** (10 ไฟล์) |
@@ -507,11 +516,13 @@ build **ไม่มี flag เลยสักตัว** แล้วอัป
 
 ### ⚠️ ที่ยังค้าง
 
-1. **รูป probe บน Cloudinary 2 ใบ** — `smoke-test/probe/…` และ `smoke-test/escaped/…` ลบเองไม่ได้
+1. **`firestore.rules` ชุดใหม่ยังไม่ได้ deploy** — ไฟล์ในเครื่องต่างจากบน cloud (ดูหัวข้อข้างบน) ต้องรัน
+   `firebase deploy --only firestore:rules --project thaiotop-587f1` ก่อน register/role/admin ใหม่จะใช้ได้
+2. **รูป probe บน Cloudinary 2 ใบ** — `smoke-test/probe/…` และ `smoke-test/escaped/…` ลบเองไม่ได้
    (unsigned preset ต้องใช้ API secret) · ลบผ่าน Media Library หรือส่ง secret มาให้ลบแทน
-2. **`store-langdoi` ยังอยู่ใน Firestore จริง** แต่ `tool/seed_firestore.js` ใหม่ไม่สร้างมันแล้ว
+3. **`store-langdoi` ยังอยู่ใน Firestore จริง** แต่ `tool/seed_firestore.js` ใหม่ไม่สร้างมันแล้ว
    → ร้าน 1 สินค้า 3 และออเดอร์ 3 (`o-demo-2/3/5`) ยังผูกกับมันอยู่ ต้องรัน seed ซ้ำหรือลบออกให้เข้ากัน
-3. **`storage.rules` ยังไม่ deploy** และ review delete rule ยังกว้างเกินไป (`isSignedIn() || isAdmin()`)
+4. **`storage.rules` ยังไม่ deploy** และ review delete rule ยังกว้างเกินไป (`isSignedIn() || isAdmin()`)
    · Firebase Storage ต้องขึ้นแผน Blaze ก่อนจึงจะ deploy ได้
 4. **iOS ยังไม่ได้ build** — ต้องใช้ macOS + Xcode
 
