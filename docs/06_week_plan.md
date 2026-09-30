@@ -11,7 +11,7 @@
 | สัปดาห์ | ส่ง | สถานะ |
 |---|---|---|
 | Week 2 | 30 ก.ย. 2569 | ✅ **เสร็จ** |
-| Week 3 | 7 ต.ค. 2569 | 🔄 **กำลังทำ** (เสร็จ 6/9 ของรายการ — เหลือ Product CRUD) |
+| Week 3 | 7 ต.ค. 2569 | 🔄 **กำลังทำ** (Auth, catalog/cart, checkout/orders และ Seller Product CRUD เสร็จ; เหลือเก็บ error states, ย้าย Rules tests เข้า repo และ E2E บางส่วน) |
 | Week 4 | 14 ต.ค. 2569 | ⏳ |
 | Week 5 | 21 ต.ค. 2569 | ⏳ |
 | Week 6 | 4 พ.ย. 2569 | ⏳ |
@@ -252,11 +252,13 @@
 
 ### ⏳ เหลือใน Week 3
 
-1. **Product CRUD ฝั่งผู้ขาย** — เพิ่ม/แก้/ลบสินค้า + variant + สต็อก + อัปโหลดหลายรูป
-   (ยังไม่เริ่ม · เป็นงานใหญ่สุดที่เหลือ · ต่อ `CloudinaryImageService` ที่เขียนเตรียมไว้แล้ว)
-2. **อัปโหลดรูปจริง** — รอผู้ใช้ตั้ง `CLOUDINARY_CLOUD_NAME` + `CLOUDINARY_UPLOAD_PRESET`
-   (ตอนนี้ seed ใช้ `picsum.photos` เป็นรูปตัวอย่าง)
-3. **Error/Empty state ครบทุกหน้า** — มี `state_views.dart` แล้ว แต่ยังไม่ได้ไปเรียกใช้ครบ
+1. **Error/Empty state ครบทุกหน้า** — มี `state_views.dart` และหน้า Seller บางส่วนเรียกใช้แล้ว แต่ยังไม่ได้ไล่ตรวจทุกหน้า
+2. **Seller E2E เพิ่มเติม** — Product CRUD ผ่านแล้ว (`create → edit price → delete`); ยังไม่ได้เดิน order status และ store profile บน emulator
+3. **ย้าย Firestore Rules tests เข้า repo** — ตอนนี้ชุด 36 เคสยังอยู่ที่ `%TEMP%\opencode\rules-test\check.js` ไม่ได้เป็น regression test ที่รันจากโปรเจกต์ได้
+4. **ทดสอบ build/run บน iOS** — ต้องใช้ macOS + Xcode
+5. **ลบ Cloudinary probe 2 รูป** — unsigned preset ลบไม่ได้ ต้องลบผ่าน Media Library
+
+> **ขอบเขต Local DB → Cloud Sync:** ยังไม่ได้ทำ ระบบตะกร้าตั้งใจเป็น in-memory เพื่อรองรับ guest และ Product/Order เขียนไป Firestore โดยตรงผ่าน repository; ยังไม่มี local database persistence หรือ sync queue ในแอป
 
 ### ⏳ ต้องทำนอกเครื่องนี้
 
@@ -412,7 +414,7 @@ docs(week3): <เอกสาร>
 | คำสั่ง / การทดสอบ | ผลลัพธ์ |
 |---|---|
 | `flutter analyze --no-pub` | `No issues found!` |
-| `flutter test --no-pub` | **146/146 ผ่าน** (10 ไฟล์) — นับจากการรันจริงล่าสุด ไม่ใช่ตัวเลขที่เคยบันทึกไว้ก่อนหน้า |
+| `flutter test --no-pub` | **168/168 ผ่าน** (11 ไฟล์) — นับจากการรันจริงล่าสุด ไม่ใช่ตัวเลขที่เคยบันทึกไว้ก่อนหน้า |
 | `flutter test --no-pub test\seller_hub_test.dart` | **18/18 ผ่าน** |
 | `flutter test integration_test -d emulator-5554` | Seller Product CRUD ผ่าน (`create → edit price → delete`) |
 | `curl` upload จริง | ได้ `secure_url` + `public_id` · delivery 200 · transform `c_fill,g_auto,w_300,h_200,q_auto,f_auto` 200 |
@@ -484,7 +486,7 @@ commit `fd156e7` (22:09) เพิ่ม Admin Hub + order tracking + กฎ reg
 ตรวจแล้วว่า **บน cloud ตรงกับไฟล์ในเครื่องทุกบรรทัด**
 
 เพิ่มเทสต์ `users.create` / `users.update` อีก 22 เคส (เดิมมีแค่ orders/stores 14 เคส
-คือกฎที่เพิ่ง deploy ไปไม่เคยถูกทดสอบเลย) รวมเป็น **36/36 ผ่าน**:
+คือกฎที่เพิ่ง deploy ไปไม่เคยถูกทดสอบเลย) รวมเป็น **36/36 ผ่าน** (แล้วขยายเป็น 47 เมื่อเพิ่มเทสต์ `affiliate_*` อีก 11 เคส — ดูหัวข้อ Affiliate ด้านล่าง):
 
 | ต้องผ่าน | ต้องถูกบล็อก |
 |---|---|
@@ -514,11 +516,11 @@ commit `fd156e7` (22:09) เพิ่ม Admin Hub + order tracking + กฎ reg
 
 | การทดสอบ | ผล |
 |---|---|
-| Rules unit test บน Firestore Emulator | **36/36 ผ่าน** — orders.list 6 · stores.update 5 · orders.get 3 · users.create 11 · users.update 6 |
+| Rules unit test บน Firestore Emulator | **47/47 ผ่าน** — orders.list 6 · stores.update 5 · orders.get 3 · users.create 11 · users.update 6 · **affiliate 16** |
 | กฎบน cloud vs ไฟล์ในเครื่อง | ตรงกันทุกบรรทัด (ruleset `c04029c3`) · สำรองชุดก่อนหน้าไว้ที่ `%TEMP%\opencode\deployed-before-cloud.firestore.json` |
 | E2E Seller CRUD บน emulator | ผ่าน (`create → edit price → delete`) |
 | `flutter analyze --no-pub` | `No issues found!` |
-| `flutter test --no-pub` | **146/146 ผ่าน** (10 ไฟล์) |
+| `flutter test --no-pub` | **168/168 ผ่าน** (11 ไฟล์) |
 | ข้อมูลจริงหลัง seed | ร้าน 3 (1 ผู้ขาย = 1 ร้าน) · สินค้า 11 · variant 9 · ออเดอร์ 6 · payment 5 |
 
 > Emulator ค้างครั้งแรก **ไม่ใช่** เพราะ Java — แต่เพราะ Firebase CLI ในเครื่องยังไม่ `login`
@@ -535,6 +537,40 @@ commit `fd156e7` (22:09) เพิ่ม Admin Hub + order tracking + กฎ reg
 > ยืนยันแล้วว่า `flutter test` ไม่เขียนลง Firestore (นับก่อน/หลังรันเท่ากันทุก collection)
 > ขยะ 4 เอกสารจึงมาจากการเปิดแอปบน emulator ไม่ใช่จาก unit test
 
+### ✅ Affiliate Dashboard — เพิ่มแล้ว
+
+`docs/02_user_flows.md:115` เขียนไว้ว่าพาร์ทเนอร์ต้องมีแดชบอร์ด
+(ภาพรวม · ลิงก์ · คอมมิชชัน) แต่โค้ดไม่มีเลย — `lib/features/affiliate/` ว่างเปล่า
+มีแต่ `.gitkeep` และมีแค่ฝั่งแอดมินที่ดูรายชื่อ affiliate ได้ ตอนนี้เติมแล้ว
+
+**หน้าจอ** `lib/features/affiliate/screens/affiliate_home_screen.dart`
+โชว์ 4 ตัวเลขตามสเปก — ยอดขายที่ทำให้เกิด · คอมมิชชันที่ได้รับ · ออเดอร์ · คลิก
+พร้อมอัตราการแปลง รายการคอมมิชชันล่าสุด และลิงก์ของตัวเอง (คัดลอกรหัส/ลบได้)
+
+**เส้นทางเข้า** `/affiliate` ผูกกับบัญชี + role-gate ในหน้าจอแบบเดียวกับ `/seller`
+- พาร์ทเนอร์เดี่ยว → `/home` พาไป `/affiliate`
+- คนที่มีทั้ง seller + affiliate → `/home` พาไป `/seller` (อันดับชัดเจนและมีเทสต์กัน)
+  และมีปุ่ม affiliate อยู่บนแดชบอร์ดผู้ขาย จึงยังเข้าถึงได้ครบ
+- ลูกค้าธรรมดาไม่ถูกดันเข้าคอนโซลใด
+
+**ยอดขายมาจากไหน — จุดที่ต้องตัดสินใจให้ชัด**
+`affiliate_clicks` เปิดอ่านให้แค่แอดมิน (แถวคลิกมีข้อมูลผู้คลิก) พาร์ทเนอร์จึงนับคลิกเองไม่ได้
+และอ่าน `orders` ก็ไม่ได้ (ออเดอร์มีชื่อผู้ซื้อ/ผู้ขาย) ถ้าอ่านได้ก็ต้องเปิดกฎใหม่
+
+สอง collection ที่กฎอนุญาตอยู่แล้วคือ `affiliate_links` + `affiliate_commissions` ซึ่งเอกสารสเปก
+(`docs/05_architecture.md:157`) วาง `clicks`/`orders` ไว้บน link doc อยู่แล้ว จึงทำตามนั้น:
+- คลิก/ออเดอร์/อัตราแปลง ← รวมจาก `clicks`/`orders` บน link doc
+- **ยอดขายที่ทำให้เกิด** ← `orderTotal` ที่ denormalize ไว้บน commission doc
+  (หลักการเดียวกับที่ `docs/05_architecture.md:164` ใช้กับ order_items)
+
+> ถ้าวันหนึ่งอยากให้พาร์ทเนอร์เห็นยอดขายสดจาก `orders` ต้องแก้ `firestore.rules`
+> ให้อ่าน order ที่มี `affiliateUid == ตัวเอง` แล้ว deploy ใหม่ — รอบนี้ยังไม่ทำเพราะเปิด
+> สิทธิ์กว้างเกินจำเป็นโดยไม่ต้องการ
+
+**เทสต์** `test/affiliate_dashboard_test.dart` 22 เคส + กฎ 11 เคสบน emulator
+ปิดช่องโหว่ที่เจอระหว่างออกแบบ: พาร์ทเนอร์แก้ `clicks` ตัวเองไม่ได้ · อนุมัติคอมมิชชันเองไม่ได้ ·
+สร้างลิงก์ในชื่อคนอื่นไม่ได้ · อ่านของคนอื่น/ของลูกค้าไม่ได้
+
 ### ⚠️ ที่ยังค้าง
 
 1. **รูป probe บน Cloudinary 2 ใบ** — `smoke-test/probe/…` และ `smoke-test/escaped/…` ลบเองไม่ได้
@@ -545,11 +581,18 @@ commit `fd156e7` (22:09) เพิ่ม Admin Hub + order tracking + กฎ reg
    ในโปรเจกต์ Flutter) → ถ้าไม่ย้าย กฎใหม่ที่เพิ่ง deploy จะไม่มี regression test
 4. **E2E ฝั่งผู้ขาย** — ทดสอบแค่ Product CRUD (`create → edit price → delete`)
    ยังไม่ได้เดิน order status และ store profile บน emulator
+5. **Affiliate ยังไม่มี E2E** — มีแต่ unit test + widget test (22 เคส)
+6. **ยังไม่ได้รัน seed ที่เพิ่มข้อมูลพาร์ทเนอร์** — `tool/seed_firestore.js` เขียนบัญชี
+   `affiliate@example.com` + 4 ลิงก์ + 4 คอมมิชชัน (ทุกสถานะ) แล้ว แต่ยังไม่ deploy
+   ข้อมูลนี้ไปยัง Firestore จริง
+7. **คลิก/ออเดอร์ยังไม่มีระบบนับจริง** — ตัวเลขใน seed เป็นค่าตัวอย่างที่เขียนเป็น counter
+   ต้องมี Cloud Function หรือ backend ไป increment ตอนมีคนคลิกลิงก์/สั่งซื้อ
 
 ### ✅ ปิดแล้วในรอบนี้
 
 - deploy กฎชุดใหม่ (`c04029c3`) และยืนยันว่าตรงกับไฟล์ในเครื่องทุกบรรทัด
 - เพิ่มเทสต์กฎ `users.create`/`users.update` 22 เคส → รวม 36/36 ผ่าน
+- เพิ่ม **Affiliate Dashboard** (ดูหัวข้อถัดไป) + เทสต์กฎ `affiliate_*` 11 เคส → รวม 47/47
 - รัน seed ใหม่ + ลบ `store-langdoi` ที่ค้าง (เช็คทุก collection แล้วว่าไม่มีอะไรอ้างถึง)
   → 1 ผู้ขาย = 1 ร้าน ตรงกับโค้ดแล้ว
 - ลบ `storage.rules` + ถอด block `storage` ออกจาก `firebase.json`

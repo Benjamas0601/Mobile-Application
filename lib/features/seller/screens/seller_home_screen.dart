@@ -57,6 +57,15 @@ class SellerHomeScreen extends ConsumerWidget {
           ],
         ),
         actions: <Widget>[
+          // A seller who also promotes needs a way into the affiliate console.
+          // `/home` redirects sellers here, so this button is the only route to
+          // that dashboard for a dual-role account.
+          if (user.isAffiliate || user.isAdmin)
+            IconButton(
+              tooltip: AppStrings.navAffiliateDashboard,
+              icon: const Icon(Icons.campaign_outlined),
+              onPressed: () => context.push(AppRoutes.affiliateRoot),
+            ),
           IconButton(
             tooltip: 'ดูตลาด OTOP',
             icon: const Icon(Icons.storefront_outlined),
