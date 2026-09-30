@@ -146,12 +146,13 @@
 | สิ่งที่ยังใช้ Firebase | Auth + Firestore เหมือนเดิม เปลี่ยนเฉพาะส่วนเก็บรูป |
 | โค้ด | `ImageStorageService` (interface) + `CloudinaryImageService` — สลับผู้ให้บริการได้โดยแก้บรรทัดเดียว |
 | เก็บค่า credential | `defaultValue` ใน `cloudinary_config.dart` (ทั้งสองค่าเป็น public โดยธรรมชาติ) + override ด้วย `--dart-define` |
-| รูปแบบโฟลเดอร์ | ตรงกับ `storage.rules` เดิม → ถ้าวันไหนย้ายกลับ Firebase Storage จึงไม่ต้องแก้ฐานข้อมูล (`storage.rules` ยังอยู่ในโปรเจกต์ แต่ **ยังไม่ deploy** และ deploy ไม่ได้จนกว่าจะขึ้นแผน Blaze) |
+| รูปแบบโฟลเดอร์ | ตรงกับข้อกำหนดเดิมของ Firebase Storage → ถ้าวันไหนย้ายกลับ จึงไม่ต้องแก้ฐานข้อมูล (`storage.rules` **ถูกลบออกจากโปรเจกต์แล้ว** เพราะไม่ได้ใช้ — ดูหัวข้อ "ลบ storage.rules" ด้านล่าง) |
 | รูปใน seed | ใช้ `picsum.photos` เป็นรูปตัวอย่างชั่วคราว (เปลี่ยนเป็นรูปจริงตอนผู้ขายอัปโหลด) |
 
-> **หมายเหตุ:** `firebase.json` ยังอ้าง `storage.rules` อยู่ ถ้าสั่ง `firebase deploy` แบบไม่ระบุเป้าหมาย
-> มันจะพยายาม deploy storage rules และ**ล้มเหลว** (เพราะยังไม่มี bucket) ให้ใช้
-> `firebase deploy --only firestore` เสมอ
+> **หมายเหตุ:** ถอด block `storage` ออกจาก `firebase.json` แล้ว ตอนนี้
+> `firebase deploy` แบบไม่ระบุเป้าหมายจะไม่พยายามแตะ Storage อีก (เดิมมันล้มเหลว
+> เพราะยังไม่มี bucket และต้องขึ้นแผน Blaze) — แต่ยังควรใช้
+> `firebase deploy --only firestore:rules` เพื่อไม่เผลอ deploy อย่างอื่น
 
 ### ✅ คืน Cloudinary + harden path (29 ก.ย. 2569)
 
@@ -522,7 +523,7 @@ commit `fd156e7` (22:09) เพิ่ม Admin Hub + order tracking + กฎ reg
    (unsigned preset ต้องใช้ API secret) · ลบผ่าน Media Library หรือส่ง secret มาให้ลบแทน
 3. **`store-langdoi` ยังอยู่ใน Firestore จริง** แต่ `tool/seed_firestore.js` ใหม่ไม่สร้างมันแล้ว
    → ร้าน 1 สินค้า 3 และออเดอร์ 3 (`o-demo-2/3/5`) ยังผูกกับมันอยู่ ต้องรัน seed ซ้ำหรือลบออกให้เข้ากัน
-4. **`storage.rules` ยังไม่ deploy** และ review delete rule ยังกว้างเกินไป (`isSignedIn() || isAdmin()`)
-   · Firebase Storage ต้องขึ้นแผน Blaze ก่อนจึงจะ deploy ได้
+4. ~~**`storage.rules` ยังไม่ deploy**~~ → **✅ ลบไฟล์ออกแล้ว** ตอนนี้รูปทั้งหมดอยู่บน Cloudinary
+   (เดิม review delete rule กว้างเกินไป — `isSignedIn() || isAdmin()` — แต่ไม่ต้องแก้แล้วเพราะเลิกใช้ Storage)
 4. **iOS ยังไม่ได้ build** — ต้องใช้ macOS + Xcode
 

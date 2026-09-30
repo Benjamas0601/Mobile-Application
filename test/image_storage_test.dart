@@ -161,8 +161,8 @@ void main() {
 
   group('the storage interface stays backend-agnostic', () {
     test('upload folders mirror the Firestore layout', () {
-      // The folder paths were designed to match `storage.rules` so the app can
-      // move to Firebase Storage later without reshaping any data.
+      // The folder paths mirror the Firestore layout so the app can move to a
+      // different image host later without reshaping any data.
       expect(
         ImageUploadPolicy.folderForPaymentSlip(paymentId: 'pay-1'),
         'payments/pay-1/slips',

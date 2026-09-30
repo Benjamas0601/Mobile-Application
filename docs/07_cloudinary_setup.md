@@ -60,7 +60,7 @@ CloudinaryConfig.isConfigured // cloudName + uploadPreset ต้องไม่�
 ## โครงสร้าง path
 
 กำหนดไว้ใน `ImageUploadPolicy` (`lib/core/services/image/image_storage_service.dart`)
-ใช้รูปแบบเดียวกับ `storage.rules` เดิม เพื่อให้ย้ายกลับ Firebase Storage ทีหลังได้โดยไม่ต้องแก้ข้อมูลใน Firestore
+ใช้รูปแบบเดียวกับที่เคยวางไว้สำหรับ Firebase Storage เพื่อให้ย้ายกลับทีหลังได้โดยไม่ต้องแก้ข้อมูลใน Firestore
 
 | รูป | path |
 |---|---|

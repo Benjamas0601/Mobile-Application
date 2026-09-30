@@ -30,7 +30,7 @@ class UploadedImage {
 
 /// เงื่อนไขการอัปโหลดรูป
 ///
-/// ตั้งไว้ให้ตรงกับข้อกำหนดเดิมใน `storage.rules`
+/// ตั้งไว้ให้ตรงกับข้อกำหนดเดิมตอนที่ยังวางแผนจะใช้ Firebase Storage
 /// เพื่อให้พฤติกรรมเหมือนเดิมไม่ว่าจะเปลี่ยนผู้ให้บริการเก็บรูปทีหลัง
 class ImageUploadPolicy {
   const ImageUploadPolicy._();
@@ -75,8 +75,8 @@ class ImageUploadPolicy {
 
   /// แปลง path ของแอปให้เป็นโฟลเดอร์ของ Cloudinary
   ///
-  /// โครงสร้าง path ชุดนี้วางไว้ให้ตรงกับ `storage.rules` ตั้งแต่ตอนที่ยังวางแผนจะ
-  /// ใช้ Firebase Storage ไว้ ถ้าวันไหนย้ายกลับจึงไม่ต้องแก้ฐานข้อมูล แต่ตอนนี้ใช้
+  /// โครงสร้าง path ชุดนี้วางไว้ตั้งแต่ตอนที่ยังวางแผนจะใช้ Firebase Storage ไว้
+  /// ถ้าวันไหนย้ายกลับจึงไม่ต้องแก้ฐานข้อมูล แต่ตอนนี้ใช้
   /// Cloudinary free (Firebase Storage บังคับแผน Blaze) จึงเป็นแค่ข้อตกลงร่วมกัน
   static String folderForProduct({
     required String storeId,
