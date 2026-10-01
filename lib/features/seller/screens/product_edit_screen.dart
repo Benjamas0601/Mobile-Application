@@ -24,6 +24,7 @@ import '../../../widgets/state_views.dart';
 /// form on purpose, so the seller never learns two versions of "product".
 /// Images can come from a URL or from the device — the device path goes through
 /// [ImageStorageService] so it can be swapped to Firebase Storage later.
+/// ฟอร์มสร้างหรือแก้สินค้า พร้อม variant รูปภาพ และสต็อกของแต่ละแบบ
 class ProductEditScreen extends ConsumerStatefulWidget {
   const ProductEditScreen({super.key, this.productId, this.storeId});
 

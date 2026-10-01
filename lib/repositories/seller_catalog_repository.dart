@@ -20,6 +20,7 @@ import '../models/store_profile_draft.dart';
 ///
 /// `stockTotal` on the product is always recomputed from the variant rows in
 /// the draft, so it can never drift out of sync with what the buyer picks.
+/// จัดการสินค้าและร้านของผู้ขาย โดยให้ Firestore Rules ตรวจสิทธิ์ซ้ำ
 class SellerCatalogRepository {
   SellerCatalogRepository({FirebaseFirestore? firestore, FirebaseAuth? auth})
     : _firestore = firestore ?? FirebaseFirestore.instance,

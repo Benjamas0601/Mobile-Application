@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 ///  - Clay red    = urgency, promotion, OTOP handicraft (sale / coupon)
 ///
 /// Everything else is a warm neutral so product photography stays the focus.
+/// สีหลักของแบรนด์ ใช้ผ่าน token เพื่อปรับธีมได้จากจุดเดียว
 class AppColors {
   AppColors._();
 

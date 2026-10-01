@@ -4,6 +4,7 @@ import '../../../core/constants/app_enums.dart';
 import '../../../models/store_model.dart';
 import '../../../models/user_model.dart';
 
+/// อ่านและแก้ข้อมูลระบบเฉพาะที่กฎ Firestore อนุญาตให้ผู้ดูแลจัดการ
 class AdminRepository {
   AdminRepository({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;

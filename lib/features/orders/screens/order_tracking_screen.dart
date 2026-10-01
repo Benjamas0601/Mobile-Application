@@ -13,6 +13,7 @@ import '../../../providers/order_provider.dart';
 import '../../../widgets/state_views.dart';
 import '../widgets/order_status_timeline.dart';
 
+/// สรุปสถานะและข้อมูลจัดส่งที่ใช้ติดตามออเดอร์
 class OrderTrackingScreen extends ConsumerWidget {
   const OrderTrackingScreen({super.key, required this.orderId});
 

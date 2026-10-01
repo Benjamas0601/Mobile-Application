@@ -35,6 +35,7 @@ import '../../../widgets/state_views.dart';
 /// allows this account to read. The affiliate cannot see other people's orders
 /// or raw click rows, and does not need to for the figures the flow promises
 /// (Clicks / Orders / Conversion / Commission — `docs/02_user_flows.md:122`).
+/// หน้ารวมลิงก์โปรโมตและคอมมิชชันของ Affiliate ที่ล็อกอินอยู่
 class AffiliateHomeScreen extends ConsumerWidget {
   const AffiliateHomeScreen({super.key});
 

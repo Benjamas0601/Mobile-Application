@@ -8,6 +8,7 @@ import 'firestore_codec.dart';
 /// admin-only because a raw click row carries the visitor's identity, which is
 /// none of the affiliate's business. The totals therefore have to live on the
 /// one document the affiliate is actually allowed to read.
+/// ลิงก์แนะนำสินค้าของ Affiliate พร้อมตัวนับที่ระบบดูแล
 class AffiliateLinkModel {
   const AffiliateLinkModel({
     required this.id,

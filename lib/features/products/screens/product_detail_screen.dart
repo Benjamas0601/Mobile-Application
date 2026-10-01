@@ -19,6 +19,7 @@ import '../../../widgets/state_views.dart';
 
 /// Product detail — the screen that has to sell the "story", so the four
 /// story blocks get as much space as the price does.
+/// หน้ารายละเอียดสินค้า รวมเรื่องราวร้าน ตัวเลือกสินค้า และเพิ่มลงตะกร้า
 class ProductDetailScreen extends ConsumerWidget {
   const ProductDetailScreen({super.key, required this.productId});
 

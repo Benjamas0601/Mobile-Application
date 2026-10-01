@@ -24,6 +24,7 @@ class AuthFailure implements Exception {
 /// The Auth object owns the credential; this repository owns the
 /// `users/{uid}` profile that the app actually reads. Keeping the two in step
 /// here is what stops a signed-in user from having a null profile.
+/// รวมการยืนยันตัวตนกับการอ่าน/สร้างโปรไฟล์ผู้ใช้ใน Firestore
 class AuthRepository {
   AuthRepository({FirebaseAuth? auth, FirebaseFirestore? db})
     : _auth = auth ?? FirebaseAuth.instance,

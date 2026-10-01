@@ -30,6 +30,7 @@ class FirebaseUnavailable extends FirebaseStartupResult {
 }
 
 /// Starts Firebase exactly once and reports what happened.
+/// เริ่ม Firebase และแปลงความล้มเหลวเป็นสถานะที่ UI แสดงวิธีแก้ได้
 class FirebaseBootstrap {
   FirebaseBootstrap._();
 

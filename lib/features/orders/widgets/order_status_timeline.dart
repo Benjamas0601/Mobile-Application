@@ -16,6 +16,7 @@ import '../../../models/order_model.dart';
 /// an empty dot means not yet. `cancelled` is not a step on the path, so a
 /// cancelled order collapses to a single terminal state instead of pretending
 /// to have progressed.
+/// แสดงความคืบหน้าออเดอร์ตามลำดับสถานะที่ระบบอนุญาต
 class OrderStatusTimeline extends StatelessWidget {
   const OrderStatusTimeline({super.key, required this.order});
 

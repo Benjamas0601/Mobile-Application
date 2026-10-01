@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 /// Rule for this project: never write a raw number into a `padding` or
 /// `margin`. Use a token from here so rhythm stays consistent and a design
 /// change is a one-line edit.
+/// ระยะห่างและมิติที่ใช้ซ้ำ เพื่อคุมจังหวะ layout ให้สม่ำเสมอ
 class AppSpacing {
   AppSpacing._();
 

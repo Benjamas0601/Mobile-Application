@@ -97,6 +97,7 @@ Future<AffiliateDashboardMetrics> _metrics({
 }
 
 void main() {
+    // ครอบคลุมโมเดล ค่าคอมมิชชัน และหน้าสรุป Affiliate โดยใช้ข้อมูลจำลอง
   group('AffiliateLinkModel', () {
     test('converts clicks into orders as a percentage', () {
       expect(_link(clicks: 200, orders: 10).conversionRate, 5);

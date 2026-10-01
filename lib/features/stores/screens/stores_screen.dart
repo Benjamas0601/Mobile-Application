@@ -11,6 +11,7 @@ import '../../../widgets/state_views.dart';
 
 /// Store directory. Public read, so a guest can see who they would be buying
 /// from before deciding to make an account.
+/// แสดงไดเรกทอรีร้านที่ guest เปิดดูได้โดยไม่ต้องล็อกอิน
 class StoresScreen extends ConsumerWidget {
   const StoresScreen({super.key});
 

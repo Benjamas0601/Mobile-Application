@@ -12,6 +12,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../repositories/auth_repository.dart';
 import '../widgets/hero_3d.dart';
 
+/// ประเภทบัญชีที่ฟอร์มสมัครรองรับ โดยทุกประเภทมี role customer พื้นฐาน
 enum _RegistrationType { customer, store, affiliate }
 
 class RegisterScreen extends ConsumerStatefulWidget {

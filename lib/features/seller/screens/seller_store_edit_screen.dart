@@ -24,6 +24,7 @@ import '../../../widgets/state_views.dart';
 /// Function, and `firestore.rules` refuses an update that touches `ownerUid`
 /// anyway. The form is the write half of the store the seller's product form
 /// already treats as its parent.
+/// ฟอร์มแก้เฉพาะข้อมูลร้านที่ผู้ขายมีสิทธิ์เปลี่ยนได้
 class SellerStoreEditScreen extends ConsumerStatefulWidget {
   const SellerStoreEditScreen({super.key});
 

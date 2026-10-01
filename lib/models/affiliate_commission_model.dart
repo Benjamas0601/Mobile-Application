@@ -9,6 +9,7 @@ import 'firestore_codec.dart';
 /// names its buyer and its sellers), so the sales figure this dashboard leads
 /// with cannot be joined at read time. Copying the total when the commission is
 /// recorded keeps the number right even after the order is later cancelled.
+/// ยอดคอมมิชชันที่ผูกกับออเดอร์และ Affiliate หนึ่งราย
 class AffiliateCommissionModel {
   const AffiliateCommissionModel({
     required this.id,

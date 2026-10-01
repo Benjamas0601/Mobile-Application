@@ -16,6 +16,7 @@ import '../../../repositories/auth_repository.dart';
 /// same identity, and role selection happens after sign-in, not before —
 /// asking for a role up front is the most common drop-off in Thai
 /// marketplace apps.
+/// รับข้อมูลล็อกอินและพาผู้ใช้กลับไปยังปลายทางเดิมหลังยืนยันตัวตน
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key, this.redirect});
 

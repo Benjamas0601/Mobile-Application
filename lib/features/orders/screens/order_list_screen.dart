@@ -18,6 +18,7 @@ import '../../../widgets/state_views.dart';
 /// Read-only from the customer's side on purpose: `firestore.rules` only lets a
 /// buyer touch the address while the order is still unpaid, so anything that
 /// looks like editing here would fail at write time.
+/// แสดงประวัติออเดอร์ของผู้ซื้อ โดยเรียงรายการล่าสุดไว้ก่อน
 class OrderListScreen extends ConsumerWidget {
   const OrderListScreen({super.key});
 

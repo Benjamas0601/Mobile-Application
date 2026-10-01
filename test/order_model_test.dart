@@ -29,6 +29,7 @@ OrderModel _order({
 );
 
 void main() {
+    // ตรวจ state machine และการอ่าน order snapshot จาก Firestore
   group('the state machine allows one step at a time', () {
     test('an unpaid order can be paid or cancelled, and nothing else', () {
       expect(OrderStatus.pendingPayment.allowedNext, <OrderStatus>[

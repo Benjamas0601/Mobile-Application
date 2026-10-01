@@ -2,6 +2,7 @@ import '../core/constants/app_enums.dart';
 import 'firestore_codec.dart';
 
 /// A `stores/{storeId}` document — an OTOP producer's shop.
+/// ข้อมูลร้านที่ใช้แสดงหน้าร้านและตรวจความเป็นเจ้าของโดยผู้ขาย
 class StoreModel {
   const StoreModel({
     required this.id,

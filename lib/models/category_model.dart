@@ -1,6 +1,7 @@
 import 'firestore_codec.dart';
 
 /// A `categories/{categoryId}` document — the top level of browsing.
+/// ข้อมูลหมวดหมู่ที่ใช้จัดกลุ่มสินค้าในหน้าเลือกดู
 class CategoryModel {
   const CategoryModel({
     required this.id,

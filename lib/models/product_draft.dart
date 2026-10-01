@@ -6,6 +6,7 @@ import 'product_model.dart';
 /// A draft mirrors the stored `product_variants` shape ([ProductVariantModel])
 /// but is owned by the form, so it can carry a brand-new variant (no id) and
 /// `stock` can be typed before anything is written.
+/// ข้อมูลชั่วคราวของ variant ก่อนตรวจสอบและบันทึกสินค้า
 class VariantDraft {
   const VariantDraft({
     this.id,

@@ -18,6 +18,7 @@ import 'app_colors.dart';
 /// other file needs to change.
 const String kAppFontFamily = '';
 
+/// ชุดรูปแบบตัวอักษรกลางของแอป โดยไม่บังคับฟอนต์เดียวทุกภาษา
 class AppTextStyles {
   AppTextStyles._();
 

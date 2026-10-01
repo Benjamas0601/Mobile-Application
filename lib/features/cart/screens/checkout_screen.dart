@@ -19,6 +19,7 @@ import '../../../widgets/state_views.dart';
 /// This is the boundary the whole "browse as guest" flow is built around: the
 /// cart is local and works signed out, and the first moment that needs a named
 /// person is right here.
+/// ตรวจสถานะบัญชีก่อนซื้อ แต่ยังให้ guest เห็น gate และเลือกสมัคร/ล็อกอินได้
 class CheckoutScreen extends ConsumerWidget {
   const CheckoutScreen({super.key});
 

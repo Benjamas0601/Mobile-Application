@@ -16,6 +16,7 @@ import '../models/order_model.dart';
 ///  * only the seller of the order's store, or an admin, may change `status`.
 ///    The client checks [OrderStatus.allowedNext] first so an illegal step is
 ///    reported as a clear message rather than a permission error.
+/// สร้างและติดตามออเดอร์ โดยเก็บ snapshot เพื่อรักษาราคาตอนซื้อ
 class OrderRepository {
   OrderRepository({FirebaseFirestore? firestore, FirebaseAuth? auth})
     : _firestore = firestore ?? FirebaseFirestore.instance,

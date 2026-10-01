@@ -5,6 +5,7 @@ import '../models/user_model.dart';
 import '../repositories/auth_repository.dart';
 
 /// Injected once and overridden in tests with a fake.
+/// จุดฉีด AuthRepository เพื่อให้หน้าจอทดสอบแทนที่ด้วย fake ได้
 final Provider<AuthRepository> authRepositoryProvider =
     Provider<AuthRepository>((Ref ref) => AuthRepository());
 

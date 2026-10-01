@@ -15,6 +15,7 @@ import 'widgets/bootstrap_gate.dart';
 ///  2. theme          — light + dark from the design tokens
 ///  3. startup gate   — blocks the app with a readable message if Firebase
 ///                      could not start, so we never render a white screen
+/// ประกอบ router, theme และหน้ารอ Firebase ให้เป็นแอปเดียว
 class ThaiOtopApp extends StatelessWidget {
   const ThaiOtopApp({super.key, required this.startup});
 

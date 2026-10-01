@@ -23,6 +23,7 @@ import '../../../widgets/state_views.dart';
 /// Drafts are listed here — a seller must be able to finish a product they
 /// started — which is why the customer-facing catalogue never shares this
 /// provider.
+/// รายการสินค้าของร้านผู้ขาย รวมสินค้าร่างที่ลูกค้ายังไม่เห็น
 class SellerProductListScreen extends ConsumerStatefulWidget {
   const SellerProductListScreen({super.key});
 

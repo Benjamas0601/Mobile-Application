@@ -35,6 +35,7 @@ import '../../../widgets/state_views.dart';
 /// Nothing here talks to a payment gateway. Selecting a method records the
 /// choice in Firestore, which is the part the rest of the app actually reads.
 /// The screen says so plainly instead of showing a fake success.
+/// ยืนยันวิธีชำระเงินและสร้างออเดอร์; gateway จริงยังไม่เชื่อมใน MVP
 class PaymentScreen extends ConsumerWidget {
   const PaymentScreen({super.key});
 

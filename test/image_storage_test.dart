@@ -9,6 +9,7 @@ import 'package:thai_otop_marketplace/core/services/image/image_storage_service.
 import 'package:thai_otop_marketplace/providers/image_storage_provider.dart';
 
 void main() {
+    // ตรวจ policy, URL และข้อความผิดพลาดของ storage service
   group('the image service is reachable from the app', () {
     test('a provider returns a usable uploader', () {
       // The service used to exist with no caller, so nothing in the app could

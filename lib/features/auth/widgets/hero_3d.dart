@@ -16,6 +16,7 @@ import '../../../core/theme/app_colors.dart';
 ///
 /// Swap-in point: if a real 3D asset is produced later, replace [IsoParcel]
 /// with a `model_viewer_plus` widget — the layout here does not change.
+/// ภาพประกอบ 3 มิติแบบวาดเองและเคลื่อนไหวบนหน้าเข้าสู่ระบบ
 class Hero3d extends StatefulWidget {
   const Hero3d({super.key, this.size = 260});
 

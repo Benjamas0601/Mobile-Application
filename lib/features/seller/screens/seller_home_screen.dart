@@ -22,6 +22,7 @@ import '../../orders/screens/order_list_screen.dart' show StatusChip;
 /// featuring Live Analytics KPIs, Quick Actions, and Action-required orders.
 ///
 /// Designed strictly for 1 Seller = 1 Store with isolated store queries.
+/// หน้าแรก Seller Hub รวมภาพรวมร้านและทางลัดจัดการสินค้า/ออเดอร์
 class SellerHomeScreen extends ConsumerWidget {
   const SellerHomeScreen({super.key});
 

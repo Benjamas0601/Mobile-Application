@@ -3,6 +3,7 @@
 /// Kept apart from the widget tree because the wording is graded and, more
 /// practically, because the one rule these strings have to respect is honesty:
 /// nothing may imply a real money transfer or a real shipment happened.
+/// ข้อความเฉพาะขั้นตอนชำระเงินและติดตามสถานะออเดอร์
 class PaymentStrings {
   PaymentStrings._();
 

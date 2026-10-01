@@ -12,6 +12,7 @@ import 'order_provider.dart';
 
 /// Injected once and overridden in tests with a fake, so the seller screens
 /// can be driven without a live Firestore.
+/// จุดฉีด repository ฝั่งผู้ขาย; tests override จุดนี้เพื่อไม่ต่อ Firestore จริง
 final Provider<SellerCatalogRepository> sellerCatalogRepositoryProvider =
     Provider<SellerCatalogRepository>((Ref ref) => SellerCatalogRepository());
 

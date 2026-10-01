@@ -14,6 +14,7 @@ import '../../../widgets/state_views.dart';
 
 /// The local cart. Reachable by a guest — signing in is a checkout step, not a
 /// cart step.
+/// แสดงรายการตะกร้า ยอดรวม และทางไป checkout ของร้านเดียว
 class CartScreen extends ConsumerWidget {
   const CartScreen({super.key});
 

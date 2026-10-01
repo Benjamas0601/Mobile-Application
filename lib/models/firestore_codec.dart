@@ -9,6 +9,7 @@ library;
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Reads a single document map with a fallback for every field.
+/// แปลงค่าจาก Firestore ที่อาจมีชนิดต่างกันให้เป็นชนิดที่โมเดลคาดไว้
 class FirestoreReader {
   FirestoreReader(this._data);
 

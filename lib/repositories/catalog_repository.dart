@@ -11,6 +11,7 @@ import '../models/store_model.dart';
 /// Every method here is readable while signed out — `firestore.rules` sets
 /// `allow read: if true` on all four collections so browsing works before
 /// anyone creates an account.
+/// อ่านข้อมูลแคตตาล็อกสาธารณะ; การเขียนสินค้าแยกไปฝั่งผู้ขาย
 class CatalogRepository {
   CatalogRepository({FirebaseFirestore? db})
     : _db = db ?? FirebaseFirestore.instance;

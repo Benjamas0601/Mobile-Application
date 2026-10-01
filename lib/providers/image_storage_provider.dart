@@ -13,6 +13,7 @@ import '../core/services/image/image_storage_service.dart';
 ///
 /// Overridden in tests with a fake, which is also how the not-configured path
 /// is exercised without network access.
+/// เลือก storage ผ่าน interface เพื่อสลับเป็น fake ในการทดสอบได้
 final Provider<ImageStorageService> imageStorageServiceProvider =
     Provider<ImageStorageService>((Ref ref) => CloudinaryImageService());
 

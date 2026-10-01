@@ -263,6 +263,7 @@ ProductDraft _draft({
 }
 
 void main() {
+    // ตรวจ draft สินค้าและพฤติกรรม CRUD ของหน้าจอผู้ขายด้วย repository ปลอม
   setUpAll(() async {
     await initializeDateFormatting('th');
   });

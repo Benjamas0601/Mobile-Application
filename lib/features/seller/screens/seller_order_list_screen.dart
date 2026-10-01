@@ -24,6 +24,7 @@ import '../../orders/screens/order_list_screen.dart' show StatusChip;
 /// order detail unnecessary — the same [AdvanceOrderStatusController] drives
 /// the step button here, but it now sits in a screen the seller chose to open
 /// rather than one a customer happens to be looking at.
+/// กล่องออเดอร์ของร้านผู้ขาย พร้อมควบคุมการเดินสถานะและเลขพัสดุ
 class SellerOrderListScreen extends ConsumerStatefulWidget {
   const SellerOrderListScreen({super.key});
 

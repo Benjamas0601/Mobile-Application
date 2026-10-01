@@ -4,6 +4,7 @@
 /// "the wording is wrong" there is exactly one file to edit, and no widget
 /// contains a hard-coded sentence. Widgets should reference `AppStrings.*`
 /// rather than typing Thai text inline.
+/// รวมข้อความ UI ภาษาไทยไว้จุดเดียวเพื่อให้ใช้ถ้อยคำสม่ำเสมอ
 class AppStrings {
   AppStrings._();
 

@@ -27,6 +27,7 @@ import '../../providers/auth_provider.dart';
 ///
 /// Two reasons: no typo'd string literals scattered through the app, and the
 /// navigation map can be read in one place during the demo.
+/// รวม path และกติกา redirect เพื่อควบคุมสิทธิ์เข้าถึงแต่ละหน้าจอ
 class AppRoutes {
   AppRoutes._();
 

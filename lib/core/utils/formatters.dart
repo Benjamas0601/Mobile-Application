@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 ///
 /// Kept in one file because a baht symbol or a Buddhist-era year that is
 /// wrong in three different places is impossible to review.
+/// รวมการจัดรูปแบบราคาและวันที่ให้แสดงตรงกันทั้งแอป
 class Fmt {
   Fmt._();
 

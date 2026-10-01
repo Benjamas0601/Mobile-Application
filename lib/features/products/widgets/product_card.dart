@@ -12,6 +12,7 @@ import '../../../models/product_model.dart';
 ///
 /// The brief limits 3D art to the login hero, so a card stays a flat image
 /// plus text — that also keeps the grid cheap to scroll on low-end phones.
+/// การ์ดสินค้าในกริด; แสดงสถานะหมดสต็อกและราคาให้เห็นก่อนเปิดรายละเอียด
 class ProductCard extends StatelessWidget {
   const ProductCard({super.key, required this.product, this.onTap});
 

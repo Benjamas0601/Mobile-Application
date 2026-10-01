@@ -11,6 +11,7 @@ import 'app_typography.dart';
 /// Two themes are provided: light (default) and dark. Dark is not cosmetic —
 /// product photos are shot on white, so the dark theme uses a warm charcoal
 /// rather than pure black to avoid harsh contrast against those images.
+/// ประกอบ ThemeData จากสี ระยะห่าง และรูปแบบตัวอักษรของแอป
 class AppTheme {
   AppTheme._();
 

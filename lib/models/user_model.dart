@@ -5,6 +5,7 @@ import 'firestore_codec.dart';
 ///
 /// Roles live in Firestore (not in the Auth token) so a role change takes
 /// effect on the next read instead of needing a token refresh.
+/// โปรไฟล์ผู้ใช้และบทบาทที่อ่านจากเอกสาร `users/{uid}`
 class UserModel {
   const UserModel({
     required this.uid,

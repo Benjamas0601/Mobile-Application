@@ -7,6 +7,7 @@ import 'store_model.dart';
 /// `ownerUid`, `createdAt`, `ratingAvg`, `ratingCount`, `commissionRate`. Those
 /// are written by the seed, the platform, or a Cloud Function, so the form has
 /// no control for them and this draft cannot carry them either.
+/// เก็บเฉพาะช่องที่ผู้ขายแก้ได้ ไม่รวมฟิลด์ที่ระบบเป็นเจ้าของ
 class StoreProfileDraft {
   const StoreProfileDraft({
     required this.name,

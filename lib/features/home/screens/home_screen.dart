@@ -24,6 +24,7 @@ import '../../products/widgets/product_card.dart';
 ///
 /// Reads straight from Firestore, so whatever was seeded in the console
 /// appears here with no extra wiring.
+/// หน้าเลือกดูสินค้าแบบ public พร้อมหมวด ภูมิภาค และค้นหา
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 

@@ -14,6 +14,7 @@ import '../../../widgets/state_views.dart';
 import '../providers/admin_provider.dart';
 import '../repositories/admin_repository.dart';
 
+/// หน้าจอผู้ดูแลสำหรับตรวจและจัดการข้อมูลหลักตามสิทธิ์ admin
 class AdminHomeScreen extends ConsumerWidget {
   const AdminHomeScreen({super.key});
 

@@ -7,6 +7,7 @@ import 'cart_provider.dart';
 
 /// Injected once and overridden in tests with a fake, so screens can be driven
 /// without a live Firestore.
+/// จุดฉีด OrderRepository สำหรับแยก UI ออกจาก Firebase และทดสอบด้วย fake
 final Provider<OrderRepository> orderRepositoryProvider =
     Provider<OrderRepository>((Ref ref) => OrderRepository());
 

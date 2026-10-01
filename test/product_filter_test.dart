@@ -4,6 +4,7 @@ import 'package:thai_otop_marketplace/core/constants/app_enums.dart';
 import 'package:thai_otop_marketplace/providers/catalog_provider.dart';
 
 void main() {
+    // ตรวจการกรองสินค้าตามหมวด ภูมิภาค และข้อความค้นหา
   group('ProductFilter', () {
     late ProviderContainer container;
     late ProductFilterNotifier filter;

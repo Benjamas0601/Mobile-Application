@@ -18,6 +18,7 @@ import 'package:thai_otop_marketplace/core/constants/payment_strings.dart';
 ///
 /// Run: flutter test integration_test -d emulator-5554
 void main() {
+    // ทดสอบปลายทางจริง: ล็อกอิน อ่านประวัติ และสั่งซื้อผ่าน Firestore
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   Future<void> pumpUntil(

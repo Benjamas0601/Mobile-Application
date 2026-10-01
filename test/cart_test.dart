@@ -29,6 +29,7 @@ ProductModel _product({
 CartNotifier _cart(ProviderContainer c) => c.read(cartProvider.notifier);
 
 void main() {
+    // ตรวจสต็อก ยอดรวม ค่าจัดส่ง และกติกาที่ตะกร้าหนึ่งใบต้องเป็นของร้านเดียว
   group('guest cart', () {
     late ProviderContainer container;
 

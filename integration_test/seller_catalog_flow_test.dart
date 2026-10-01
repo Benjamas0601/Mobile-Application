@@ -15,6 +15,7 @@ import 'package:thai_otop_marketplace/core/constants/app_strings.dart';
 ///
 /// Run: flutter test integration_test -d emulator-5554
 void main() {
+    // ทดสอบ CRUD สินค้าบน emulator และลบข้อมูลที่สร้างท้ายการทดสอบ
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   Future<void> pumpUntil(

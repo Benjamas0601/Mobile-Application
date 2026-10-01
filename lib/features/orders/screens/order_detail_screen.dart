@@ -22,6 +22,7 @@ import 'order_list_screen.dart' show StatusChip;
 /// Subscribed to the order document rather than reading it once, so a status
 /// change by the seller appears without the buyer pulling to refresh — which is
 /// the whole point of having a status at all.
+/// แสดง snapshot รายการซื้อและการเปลี่ยนสถานะของออเดอร์หนึ่งรายการ
 class OrderDetailScreen extends ConsumerWidget {
   const OrderDetailScreen({super.key, required this.orderId});
 

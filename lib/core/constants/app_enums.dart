@@ -9,6 +9,7 @@ library;
 /// Who the account acts as. A single account may hold several roles —
 /// that is intentional and matches how real OTOP sellers often also promote
 /// their own products.
+/// ค่าบทบาทที่เก็บในฐานข้อมูลและป้ายภาษาไทยที่แสดงใน UI
 enum UserRole {
   customer('customer', 'ลูกค้า'),
   seller('seller', 'ผู้ขาย OTOP'),

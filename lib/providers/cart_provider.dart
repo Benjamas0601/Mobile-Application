@@ -8,6 +8,7 @@ import '../models/product_model.dart';
 /// The product is flattened into the line on purpose: the cart must survive a
 /// catalogue refresh and must be readable while signed out, so it cannot depend
 /// on a live Firestore document.
+/// รายการตะกร้าเก็บ snapshot สินค้าไว้ จึงใช้ได้แม้ guest หรือเน็ตหลุด
 class CartLine {
   const CartLine({
     required this.productId,
