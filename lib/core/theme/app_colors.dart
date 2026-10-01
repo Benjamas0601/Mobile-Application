@@ -66,7 +66,12 @@ class AppColors {
   // --- Semantic ------------------------------------------------------------
   static const Color success = Color(0xFF1F6B57);
   static const Color successLight = Color(0xFFE3F1EA);
-  static const Color warning = Color(0xFFB07A00);
+
+  /// Amber for "waiting"/"pending". Darkened from #B07A00 to #8A6A00: as pill
+  /// text on [warningLight] the lighter amber only reached 3.38:1, which is
+  /// under the 4.5:1 body-text bar. #8A6A00 gives 4.60:1 on the same fill and
+  /// still reads as turmeric rather than brown.
+  static const Color warning = Color(0xFF8A6A00);
   static const Color warningLight = Color(0xFFFFF3D6);
   static const Color danger = Color(0xFFC8324A);
   static const Color dangerLight = Color(0xFFFCE8EB);
