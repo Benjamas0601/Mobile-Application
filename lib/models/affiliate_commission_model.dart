@@ -49,7 +49,8 @@ class AffiliateCommissionModel {
   /// performance — while a *pending* one is real revenue that is merely awaiting
   /// review and must stay in.
   bool get countsAsSales =>
-      status != CommissionStatus.rejected && status != CommissionStatus.cancelled;
+      status != CommissionStatus.rejected &&
+      status != CommissionStatus.cancelled;
 
   bool get isPending => status == CommissionStatus.pending;
 

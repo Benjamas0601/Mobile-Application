@@ -31,11 +31,9 @@ class OrderListScreen extends ConsumerWidget {
       // `body` only: a seller signed in as a customer still wants the list
       // first, not a list with a demo panel above it.
       body: orders.when(
-        loading: () =>
-            const SkeletonListView(itemCount: 4, height: 140),
-        error: (Object e, StackTrace _) => ErrorView(
-          onRetry: () => ref.invalidate(myOrdersProvider),
-        ),
+        loading: () => const SkeletonListView(itemCount: 4, height: 140),
+        error: (Object e, StackTrace _) =>
+            ErrorView(onRetry: () => ref.invalidate(myOrdersProvider)),
         data: (List<OrderModel> list) {
           if (list.isEmpty) {
             return EmptyView(
@@ -149,10 +147,7 @@ class StatusChip extends StatelessWidget {
         horizontal: AppSpacing.sm,
         vertical: large ? AppSpacing.sm : AppSpacing.xs,
       ),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: AppRadius.pillRadius,
-      ),
+      decoration: BoxDecoration(color: bg, borderRadius: AppRadius.pillRadius),
       child: Text(
         status.label,
         style: (large ? AppTextStyles.bodyMedium : AppTextStyles.bodySmall)

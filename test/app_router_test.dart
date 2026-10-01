@@ -10,7 +10,7 @@ import 'package:thai_otop_marketplace/core/constants/app_enums.dart';
 import 'package:thai_otop_marketplace/models/user_model.dart';
 
 void main() {
-    // ตรวจสิทธิ์ route, redirect ตาม role และการกลับไปยังปลายทางเดิม
+  // ตรวจสิทธิ์ route, redirect ตาม role และการกลับไปยังปลายทางเดิม
   group('authRedirect', () {
     test('a guest may browse the whole catalogue', () {
       // Browse-first: opening the app must never bounce a guest to login.

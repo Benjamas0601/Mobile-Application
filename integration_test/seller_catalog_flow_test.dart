@@ -6,6 +6,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:thai_otop_marketplace/app.dart';
 import 'package:thai_otop_marketplace/core/config/firebase_bootstrap.dart';
 import 'package:thai_otop_marketplace/core/constants/app_strings.dart';
+import 'package:thai_otop_marketplace/widgets/design_system.dart';
 
 /// End-to-end seller-console proof against the real Firebase project
 /// (thaiotop-587f1): create a product with a variant, edit its price, then
@@ -15,7 +16,7 @@ import 'package:thai_otop_marketplace/core/constants/app_strings.dart';
 ///
 /// Run: flutter test integration_test -d emulator-5554
 void main() {
-    // ทดสอบ CRUD สินค้าบน emulator และลบข้อมูลที่สร้างท้ายการทดสอบ
+  // ทดสอบ CRUD สินค้าบน emulator และลบข้อมูลที่สร้างท้ายการทดสอบ
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   Future<void> pumpUntil(
@@ -130,7 +131,7 @@ void main() {
     // home-screen hop to do. The hub is store-scoped: its body only exists
     // once this seller's own store has resolved.
     await pumpUntil(tester, find.text(AppStrings.navSellerDashboard));
-    await pumpUntil(tester, find.byType(CustomScrollView));
+    await pumpUntil(tester, find.byType(ListView));
     // The quick actions sit below the KPI grid, so they may not be laid out
     // until the page scrolls.
     await tester.scrollUntilVisible(
@@ -144,21 +145,59 @@ void main() {
     await tester.tap(find.text(AppStrings.sellerAddProduct));
     await pumpUntil(tester, find.text(AppStrings.productNameLabel));
 
+    // The editor is a four-step wizard, so the create is driven the same way a
+    // seller would: basics -> images -> variants -> story -> publish. Only the
+    // basics step is validated by index; later steps are addressed by label.
     await tester.enterText(find.byType(TextFormField).at(0), productName);
-    await tester.enterText(find.byType(TextFormField).at(2), '1290');
+    await tester.enterText(find.byType(TextFormField).at(1), '1290');
 
+    await tester.ensureVisible(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
     await tester.tap(find.byType(DropdownButtonFormField<String>));
+    // Tap the menu entry by its rendered label rather than by type: the
+    // dropdown route is an overlay, and addressing the route's own item widget
+    // can resolve to a node that is no longer hit-testable by the time the tap
+    // is dispatched.
     await pumpUntil(tester, find.byType(DropdownMenuItem<String>).last);
-    await tester.tap(find.byType(DropdownMenuItem<String>).last);
+    final String categoryLabel = tester
+        .widget<Text>(
+          find
+              .descendant(
+                of: find.byType(DropdownMenuItem<String>).last,
+                matching: find.byType(Text),
+              )
+              .first,
+        )
+        .data!;
+    await tester.tap(find.text(categoryLabel).last);
     await tester.pumpAndSettle();
 
-    // One variant with stock, so the sold-as-sum stockTotal has a real row.
-    final Finder pageScroller = find.byType(Scrollable).first;
-    await tester.scrollUntilVisible(
-      find.text(AppStrings.addVariant),
-      300,
-      scrollable: pageScroller,
+    // --- Step 2: images. Publishing needs at least one, and there is no
+    // camera in a test, so add one by URL.
+    await tapAndSettle(tester, find.text('ขั้นตอนถัดไป'));
+    final Finder imageChip = find.ancestor(
+      of: find.text('เพิ่มรูป'),
+      matching: find.byType(AppChip),
     );
+    await tester.tap(imageChip);
+    await pumpUntil(tester, find.text(AppStrings.addImageByUrl));
+    await tapAndSettle(tester, find.text(AppStrings.addImageByUrl));
+    await tester.enterText(
+      find.widgetWithText(TextField, AppStrings.imageUrlHint),
+      'https://res.cloudinary.com/demo/image/upload/sample.jpg',
+    );
+    await tapAndSettle(
+      tester,
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text(AppStrings.addImage),
+      ),
+    );
+
+    // --- Step 3: one variant with stock, so the sold-as-sum stockTotal has a
+    // real row. Stock is a stepper here, not a text field.
+    await tapAndSettle(tester, find.text('ขั้นตอนถัดไป'));
+    await tester.ensureVisible(find.text(AppStrings.addVariant));
     await tester.pumpAndSettle();
     await tester.tap(find.text(AppStrings.addVariant));
     await tester.pumpAndSettle();
@@ -166,16 +205,19 @@ void main() {
       find.byWidgetPredicate(
         (Widget w) =>
             w is TextField &&
-            w.decoration?.labelText == AppStrings.variantStockHint,
+            w.decoration?.hintText == AppStrings.variantNameExample,
       ),
-      '3',
+      'แพ็คขวด',
     );
-
-    await dismissKeyboard(tester);
-    await tapAndSettle(tester, find.text(AppStrings.sellerAddProduct));
-    if (!(await probeVisible(tester, find.text(AppStrings.productSaved), 8))) {
-      await tapAndSettle(tester, find.text(AppStrings.sellerAddProduct));
+    final Finder stockUp = find.byKey(const ValueKey<String>('stock-up-0'));
+    for (int i = 0; i < 3; i++) {
+      await tester.tap(stockUp);
+      await tester.pumpAndSettle();
     }
+
+    // --- Step 4: story, then publish.
+    await tapAndSettle(tester, find.text('ขั้นตอนถัดไป'));
+    await tapAndSettle(tester, find.text(AppStrings.save));
     await pumpUntil(tester, find.text(AppStrings.productSaved));
 
     // Saving pops the form back to wherever it was opened from — here the hub,
@@ -211,19 +253,22 @@ void main() {
       fieldWith('1290'),
       reason: 'the saved price must arrive in the price field',
     );
-    // In edit mode the save button reads "บันทึก <ชื่อร้าน>", so match on the
-    // prefix and scope it to the button — a bare text match would also catch
-    // the "บันทึกสินค้าแล้ว" snackbar.
-    Finder saveButton() => find.descendant(
-      of: find.byType(FilledButton),
-      matching: find.textContaining(AppStrings.save),
-    );
-
+    // Edit the price while it is still mounted — only the visible step is built,
+    // so walking forward first would unmount the basics fields.
     await tester.enterText(fieldWith('1290'), '1990');
     await dismissKeyboard(tester);
-    await tapAndSettle(tester, saveButton());
+
+    // The editor opens on the basics step even in edit mode, so the save lives
+    // on the last step: walk to the end, then save. The saved product already
+    // has its image and variants, so the later gates pass without touching
+    // them.
+    for (int i = 0; i < 3; i++) {
+      await tapAndSettle(tester, find.text('ขั้นตอนถัดไป'));
+    }
+
+    await tapAndSettle(tester, find.text(AppStrings.save));
     if (!(await probeVisible(tester, find.text(AppStrings.productSaved), 8))) {
-      await tapAndSettle(tester, saveButton());
+      await tapAndSettle(tester, find.text(AppStrings.save));
     }
     await pumpUntil(tester, find.text(AppStrings.productSaved));
     await pumpUntil(tester, find.text(productName));

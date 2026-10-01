@@ -52,7 +52,10 @@ class _SellerProductListScreenState
 
     final storeState = ref.watch(myStoreProvider);
     if (storeState.isLoading) {
-      return _Scaffold(title: AppStrings.sellerProducts, child: const LoadingView());
+      return _Scaffold(
+        title: AppStrings.sellerProducts,
+        child: const LoadingView(),
+      );
     }
     if (storeState.hasError) {
       return Scaffold(
@@ -82,8 +85,7 @@ class _SellerProductListScreenState
       appBar: AppBar(title: const Text(AppStrings.sellerProducts)),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'seller-add-product',
-        onPressed: () =>
-            context.push(AppRoutes.sellerProductNew(storeId)),
+        onPressed: () => context.push(AppRoutes.sellerProductNew(storeId)),
         icon: const Icon(Icons.add_rounded),
         label: const Text(AppStrings.sellerAddProduct),
       ),
@@ -102,7 +104,8 @@ class _SellerProductListScreenState
         onRetry: () => ref.invalidate(myProductsProvider(storeId)),
       );
     }
-    final List<ProductModel> products = state.asData?.value ?? const <ProductModel>[];
+    final List<ProductModel> products =
+        state.asData?.value ?? const <ProductModel>[];
     if (products.isEmpty) {
       return const EmptyView(
         icon: Icons.inventory_2_outlined,
@@ -219,7 +222,10 @@ class _SellerProductListScreenState
       ProductStatus.archived => AppColors.inkSubtle,
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 2,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: AppRadius.pillRadius,
@@ -243,9 +249,7 @@ class _SellerProductListScreenState
             child: const Text(AppStrings.cancel),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.danger,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text(AppStrings.delete),
           ),
@@ -262,7 +266,9 @@ class _SellerProductListScreenState
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          id == null ? AppStrings.deleteProductFailed : AppStrings.productDeleted,
+          id == null
+              ? AppStrings.deleteProductFailed
+              : AppStrings.productDeleted,
         ),
       ),
     );
@@ -277,6 +283,8 @@ class _Scaffold extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) =>
-      Scaffold(appBar: AppBar(title: Text(title)), body: child);
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text(title)),
+    body: child,
+  );
 }

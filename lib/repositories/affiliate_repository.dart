@@ -145,7 +145,9 @@ class AffiliateRepository {
   /// resolves by document id anyway.
   String _generateCode(String uid) {
     const String alphabet = 'abcdefghijkmnpqrstuvwxyz23456789';
-    final String prefix = uid.replaceAll(RegExp('[^a-zA-Z0-9]'), '').toLowerCase();
+    final String prefix = uid
+        .replaceAll(RegExp('[^a-zA-Z0-9]'), '')
+        .toLowerCase();
     final String head = prefix.length >= 4 ? prefix.substring(0, 4) : prefix;
     final StringBuffer tail = StringBuffer();
     for (int i = 0; i < 4; i++) {

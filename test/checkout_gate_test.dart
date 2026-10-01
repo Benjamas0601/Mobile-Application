@@ -44,7 +44,7 @@ Widget _harness(ProviderContainer container, GoRouter router) =>
     );
 
 void main() {
-    // ยืนยันว่า guest เห็นทางเลือกสมัคร/ล็อกอินก่อนถูกกันออกจากการซื้อ
+  // ยืนยันว่า guest เห็นทางเลือกสมัคร/ล็อกอินก่อนถูกกันออกจากการซื้อ
   group('checkout auth gate', () {
     late ProviderContainer container;
     late GoRouter router;

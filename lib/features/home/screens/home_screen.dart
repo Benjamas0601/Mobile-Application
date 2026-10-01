@@ -54,6 +54,13 @@ class HomeScreen extends ConsumerWidget {
           ],
         ),
         actions: <Widget>[
+          // Explore is the redesigned browse entry point, so it gets the first
+          // slot in the AppBar rather than hiding behind the store list.
+          IconButton(
+            tooltip: 'สำรวจไทย',
+            icon: const Icon(Icons.travel_explore_rounded),
+            onPressed: () => context.push(AppRoutes.explore),
+          ),
           IconButton(
             tooltip: AppStrings.stores,
             icon: const Icon(Icons.storefront_outlined),

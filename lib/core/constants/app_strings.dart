@@ -146,7 +146,8 @@ class AppStrings {
   static const String advanceStatusDone = 'เปลี่ยนสถานะเป็น "{status}" แล้ว';
   static const String advanceStatusFailed = 'เปลี่ยนสถานะไม่สำเร็จ';
   static const String backToOrders = 'กลับไปรายการคำสั่งซื้อ';
-  static const String orderCreateFailed = 'บันทึกคำสั่งซื้อไม่สำเร็จ กรุณาลองใหม่';
+  static const String orderCreateFailed =
+      'บันทึกคำสั่งซื้อไม่สำเร็จ กรุณาลองใหม่';
   static const String paymentPending = 'รอการยืนยันการชำระเงิน';
   static const String paymentSubmitted = 'ส่งข้อมูลการชำระเงินแล้ว';
   static const String paymentVerified = 'ผู้ขายตรวจสอบการชำระเงินแล้ว';
@@ -248,7 +249,8 @@ class AppStrings {
   static const String sellerStoreCoverLabel = 'รูปปกร้าน';
   static const String sellerStoreLogoLabel = 'โลโก้ร้าน';
   static const String sellerStoreSaved = 'บันทึกข้อมูลร้านแล้ว';
-  static const String sellerStoreSaveFailed = 'บันทึกข้อมูลร้านไม่สำเร็จ กรุณาลองใหม่';
+  static const String sellerStoreSaveFailed =
+      'บันทึกข้อมูลร้านไม่สำเร็จ กรุณาลองใหม่';
   static const String sellerStoreNameRequired = 'กรุณากรอกชื่อร้าน';
   static const String sellerStoreNotEditable = 'แก้ไขข้อมูลร้านนี้ไม่ได้';
 

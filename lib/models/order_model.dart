@@ -111,7 +111,9 @@ class OrderModel {
   /// `cancelled` is a dead end rather than a step, so it is never pre-filled;
   /// the timeline switches to a single cancelled state instead.
   List<OrderStatus> get timeline => switch (status) {
-    OrderStatus.pendingPayment => const <OrderStatus>[OrderStatus.pendingPayment],
+    OrderStatus.pendingPayment => const <OrderStatus>[
+      OrderStatus.pendingPayment,
+    ],
     OrderStatus.paid => const <OrderStatus>[
       OrderStatus.pendingPayment,
       OrderStatus.paid,
@@ -154,10 +156,9 @@ class OrderModel {
 
   factory OrderModel.fromFirestore(String id, Map<String, dynamic> data) {
     final FirestoreReader r = FirestoreReader(data);
-    final String address = r.nested(
-      'shippingAddress',
-      (FirestoreReader a) => a.string('full'),
-    ) ?? r.string('shippingAddress');
+    final String address =
+        r.nested('shippingAddress', (FirestoreReader a) => a.string('full')) ??
+        r.string('shippingAddress');
 
     return OrderModel(
       id: id,
@@ -179,7 +180,10 @@ class OrderModel {
       status: OrderStatus.fromValue(r.string('status')),
       paymentMethod: PaymentMethod.fromValue(r.string('paymentMethod')),
       paymentStatus: PaymentStatus.fromValue(r.string('paymentStatus')),
-      createdAt: r.dateTimeOr('createdAt', DateTime.fromMillisecondsSinceEpoch(0)),
+      createdAt: r.dateTimeOr(
+        'createdAt',
+        DateTime.fromMillisecondsSinceEpoch(0),
+      ),
     );
   }
 }

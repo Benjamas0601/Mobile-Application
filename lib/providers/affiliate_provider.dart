@@ -22,14 +22,15 @@ final FutureProvider<List<AffiliateLinkModel>> myAffiliateLinksProvider =
 
 /// The affiliate's commission rows, newest first.
 final FutureProvider<List<AffiliateCommissionModel>>
-myAffiliateCommissionsProvider =
-    FutureProvider<List<AffiliateCommissionModel>>((Ref ref) {
-      final String? uid = ref.watch(authUserProvider).asData?.value?.uid;
-      if (uid == null) {
-        return Future.value(const <AffiliateCommissionModel>[]);
-      }
-      return ref.watch(affiliateRepositoryProvider).listMyCommissions();
-    });
+myAffiliateCommissionsProvider = FutureProvider<List<AffiliateCommissionModel>>(
+  (Ref ref) {
+    final String? uid = ref.watch(authUserProvider).asData?.value?.uid;
+    if (uid == null) {
+      return Future.value(const <AffiliateCommissionModel>[]);
+    }
+    return ref.watch(affiliateRepositoryProvider).listMyCommissions();
+  },
+);
 
 /// Live KPIs for the Affiliate Dashboard.
 ///

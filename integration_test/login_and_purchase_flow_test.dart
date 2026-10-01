@@ -18,7 +18,7 @@ import 'package:thai_otop_marketplace/core/constants/payment_strings.dart';
 ///
 /// Run: flutter test integration_test -d emulator-5554
 void main() {
-    // ทดสอบปลายทางจริง: ล็อกอิน อ่านประวัติ และสั่งซื้อผ่าน Firestore
+  // ทดสอบปลายทางจริง: ล็อกอิน อ่านประวัติ และสั่งซื้อผ่าน Firestore
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   Future<void> pumpUntil(
@@ -129,27 +129,52 @@ void main() {
 
     // Payment screen shows the correct total before confirming.
     await pumpUntil(tester, find.textContaining('1,290'));
+    // Cash on delivery is the only channel whose confirm button is enabled
+    // without store payment configuration: the seeded store has no PromptPay ID
+    // or bank account, and the button stays correctly disabled for those. COD
+    // needs no destination, so the purchase can still be driven end to end.
+    await tester.ensureVisible(find.text('เก็บเงินปลายทาง'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('เก็บเงินปลายทาง'));
+    await tester.pumpAndSettle();
     await tester.tap(find.textContaining(AppStrings.confirm));
 
-    // New order lands on its own detail page as pending payment.
-    await pumpUntil(tester, find.text(AppStrings.orderDetailTitle));
+    // Confirming navigates to the new order's tracking page, where it starts as
+    // pending payment. The tracking screen carries the order id, the status and
+    // the shipping address, so all three are asserted there rather than on the
+    // detail page.
+    await pumpUntil(tester, find.text('ติดตามสถานะ'));
     await pumpUntil(tester, find.text(OrderStatus.pendingPayment.label));
     await pumpUntil(tester, find.textContaining('99/1 ถนนสาทร'));
 
-    // Remember its id, then use the footer action to reach the history.
+    // Remember its id from the tracking card, then reach the order history
+    // through the shell's orders shortcut. The tracking page labels the field
+    // `หมายเลขคำสั่งซื้อ` and its only footer action returns to the catalogue,
+    // so it is the shell navigation that gets to the list.
+    // The order id is the value paired with the `หมายเลขคำสั่งซื้อ` label, so it
+    // is read out of that row instead of by position: the card also renders
+    // the store name, the total and the address.
     final String newOrderId = tester
-        .widgetList<Text>(find.textContaining(AppStrings.orderIdPrefix))
-        .first
+        .widget<SelectableText>(
+          find.descendant(
+            of: find.ancestor(
+              of: find.text('หมายเลขคำสั่งซื้อ'),
+              matching: find.byType(Row),
+            ),
+            matching: find.byType(SelectableText),
+          ),
+        )
         .data!
-        .split(' ')
-        .last;
+        .trim();
     await tester.scrollUntilVisible(
-      find.text(AppStrings.backToOrders),
+      find.text('เลือกสินค้าต่อ'),
       300,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text(AppStrings.backToOrders));
+    await tester.tap(find.text('เลือกสินค้าต่อ'));
+    await pumpUntil(tester, find.byTooltip(AppStrings.navOrders));
+    await tester.tap(find.byTooltip(AppStrings.navOrders));
     // Query snapshots can lag a fresh point-read, so wait for this run's
     // order specifically instead of any `เลขที่` from the stale cache.
     await pumpUntil(tester, find.textContaining(newOrderId));

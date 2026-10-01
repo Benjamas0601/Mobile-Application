@@ -20,11 +20,7 @@ const UserModel _affiliate = UserModel(
   affiliateProfileUrl: 'https://tiktok.com/@otop.boran',
 );
 
-AffiliateLinkModel _link({
-  String id = 'al1',
-  int clicks = 0,
-  int orders = 0,
-}) {
+AffiliateLinkModel _link({String id = 'al1', int clicks = 0, int orders = 0}) {
   return AffiliateLinkModel(
     id: id,
     affiliateUid: 'af1',
@@ -97,7 +93,7 @@ Future<AffiliateDashboardMetrics> _metrics({
 }
 
 void main() {
-    // ครอบคลุมโมเดล ค่าคอมมิชชัน และหน้าสรุป Affiliate โดยใช้ข้อมูลจำลอง
+  // ครอบคลุมโมเดล ค่าคอมมิชชัน และหน้าสรุป Affiliate โดยใช้ข้อมูลจำลอง
   group('AffiliateLinkModel', () {
     test('converts clicks into orders as a percentage', () {
       expect(_link(clicks: 200, orders: 10).conversionRate, 5);
@@ -124,8 +120,14 @@ void main() {
 
   group('AffiliateCommissionModel', () {
     test('counts approved and pending towards sales', () {
-      expect(_commission(status: CommissionStatus.approved).countsAsSales, isTrue);
-      expect(_commission(status: CommissionStatus.pending).countsAsSales, isTrue);
+      expect(
+        _commission(status: CommissionStatus.approved).countsAsSales,
+        isTrue,
+      );
+      expect(
+        _commission(status: CommissionStatus.pending).countsAsSales,
+        isTrue,
+      );
     });
 
     test('excludes rejected and cancelled from sales', () {
@@ -163,7 +165,8 @@ void main() {
     });
 
     test('sums clicks across every link', () async {
-      final AffiliateDashboardMetrics m = await _metrics(links: <AffiliateLinkModel>[
+      final AffiliateDashboardMetrics m = await _metrics(
+        links: <AffiliateLinkModel>[
           _link(id: 'a', clicks: 148, orders: 4),
           _link(id: 'b', clicks: 96, orders: 2),
           _link(id: 'c', clicks: 7),
@@ -173,55 +176,64 @@ void main() {
       expect(m.linkCount, 3);
     });
 
-    test('counts sales and approved commission separately from pending', () async {
-      // The number an affiliate is owed now versus what is still under review.
-      final AffiliateDashboardMetrics m = await _metrics(links: <AffiliateLinkModel>[_link(clicks: 100, orders: 3)],
-        commissions: <AffiliateCommissionModel>[
-          _commission(id: '1', amount: 111.5, orderTotal: 2230),
-          _commission(
-            id: '2',
-            amount: 72.5,
-            orderTotal: 1450,
-            status: CommissionStatus.pending,
-          ),
-        ],
-      );
-      expect(m.attributedSales, 3680);
-      expect(m.approvedCommission, 111.5);
-      expect(m.pendingCommission, 72.5);
-      expect(m.totalCommission, 184);
-      expect(m.attributedOrders, 2);
-    });
+    test(
+      'counts sales and approved commission separately from pending',
+      () async {
+        // The number an affiliate is owed now versus what is still under review.
+        final AffiliateDashboardMetrics m = await _metrics(
+          links: <AffiliateLinkModel>[_link(clicks: 100, orders: 3)],
+          commissions: <AffiliateCommissionModel>[
+            _commission(id: '1', amount: 111.5, orderTotal: 2230),
+            _commission(
+              id: '2',
+              amount: 72.5,
+              orderTotal: 1450,
+              status: CommissionStatus.pending,
+            ),
+          ],
+        );
+        expect(m.attributedSales, 3680);
+        expect(m.approvedCommission, 111.5);
+        expect(m.pendingCommission, 72.5);
+        expect(m.totalCommission, 184);
+        expect(m.attributedOrders, 2);
+      },
+    );
 
-    test('drops cancelled and rejected rows from sales but keeps clicks', () async {
-      final AffiliateDashboardMetrics m = await _metrics(links: <AffiliateLinkModel>[_link(clicks: 100, orders: 4)],
-        commissions: <AffiliateCommissionModel>[
-          _commission(id: '1', amount: 100, orderTotal: 2000),
-          _commission(
-            id: '2',
-            amount: 50,
-            orderTotal: 1000,
-            status: CommissionStatus.cancelled,
-          ),
-          _commission(
-            id: '3',
-            amount: 50,
-            orderTotal: 1000,
-            status: CommissionStatus.rejected,
-          ),
-        ],
-      );
-      expect(m.attributedSales, 2000);
-      expect(m.attributedOrders, 1);
-      expect(m.approvedCommission, 100);
-      // Click counters are maintained by the backend, so they are unaffected by
-      // what the affiliate earned.
-      expect(m.totalClicks, 100);
-      expect(m.conversionRate, 1);
-    });
+    test(
+      'drops cancelled and rejected rows from sales but keeps clicks',
+      () async {
+        final AffiliateDashboardMetrics m = await _metrics(
+          links: <AffiliateLinkModel>[_link(clicks: 100, orders: 4)],
+          commissions: <AffiliateCommissionModel>[
+            _commission(id: '1', amount: 100, orderTotal: 2000),
+            _commission(
+              id: '2',
+              amount: 50,
+              orderTotal: 1000,
+              status: CommissionStatus.cancelled,
+            ),
+            _commission(
+              id: '3',
+              amount: 50,
+              orderTotal: 1000,
+              status: CommissionStatus.rejected,
+            ),
+          ],
+        );
+        expect(m.attributedSales, 2000);
+        expect(m.attributedOrders, 1);
+        expect(m.approvedCommission, 100);
+        // Click counters are maintained by the backend, so they are unaffected by
+        // what the affiliate earned.
+        expect(m.totalClicks, 100);
+        expect(m.conversionRate, 1);
+      },
+    );
 
     test('reports 0% conversion when nothing has been clicked', () async {
-      final AffiliateDashboardMetrics m = await _metrics(commissions: <AffiliateCommissionModel>[_commission()],
+      final AffiliateDashboardMetrics m = await _metrics(
+        commissions: <AffiliateCommissionModel>[_commission()],
       );
       expect(m.totalClicks, 0);
       expect(m.conversionRate, 0);
@@ -230,7 +242,9 @@ void main() {
 
     test('is empty for a signed-out visitor instead of throwing', () async {
       // The screen mounts before auth resolves; the provider must not blow up.
-      final AffiliateDashboardMetrics m = await _metrics(user: const UserModel(uid: 'x', displayName: 'Guest', email: 'g@t.com'));
+      final AffiliateDashboardMetrics m = await _metrics(
+        user: const UserModel(uid: 'x', displayName: 'Guest', email: 'g@t.com'),
+      );
       expect(m.totalClicks, 0);
     });
   });
@@ -325,7 +339,9 @@ void main() {
     testWidgets('shows the sales the affiliate drove', (
       WidgetTester tester,
     ) async {
-      await pumpScreen(tester, await _container(
+      await pumpScreen(
+        tester,
+        await _container(
           links: <AffiliateLinkModel>[_link(clicks: 244, orders: 6)],
           commissions: <AffiliateCommissionModel>[
             _commission(id: '1', amount: 111.5, orderTotal: 2230),
@@ -340,23 +356,21 @@ void main() {
       );
 
       // Headline: gross sales driven, not the commission.
-      expect(find.text('ยอดขายที่ทำให้เกิด'), findsOneWidget);
-      expect(find.textContaining('3,680'), findsOneWidget);
-      expect(find.text('ออเดอร์จากลิงก์'), findsOneWidget);
+      expect(find.text('ยอดขายที่ลิงก์ของคุณทำให้เกิด ฿3,680'), findsOneWidget);
+      expect(find.text('คลิกสะสม'), findsWidgets);
+      expect(find.textContaining('244'), findsWidgets);
+      expect(find.text('ออเดอร์'), findsOneWidget);
       expect(find.text('2'), findsOneWidget);
-      expect(find.text('คลิกลิงก์'), findsOneWidget);
-      expect(find.textContaining('244'), findsOneWidget);
     });
 
     testWidgets('labels a pending commission as awaiting review', (
       WidgetTester tester,
     ) async {
-      await pumpScreen(tester, await _container(
+      await pumpScreen(
+        tester,
+        await _container(
           commissions: <AffiliateCommissionModel>[
-            _commission(
-              amount: 72.5,
-              status: CommissionStatus.pending,
-            ),
+            _commission(amount: 72.5, status: CommissionStatus.pending),
           ],
         ),
       );
@@ -370,18 +384,18 @@ void main() {
       await pumpScreen(tester, await _container());
 
       // The create button sits above the fold; the two empty states are
-      // slivers further down and are not even built until scrolled to.
-      expect(find.text('สร้างลิงก์โปรโมต'), findsOneWidget);
+      // further down the list.
+      expect(find.text('สร้างลิงก์'), findsOneWidget);
       expect(find.text('ยังไม่มีค่าคอมมิชชัน'), findsOneWidget);
 
       await tester.scrollUntilVisible(
         find.text('ยังไม่มีลิงก์'),
         200,
-        // `scrollable` must be the Scrollable itself, not the CustomScrollView
-        // that wraps it.
+        // `scrollable` must be the Scrollable itself, not the ListView that
+        // wraps it.
         scrollable: find
             .descendant(
-              of: find.byType(CustomScrollView),
+              of: find.byType(ListView),
               matching: find.byType(Scrollable),
             )
             .first,
@@ -389,19 +403,19 @@ void main() {
       expect(find.text('ยังไม่มีลิงก์'), findsOneWidget);
     });
 
-    testWidgets('shows the affiliate own channel', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('shows the affiliate own channel', (WidgetTester tester) async {
       await pumpScreen(tester, await _container());
 
-      expect(find.text('TikTok'), findsOneWidget);
-      expect(find.text('@otop.boran'), findsOneWidget);
+      expect(find.textContaining('TikTok'), findsWidgets);
+      expect(find.textContaining('otop.boran'), findsWidgets);
     });
 
     testWidgets('locks out an account without the affiliate role', (
       WidgetTester tester,
     ) async {
-      await pumpScreen(tester, await _container(
+      await pumpScreen(
+        tester,
+        await _container(
           user: const UserModel(
             uid: 'c1',
             displayName: 'Customer',
@@ -412,11 +426,16 @@ void main() {
       );
 
       expect(find.text('คุณไม่มีสิทธิ์เข้าถึงส่วนนี้'), findsOneWidget);
-      expect(find.text('ยอดขายที่ทำให้เกิด'), findsNothing);
+      expect(
+        find.textContaining('ยอดขายที่ลิงก์ของคุณทำให้เกิด'),
+        findsNothing,
+      );
     });
 
     testWidgets('an admin may open it too', (WidgetTester tester) async {
-      await pumpScreen(tester, await _container(
+      await pumpScreen(
+        tester,
+        await _container(
           user: const UserModel(
             uid: 'a1',
             displayName: 'Admin',
@@ -426,7 +445,10 @@ void main() {
         ),
       );
 
-      expect(find.text('ยอดขายที่ทำให้เกิด'), findsOneWidget);
+      expect(
+        find.textContaining('ยอดขายที่ลิงก์ของคุณทำให้เกิด'),
+        findsOneWidget,
+      );
     });
   });
 }

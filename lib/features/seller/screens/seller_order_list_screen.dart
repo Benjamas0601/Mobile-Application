@@ -364,9 +364,7 @@ class _OrderRow extends ConsumerWidget {
     } on Object catch (e) {
       if (!context.mounted) return;
       messenger.showSnackBar(
-        SnackBar(
-          content: Text('${AppStrings.advanceStatusFailed}: $e'),
-        ),
+        SnackBar(content: Text('${AppStrings.advanceStatusFailed}: $e')),
       );
     }
   }
@@ -375,9 +373,8 @@ class _OrderRow extends ConsumerWidget {
   Future<String?> _askTrackingNumber(BuildContext context) {
     return showDialog<String>(
       context: context,
-      builder: (BuildContext _) => _ShipTrackingSheet(
-        initialValue: order.trackingNumber,
-      ),
+      builder: (BuildContext _) =>
+          _ShipTrackingSheet(initialValue: order.trackingNumber),
     );
   }
 }
@@ -423,8 +420,7 @@ class _ShipTrackingSheetState extends State<_ShipTrackingSheet> {
           hintText: AppStrings.sellerShipTrackingHint,
           border: OutlineInputBorder(),
         ),
-        onSubmitted: (String value) =>
-            Navigator.of(context).pop(value.trim()),
+        onSubmitted: (String value) => Navigator.of(context).pop(value.trim()),
       ),
       actions: <Widget>[
         TextButton(

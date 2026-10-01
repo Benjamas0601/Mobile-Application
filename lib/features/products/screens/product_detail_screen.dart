@@ -34,7 +34,10 @@ class ProductDetailScreen extends ConsumerWidget {
     final UserModel? user = ref.watch(authUserProvider).asData?.value;
     final StoreModel? store = product.asData?.value == null
         ? null
-        : ref.watch(storeProvider(product.asData!.value!.storeId)).asData?.value;
+        : ref
+              .watch(storeProvider(product.asData!.value!.storeId))
+              .asData
+              ?.value;
     final bool canEdit =
         user != null && store != null && store.ownerUid == user.uid;
 

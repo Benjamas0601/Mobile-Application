@@ -36,18 +36,12 @@ class OrderStatusTimeline extends StatelessWidget {
     if (order.isCancelled) {
       return Row(
         children: <Widget>[
-          const Icon(
-            Icons.cancel_outlined,
-            color: AppColors.danger,
-            size: 20,
-          ),
+          const Icon(Icons.cancel_outlined, color: AppColors.danger, size: 20),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               PaymentStrings.statusCancelledHint,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.danger,
-              ),
+              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.danger),
             ),
           ),
         ],

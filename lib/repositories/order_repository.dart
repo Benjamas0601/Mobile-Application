@@ -73,7 +73,9 @@ class OrderRepository {
     final String? submittedSlip = slipUrl?.trim();
     if (method.requiresSlip &&
         (submittedSlip == null || submittedSlip.isEmpty)) {
-      throw const OrderWriteException('กรุณาแนบหลักฐานการโอนก่อนยืนยันคำสั่งซื้อ');
+      throw const OrderWriteException(
+        'กรุณาแนบหลักฐานการโอนก่อนยืนยันคำสั่งซื้อ',
+      );
     }
 
     final double subtotal = items.fold(
@@ -84,7 +86,7 @@ class OrderRepository {
 
     final PaymentStatus paymentStatus = method == PaymentMethod.cashOnDelivery
         ? PaymentStatus.unpaid
-      : PaymentStatus.submitted;
+        : PaymentStatus.submitted;
 
     final Map<String, dynamic> data = <String, dynamic>{
       'buyerUid': _uid,
@@ -111,18 +113,15 @@ class OrderRepository {
     batch.set(ref, data);
 
     if (method != PaymentMethod.cashOnDelivery) {
-      batch.set(
-        _firestore.collection(_payments).doc(),
-        <String, dynamic>{
-          'orderId': ref.id,
-          'buyerUid': _uid,
-          'method': method.value,
-          'amount': subtotal + shippingFee,
-          'status': paymentStatus.value,
-          'slipUrl': submittedSlip,
-          'createdAt': FieldValue.serverTimestamp(),
-        },
-      );
+      batch.set(_firestore.collection(_payments).doc(), <String, dynamic>{
+        'orderId': ref.id,
+        'buyerUid': _uid,
+        'method': method.value,
+        'amount': subtotal + shippingFee,
+        'status': paymentStatus.value,
+        'slipUrl': submittedSlip,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
     }
 
     await batch.commit();
@@ -213,9 +212,13 @@ class OrderRepository {
       throw const OrderWriteException('ไม่พบคำสั่งซื้อนี้');
     }
 
-    final OrderStatus current = OrderStatus.fromValue(data['status'] as String?);
+    final OrderStatus current = OrderStatus.fromValue(
+      data['status'] as String?,
+    );
     if (!current.allowedNext.contains(next)) {
-      throw OrderWriteException('เปลี่ยนสถานะจาก "${current.label}" ไป "${next.label}" ไม่ได้');
+      throw OrderWriteException(
+        'เปลี่ยนสถานะจาก "${current.label}" ไป "${next.label}" ไม่ได้',
+      );
     }
 
     // `shippedAt` is written alongside the status so the timeline has a real

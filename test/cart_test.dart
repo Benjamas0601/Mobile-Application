@@ -29,7 +29,7 @@ ProductModel _product({
 CartNotifier _cart(ProviderContainer c) => c.read(cartProvider.notifier);
 
 void main() {
-    // ตรวจสต็อก ยอดรวม ค่าจัดส่ง และกติกาที่ตะกร้าหนึ่งใบต้องเป็นของร้านเดียว
+  // ตรวจสต็อก ยอดรวม ค่าจัดส่ง และกติกาที่ตะกร้าหนึ่งใบต้องเป็นของร้านเดียว
   group('guest cart', () {
     late ProviderContainer container;
 
@@ -147,24 +147,28 @@ void main() {
     tearDown(() => container.dispose());
 
     test('the cart reports the store it belongs to', () {
-      expect(_cart(container).storeId, isNull, reason: 'empty cart has no store');
-
-      _cart(container).add(
-        _product(id: 'p1', name: 'กาแฟ', price: 120, storeId: 's1'),
+      expect(
+        _cart(container).storeId,
+        isNull,
+        reason: 'empty cart has no store',
       );
+
+      _cart(
+        container,
+      ).add(_product(id: 'p1', name: 'กาแฟ', price: 120, storeId: 's1'));
       expect(_cart(container).storeId, 's1');
     });
 
     test('a product from a second store is refused', () {
       // firestore.rules resolves the seller with `order.storeId`, so a
       // two-store cart could not be written as a single order.
-      _cart(container).add(
-        _product(id: 'p1', name: 'กาแฟ', price: 120, storeId: 's1'),
-      );
+      _cart(
+        container,
+      ).add(_product(id: 'p1', name: 'กาแฟ', price: 120, storeId: 's1'));
 
-      final CartAddResult result = _cart(container).add(
-        _product(id: 'p2', name: 'ผ้าไหม', price: 450, storeId: 's2'),
-      );
+      final CartAddResult result = _cart(
+        container,
+      ).add(_product(id: 'p2', name: 'ผ้าไหม', price: 450, storeId: 's2'));
 
       expect(result, CartAddResult.differentStore);
       expect(
@@ -175,13 +179,13 @@ void main() {
     });
 
     test('another product from the same store is accepted', () {
-      _cart(container).add(
-        _product(id: 'p1', name: 'กาแฟ', price: 120, storeId: 's1'),
-      );
+      _cart(
+        container,
+      ).add(_product(id: 'p1', name: 'กาแฟ', price: 120, storeId: 's1'));
 
-      final CartAddResult result = _cart(container).add(
-        _product(id: 'p2', name: 'เค้ก', price: 90, storeId: 's1'),
-      );
+      final CartAddResult result = _cart(
+        container,
+      ).add(_product(id: 'p2', name: 'เค้ก', price: 90, storeId: 's1'));
 
       expect(result, CartAddResult.added);
       expect(container.read(cartProvider), hasLength(2));
@@ -189,36 +193,38 @@ void main() {
     });
 
     test('clearing the cart releases the store so any shop can be used', () {
-      _cart(container).add(
-        _product(id: 'p1', name: 'กาแฟ', price: 120, storeId: 's1'),
-      );
+      _cart(
+        container,
+      ).add(_product(id: 'p1', name: 'กาแฟ', price: 120, storeId: 's1'));
       _cart(container).clear();
 
       expect(_cart(container).storeId, isNull);
       expect(
-        _cart(container).add(
-          _product(id: 'p2', name: 'ผ้าไหม', price: 450, storeId: 's2'),
-        ),
+        _cart(
+          container,
+        ).add(_product(id: 'p2', name: 'ผ้าไหม', price: 450, storeId: 's2')),
         CartAddResult.added,
       );
     });
 
     test('the refusal reasons are distinguishable from success', () {
       expect(
-        _cart(container).add(_product(id: 'p1', name: 'หมด', price: 10, stock: 0)),
+        _cart(
+          container,
+        ).add(_product(id: 'p1', name: 'หมด', price: 10, stock: 0)),
         CartAddResult.outOfStock,
       );
 
-      _cart(container).add(
-        _product(id: 'p2', name: 'กาแฟ', price: 120, stock: 2),
-      );
-      _cart(container).add(
-        _product(id: 'p2', name: 'กาแฟ', price: 120, stock: 2),
-      );
+      _cart(
+        container,
+      ).add(_product(id: 'p2', name: 'กาแฟ', price: 120, stock: 2));
+      _cart(
+        container,
+      ).add(_product(id: 'p2', name: 'กาแฟ', price: 120, stock: 2));
       expect(
-        _cart(container).add(
-          _product(id: 'p2', name: 'กาแฟ', price: 120, stock: 2),
-        ),
+        _cart(
+          container,
+        ).add(_product(id: 'p2', name: 'กาแฟ', price: 120, stock: 2)),
         CartAddResult.atStockLimit,
       );
     });

@@ -270,7 +270,7 @@ Future<void> _attachSlip(WidgetTester tester) async {
 }
 
 void main() {
-    // ตรวจการชำระเงินและการสร้าง/ติดตามออเดอร์โดยใช้ repository ปลอม
+  // ตรวจการชำระเงินและการสร้าง/ติดตามออเดอร์โดยใช้ repository ปลอม
   // `Fmt` formats Buddhist-era Thai dates; the symbols are loaded once per
   // process, which the app's `main` does and the test binary must repeat.
   setUpAll(() async {

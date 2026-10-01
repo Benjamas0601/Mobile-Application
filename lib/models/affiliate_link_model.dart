@@ -51,7 +51,10 @@ class AffiliateLinkModel {
     return orders / clicks * 100;
   }
 
-  factory AffiliateLinkModel.fromFirestore(String id, Map<String, dynamic> data) {
+  factory AffiliateLinkModel.fromFirestore(
+    String id,
+    Map<String, dynamic> data,
+  ) {
     final FirestoreReader r = FirestoreReader(data);
     return AffiliateLinkModel(
       id: id,

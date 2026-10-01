@@ -22,6 +22,11 @@ class AppSpacing {
 
   /// Standard screen gutter. Used by every scrollable page.
   static const double gutter = 20;
+
+  /// Horizontal inset used by the cards on the console screens, so a card
+  /// sits slightly narrower than the section label above it — the rhythm the
+  /// HTML design set established.
+  static const double cardGutter = 22;
 }
 
 class AppRadius {
@@ -33,8 +38,12 @@ class AppRadius {
   static const double xl = 24;
   static const double pill = 999;
 
+  /// Radius of every *control* — chunky buttons, chips, text fields.
+  /// Deliberately less round than the cards, so a button never reads as a card.
+  static const double chunky = 14;
+
   /// Product cards, sheets, chat bubbles.
-  static const BorderRadius cardRadius = BorderRadius.all(Radius.circular(lg));
+  static const BorderRadius cardRadius = BorderRadius.all(Radius.circular(20));
   static const BorderRadius sheetRadius = BorderRadius.vertical(
     top: Radius.circular(xl),
   );
@@ -60,10 +69,27 @@ class AppSizes {
   /// touch targets / motor impairments (accessibility requirement).
   static const double minTapTarget = 48;
 
+  /// Height of the design's signature chunky button. Taller than the minimum
+  /// tap target because it carries the hard drop-shadow edge underneath.
+  static const double chunkyButtonHeight = 52;
+
+  /// Height of the square-ish "pill" chips used for filters and inline
+  /// actions (e.g. "จัดการ" on an order card).
+  static const double chipHeight = 48;
+
+  /// Height of the inline stepper buttons that adjust variant stock.
+  static const double stepperButton = 42;
+
+  /// Hard drop-shadow thickness under a chunky button.
+  static const double chunkyShadow = 5;
+
   static const double productCardWidth = 172;
   static const double storeCardWidth = 200;
   static const double bottomNavHeight = 64;
   static const double appBarHeight = 56;
+
+  /// Size of the rounded-square icon plate used on empty/error states.
+  static const double stateIconPlate = 66;
   static const double avatarSmall = 32;
   static const double avatarMedium = 44;
   static const double avatarLarge = 88;

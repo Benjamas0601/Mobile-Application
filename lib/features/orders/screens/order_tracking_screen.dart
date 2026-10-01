@@ -111,6 +111,13 @@ class _TrackingContent extends StatelessWidget {
                 _TrackingInfo(label: 'ร้านค้า', value: order.storeName),
                 _TrackingInfo(label: 'หมายเลขคำสั่งซื้อ', value: order.id),
                 _TrackingInfo(label: 'ยอดรวม', value: Fmt.price(order.total)),
+                // The address is what the buyer needs to check the parcel
+                // against, and it is the one field they just typed, so it
+                // belongs on this page rather than only behind the detail route.
+                _TrackingInfo(
+                  label: 'ที่อยู่จัดส่ง',
+                  value: order.shippingAddress,
+                ),
                 if (order.trackingNumber != null)
                   _TrackingInfo(
                     label: 'เลขพัสดุ',

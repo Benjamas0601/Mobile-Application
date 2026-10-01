@@ -29,7 +29,7 @@ OrderModel _order({
 );
 
 void main() {
-    // ตรวจ state machine และการอ่าน order snapshot จาก Firestore
+  // ตรวจ state machine และการอ่าน order snapshot จาก Firestore
   group('the state machine allows one step at a time', () {
     test('an unpaid order can be paid or cancelled, and nothing else', () {
       expect(OrderStatus.pendingPayment.allowedNext, <OrderStatus>[
@@ -50,8 +50,9 @@ void main() {
       OrderStatus current = OrderStatus.pendingPayment;
 
       while (current.allowedNext.isNotEmpty) {
-        final OrderStatus next = current.allowedNext
-            .firstWhere((OrderStatus s) => s != OrderStatus.cancelled);
+        final OrderStatus next = current.allowedNext.firstWhere(
+          (OrderStatus s) => s != OrderStatus.cancelled,
+        );
         walked.add(next);
         current = next;
       }
@@ -109,10 +110,10 @@ void main() {
     test('a missing or unknown field falls back instead of throwing', () {
       // A document written by an older build must still render, so every field
       // is read through a reader with a default rather than cast.
-      final OrderModel order = OrderModel.fromFirestore('old', <String, dynamic>{
-        'status': 'a_status_from_the_future',
-        'total': 100,
-      });
+      final OrderModel order = OrderModel.fromFirestore(
+        'old',
+        <String, dynamic>{'status': 'a_status_from_the_future', 'total': 100},
+      );
 
       expect(order.status, isA<OrderStatus>());
       expect(order.items, isEmpty);
@@ -189,10 +190,7 @@ void main() {
         _order(id: 'o1', status: OrderStatus.completed).isFinished,
         isTrue,
       );
-      expect(
-        _order(id: 'o2', status: OrderStatus.shipped).isFinished,
-        isFalse,
-      );
+      expect(_order(id: 'o2', status: OrderStatus.shipped).isFinished, isFalse);
     });
   });
 

@@ -20,11 +20,12 @@ import '../../../models/user_model.dart';
 import '../../../providers/affiliate_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/catalog_provider.dart';
+import '../../../widgets/design_system.dart';
 import '../../../widgets/state_views.dart';
 
-/// The affiliate console's front door: an Affiliate Dashboard showing the
-/// sales this account drove, what it earned from them, and how its links
-/// performed.
+/// The affiliate console's front door, matching the HTML design: four KPI
+/// tiles, a "สร้างลิงก์" action, the affiliate's own links, then the commission
+/// table with an explicit no-payout caveat.
 ///
 /// Same shape as `SellerHomeScreen` and the same layer-2 role gate: a role
 /// lives in Firestore, not in the route, so the screen checks the signed-in
@@ -66,8 +67,12 @@ class AffiliateHomeScreen extends ConsumerWidget {
               style: AppTextStyles.headlineSmall,
             ),
             Text(
-              'สวัสดี ${user.shortName} (พาร์ทเนอร์)',
-              style: AppTextStyles.labelSmall.copyWith(color: AppColors.inkMuted),
+              _channelLabel(user),
+              style: AppTextStyles.labelSmall.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -89,213 +94,56 @@ class AffiliateHomeScreen extends ConsumerWidget {
           ref.invalidate(myAffiliateLinksProvider);
           ref.invalidate(myAffiliateCommissionsProvider);
         },
-        child: Consumer(
-          builder: (BuildContext context, WidgetRef ref, Widget? _) {
-            final AsyncValue<List<AffiliateLinkModel>> linksAsync = ref.watch(
-              myAffiliateLinksProvider,
-            );
-            final AsyncValue<List<AffiliateCommissionModel>> commissionsAsync =
-                ref.watch(myAffiliateCommissionsProvider);
-
-            if (linksAsync.isLoading || commissionsAsync.isLoading) {
-              return const LoadingView();
-            }
-            if (linksAsync.hasError) {
-              return ErrorView(
-                message: '${linksAsync.error}',
-                onRetry: () => ref.invalidate(myAffiliateLinksProvider),
-              );
-            }
-            if (commissionsAsync.hasError) {
-              return ErrorView(
-                message: '${commissionsAsync.error}',
-                onRetry: () => ref.invalidate(myAffiliateCommissionsProvider),
-              );
-            }
-
-            final List<AffiliateLinkModel> links =
-                linksAsync.value ?? const <AffiliateLinkModel>[];
-            final List<AffiliateCommissionModel> commissions =
-                commissionsAsync.value ?? const <AffiliateCommissionModel>[];
-
-            return CustomScrollView(
-              slivers: <Widget>[
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.gutter,
-                      AppSpacing.md,
-                      AppSpacing.gutter,
-                      AppSpacing.sm,
-                    ),
-                    child: _ChannelBanner(user: user),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.gutter,
-                      vertical: AppSpacing.xs,
-                    ),
-                    child: const _AnalyticsGrid(),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.gutter,
-                      AppSpacing.md,
-                      AppSpacing.gutter,
-                      AppSpacing.sm,
-                    ),
-                    child: const _CreateLinkAction(),
-                  ),
-                ),
-                _section('ค่าคอมมิชชันล่าสุด', Icons.payments_outlined),
-                if (commissions.isEmpty)
-                  const SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.gutter,
-                      ),
-                      child: EmptyView(
-                        icon: Icons.payments_outlined,
-                        title: 'ยังไม่มีค่าคอมมิชชัน',
-                        body: 'เมื่อมีออเดอร์ผ่านลิงก์ของคุณและผ่านการตรวจสอบ '
-                            'ค่าคอมมิชชันจะแสดงที่นี่',
-                      ),
-                    ),
-                  )
-                else
-                  SliverList.separated(
-                    itemCount: _recentCount(commissions),
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (BuildContext context, int index) =>
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.gutter,
-                          ),
-                          child: _CommissionTile(
-                            commission: commissions[index],
-                          ),
-                        ),
-                  ),
-                _section('ลิงก์ของฉัน', Icons.link_rounded),
-                if (links.isEmpty)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.gutter,
-                        AppSpacing.xs,
-                        AppSpacing.gutter,
-                        0,
-                      ),
-                      child: EmptyView(
-                        icon: Icons.link_off_rounded,
-                        title: 'ยังไม่มีลิงก์',
-                        body: 'กดปุ่ม "สร้างลิงก์" เพื่อเลือกสินค้าที่จะโปรโมต',
-                        actionLabel: 'สร้างลิงก์',
-                        onAction: () => _openProductPicker(context, ref),
-                      ),
-                    ),
-                  )
-                else
-                  SliverList.separated(
-                    itemCount: links.length,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (BuildContext context, int index) => Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.gutter,
-                      ),
-                      child: _LinkTile(link: links[index]),
-                    ),
-                  ),
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: AppSpacing.xxxl),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  /// How many commission rows the dashboard lists.
-  ///
-  /// A cap rather than the full list: the dashboard answers "how am I doing",
-  /// not "show me every payout ever", and a payout history belongs behind its
-  /// own screen.
-  static const int _recentLimit = 5;
-
-  static int _recentCount(List<AffiliateCommissionModel> commissions) =>
-      commissions.length < _recentLimit ? commissions.length : _recentLimit;
-
-  static SliverToBoxAdapter _section(String title, IconData icon) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.gutter,
-          AppSpacing.lg,
-          AppSpacing.gutter,
-          AppSpacing.sm,
-        ),
-        child: Row(
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: AppSpacing.xxxl),
           children: <Widget>[
-            Icon(icon, size: 18, color: AppColors.inkMuted),
-            const SizedBox(width: AppSpacing.xs),
-            Text(
-              title,
-              style: AppTextStyles.labelLarge.copyWith(
-                color: AppColors.inkMuted,
-              ),
-            ),
+            const _ChannelBanner(),
+            const _KpiGrid(),
+            const _CreateLinkSection(),
+            const _MyLinksSection(),
+            const _CommissionTable(),
           ],
         ),
       ),
     );
   }
 
-  /// Opens the product picker and reports whether a link was created.
-  static Future<void> _openProductPicker(
-    BuildContext context,
-    WidgetRef ref,
-  ) async {
-    final bool? created = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) => const _ProductPickerDialog(),
-    );
-    if (created == true && context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text('สร้างลิงก์เรียบร้อยแล้ว')),
-        );
-    }
+  /// `otop.boran · TikTok` — the design's channel line.
+  ///
+  /// The `otop.` prefix is only added when the stored handle lacks one: the
+  /// seeded and registered handles already read `otop.boran`, and blindly
+  /// prefixing rendered that as `otop.otop.boran` on the banner and the AppBar.
+  static String _channelLabel(UserModel user) {
+    final String raw = user.affiliateHandle.trim();
+    if (raw.isEmpty) return 'ยังไม่ได้ตั้งชื่อบัญชี';
+    final String handle = raw.startsWith('otop.') ? raw : 'otop.$raw';
+    final String platform = user.affiliatePlatform.trim();
+    return platform.isEmpty ? handle : '$handle · $platform';
   }
 }
 
-/// The affiliate's own channel, which is what makes their links credible.
-class _ChannelBanner extends StatelessWidget {
-  const _ChannelBanner({required this.user});
-
-  final UserModel user;
+/// Shows which account and channel the links belong to — the thing that makes
+/// an affiliate's numbers credible to a merchant reviewing them.
+class _ChannelBanner extends ConsumerWidget {
+  const _ChannelBanner();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final UserModel? user = ref.watch(authUserProvider).asData?.value;
+    if (user == null) return const SizedBox.shrink();
+
     final bool hasChannel = user.affiliateHandle.isNotEmpty;
-    return Container(
+
+    return AppCard(
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.primaryLight,
-        borderRadius: AppRadius.cardRadius,
-      ),
+      color: AppColors.primaryLight,
+      borderColor: AppColors.primaryBorder,
       child: Row(
         children: <Widget>[
           Container(
-            padding: const EdgeInsets.all(AppSpacing.sm),
+            width: 42,
+            height: 42,
+            alignment: Alignment.center,
             decoration: const BoxDecoration(
               color: AppColors.surface,
               shape: BoxShape.circle,
@@ -313,21 +161,27 @@ class _ChannelBanner extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 Text(
-                  user.affiliatePlatform.isEmpty
-                      ? 'ยังไม่ได้ตั้งช่องทาง'
-                      : user.affiliatePlatform,
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: hasChannel ? AppColors.primary : AppColors.warning,
+                  user.shortName,
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                    height: 1.35,
+                    color: AppColors.primary,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: AppSpacing.xxs),
+                const SizedBox(height: 2),
                 Text(
                   hasChannel
-                      ? '@${user.affiliateHandle}'
+                      ? AffiliateHomeScreen._channelLabel(user)
                       : 'กรุณาให้ผู้ดูแลระบบตั้งชื่อบัญชีของคุณ',
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.inkMuted,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.35,
+                    color: hasChannel
+                        ? AppColors.primaryBorder
+                        : AppColors.warning,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -341,10 +195,11 @@ class _ChannelBanner extends StatelessWidget {
   }
 }
 
-/// The sales figures. Leads with gross sales driven, because that is the
-/// question an affiliate asks first.
-class _AnalyticsGrid extends ConsumerWidget {
-  const _AnalyticsGrid();
+/// The four figures the design promises: clicks, orders, conversion,
+/// commission. Gross sales moves to a single line beneath the grid because it
+/// is context for the commission rather than a fifth metric.
+class _KpiGrid extends ConsumerWidget {
+  const _KpiGrid();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -353,9 +208,10 @@ class _AnalyticsGrid extends ConsumerWidget {
     );
 
     return metrics.when(
-      loading: () => const SizedBox(height: 120, child: LoadingView()),
-      error: (Object e, _) => InlineErrorBanner(
-        message: '$e',
+      loading: () => const SkeletonCards(itemCount: 2, height: 88),
+      error: (Object e, StackTrace _) => InlineErrorBanner(
+        message: AppStrings.errorBody,
+        detail: '$e',
         onRetry: () => ref.invalidate(myAffiliateLinksProvider),
       ),
       data: (AffiliateDashboardMetrics m) {
@@ -364,24 +220,20 @@ class _AnalyticsGrid extends ConsumerWidget {
             Row(
               children: <Widget>[
                 Expanded(
-                  child: _KpiCard(
-                    title: 'ยอดขายที่ทำให้เกิด',
-                    value: Fmt.price(m.attributedSales),
-                    subtitle: 'มูลค่าออเดอร์ที่คุณทำยอด',
-                    icon: Icons.trending_up_rounded,
-                    color: AppColors.primary,
-                    bgColor: AppColors.primaryLight,
+                  child: _KpiTile(
+                    label: 'คลิกสะสม',
+                    value: Fmt.compactCount(m.totalClicks),
+                    caption: '${m.linkCount} ลิงก์ที่ใช้งาน',
+                    tone: AppTone.info,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
-                  child: _KpiCard(
-                    title: 'ค่าคอมมิชชันที่ได้รับ',
-                    value: Fmt.price(m.approvedCommission),
-                    subtitle: 'อนุมัติแล้ว ${m.attributedOrders} ออเดอร์',
-                    icon: Icons.account_balance_wallet_rounded,
-                    color: AppColors.success,
-                    bgColor: AppColors.successLight,
+                  child: _KpiTile(
+                    label: 'ออเดอร์',
+                    value: '${m.attributedOrders}',
+                    caption: 'รวมทุกลิงก์ของคุณ',
+                    tone: AppTone.wait,
                   ),
                 ),
               ],
@@ -390,28 +242,47 @@ class _AnalyticsGrid extends ConsumerWidget {
             Row(
               children: <Widget>[
                 Expanded(
-                  child: _KpiCard(
-                    title: 'ออเดอร์จากลิงก์',
-                    value: '${m.attributedOrders}',
-                    subtitle: 'รอตรวจสอบ ${Fmt.price(m.pendingCommission)}',
-                    icon: Icons.receipt_long_rounded,
-                    color: AppColors.warning,
-                    bgColor: AppColors.warningLight,
+                  child: _KpiTile(
+                    label: 'Conversion',
+                    value: '${m.conversionRate.toStringAsFixed(1)}%',
+                    caption:
+                        'ออเดอร์ ${m.attributedOrders} จากคลิก '
+                        '${m.totalClicks}',
+                    tone: AppTone.off,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
-                  child: _KpiCard(
-                    title: 'คลิกลิงก์',
-                    value: Fmt.compactCount(m.totalClicks),
-                    subtitle: 'แปลงเป็นออเดอร์ '
-                        '${m.conversionRate.toStringAsFixed(1)}%',
-                    icon: Icons.ads_click_rounded,
-                    color: AppColors.info,
-                    bgColor: AppColors.infoLight,
+                  child: _KpiTile(
+                    label: 'คอมมิชชัน',
+                    value: Fmt.price(m.approvedCommission),
+                    caption:
+                        'อนุมัติ ${Fmt.price(m.approvedCommission)} · '
+                        'รอ ${Fmt.price(m.pendingCommission)}',
+                    tone: AppTone.good,
+                    highlight: true,
                   ),
                 ),
               ],
+            ),
+            // One line of context rather than a fifth tile: the design puts
+            // "ยอดขายที่ลิงก์ของคุณทำให้เกิด" under the grid, because it explains
+            // the commission rather than standing as its own KPI.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.cardGutter,
+                AppSpacing.sm,
+                AppSpacing.cardGutter,
+                0,
+              ),
+              child: Text(
+                'ยอดขายที่ลิงก์ของคุณทำให้เกิด ${Fmt.price(m.attributedSales)}',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  height: 1.4,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
             ),
           ],
         );
@@ -420,74 +291,62 @@ class _AnalyticsGrid extends ConsumerWidget {
   }
 }
 
-class _KpiCard extends StatelessWidget {
-  const _KpiCard({
-    required this.title,
+/// One KPI tile. [highlight] gives the commission figure a turmeric foreground —
+/// it is the number the affiliate is actually here for.
+class _KpiTile extends StatelessWidget {
+  const _KpiTile({
+    required this.label,
     required this.value,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
-    required this.bgColor,
+    required this.caption,
+    required this.tone,
+    this.highlight = false,
   });
 
-  final String title;
+  final String label;
   final String value;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-  final Color bgColor;
+  final String caption;
+  final AppTone tone;
+  final bool highlight;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: AppColors.border),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: <Widget>[
-              Flexible(
-                child: Text(
-                  title,
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.inkMuted,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                ),
-                child: Icon(icon, color: color, size: 16),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xs),
           Text(
-            value,
-            style: AppTextStyles.headlineSmall.copyWith(
-              fontWeight: FontWeight.bold,
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.3,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: AppSpacing.xxs),
+          const SizedBox(height: AppSpacing.xs),
           Text(
-            subtitle,
-            style: AppTextStyles.labelSmall.copyWith(color: AppColors.inkSubtle),
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              height: 1.2,
+              color: highlight ? AppColors.accentDark : null,
+            ),
             maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            caption,
+            style: TextStyle(
+              fontSize: 11.5,
+              height: 1.35,
+              color: tone.foreground,
+            ),
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
         ],
@@ -496,64 +355,142 @@ class _KpiCard extends StatelessWidget {
   }
 }
 
-/// The one action this screen offers: promote another product.
-class _CreateLinkAction extends ConsumerWidget {
-  const _CreateLinkAction();
+/// The one action this screen offers: promote another product. It sits in the
+/// AppBar row of the design, so here it is a full-width chunky button directly
+/// under the KPI grid — the most reachable position without a bottom bar.
+class _CreateLinkSection extends ConsumerWidget {
+  const _CreateLinkSection();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bool busy = ref.watch(affiliateLinkProvider);
-    return SizedBox(
-      width: double.infinity,
-      child: FilledButton.icon(
-        onPressed: busy
-            ? null
-            : () => AffiliateHomeScreen._openProductPicker(context, ref),
-        icon: const Icon(Icons.add_link_rounded),
-        label: const Text('สร้างลิงก์โปรโมต'),
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.cardGutter,
+        AppSpacing.lg,
+        AppSpacing.cardGutter,
+        0,
+      ),
+      child: AppChunkyButton(
+        label: 'สร้างลิงก์',
+        icon: Icons.add_link_rounded,
+        onPressed: busy ? null : () => _openProductPicker(context, ref),
       ),
     );
   }
 }
 
-class _CommissionTile extends StatelessWidget {
-  const _CommissionTile({required this.commission});
+/// Opens the product picker and reports whether a link was created.
+Future<void> _openProductPicker(BuildContext context, WidgetRef ref) async {
+  final bool? created = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    builder: (BuildContext sheetContext) => const _ProductPickerSheet(),
+  );
+  if (created == true && context.mounted) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text('สร้างลิงก์เรียบร้อยแล้ว')));
+  }
+}
 
-  final AffiliateCommissionModel commission;
+/// "ลิงก์ของฉัน" — each row shows the product, its code and its click count, and
+/// can be copied or removed.
+class _MyLinksSection extends ConsumerWidget {
+  const _MyLinksSection();
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: AppColors.border),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<List<AffiliateLinkModel>> linksAsync = ref.watch(
+      myAffiliateLinksProvider,
+    );
+
+    return linksAsync.when(
+      loading: () => const SkeletonCards(itemCount: 2, height: 76),
+      error: (Object e, StackTrace _) => InlineErrorBanner(
+        message: AppStrings.errorBody,
+        detail: '$e',
+        onRetry: () => ref.invalidate(myAffiliateLinksProvider),
       ),
+      data: (List<AffiliateLinkModel> links) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            AppSectionLabel(
+              links.isEmpty
+                  ? 'ลิงก์ของฉัน'
+                  : 'ลิงก์ของฉัน · ${links.length} ลิงก์',
+            ),
+            if (links.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.cardGutter,
+                ),
+                child: EmptyView(
+                  icon: Icons.link_off_rounded,
+                  title: 'ยังไม่มีลิงก์',
+                  body: 'กดปุ่ม "สร้างลิงก์" เพื่อเลือกสินค้าที่จะโปรโมต',
+                  compact: true,
+                ),
+              )
+            else
+              for (final AffiliateLinkModel link in links)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.cardGutter,
+                    0,
+                    AppSpacing.cardGutter,
+                    AppSpacing.sm,
+                  ),
+                  child: _LinkTile(link: link),
+                ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _LinkTile extends ConsumerWidget {
+  const _LinkTile({required this.link});
+
+  final AffiliateLinkModel link;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bool busy = ref.watch(affiliateLinkProvider);
+
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
       child: Row(
         children: <Widget>[
+          _linkThumb(url: link.productImageUrl),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 Text(
-                  commission.productName.isEmpty
-                      ? 'ออเดอร์ #${commission.orderId}'
-                      : commission.productName,
-                  style: AppTextStyles.bodyMedium.copyWith(
+                  link.productName.isEmpty
+                      ? 'สินค้า #${link.productId}'
+                      : link.productName,
+                  style: const TextStyle(
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
+                    height: 1.35,
                   ),
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: AppSpacing.xxs),
+                const SizedBox(height: 2),
                 Text(
-                  'ยอด ${Fmt.price(commission.orderTotal)} × '
-                  '${commission.rate.toStringAsFixed(0)}% · '
-                  '${Fmt.date(commission.createdAt)}',
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.inkMuted,
+                  link.code,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    height: 1.35,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -567,167 +504,79 @@ class _CommissionTile extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               Text(
-                Fmt.price(commission.amount),
-                style: AppTextStyles.bodyMedium.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: commission.countsAsSales
-                      ? AppColors.success
-                      : AppColors.inkSubtle,
+                Fmt.compactCount(link.clicks),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
                 ),
               ),
-              const SizedBox(height: AppSpacing.xxs),
-              CommissionStatusChip(status: commission.status),
+              Text(
+                'คลิกสะสม',
+                style: TextStyle(
+                  fontSize: 11,
+                  height: 1.3,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  _MiniIconButton(
+                    icon: Icons.copy_rounded,
+                    tooltip: 'คัดลอกรหัสลิงก์',
+                    onPressed: () => _copyCode(context),
+                  ),
+                  _MiniIconButton(
+                    icon: Icons.delete_outline_rounded,
+                    tooltip: 'ลบลิงก์',
+                    onPressed: busy ? null : () => _confirmDelete(context, ref),
+                  ),
+                ],
+              ),
             ],
           ),
         ],
       ),
     );
   }
-}
 
-class CommissionStatusChip extends StatelessWidget {
-  const CommissionStatusChip({super.key, required this.status});
-
-  final CommissionStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final (Color bg, Color fg) = switch (status) {
-      CommissionStatus.pending => (AppColors.warningLight, AppColors.warning),
-      CommissionStatus.approved => (AppColors.successLight, AppColors.success),
-      CommissionStatus.rejected => (AppColors.dangerLight, AppColors.danger),
-      CommissionStatus.cancelled => (
-        AppColors.surfaceMuted,
-        AppColors.inkMuted,
-      ),
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xxs,
-      ),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: AppRadius.pillRadius,
-      ),
-      child: Text(
-        status.label,
-        style: AppTextStyles.labelSmall.copyWith(color: fg),
-      ),
-    );
-  }
-}
-
-/// One promotional link: its code, and how much traffic it has produced.
-class _LinkTile extends ConsumerWidget {
-  const _LinkTile({required this.link});
-
-  final AffiliateLinkModel link;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.cardRadius,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                child: SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: link.productImageUrl.isEmpty
-                      ? const ColoredBox(
-                          color: AppColors.surfaceMuted,
-                          child: Icon(
-                            Icons.image_not_supported_outlined,
-                            color: AppColors.inkSubtle,
-                            size: 18,
-                          ),
-                        )
-                      : Image.network(
-                          link.productImageUrl,
-                          fit: BoxFit.cover,
-                          // A dead Cloudinary URL must not take the tile down.
-                          errorBuilder: (_, _, _) => const ColoredBox(
-                            color: AppColors.surfaceMuted,
-                            child: Icon(
-                              Icons.image_not_supported_outlined,
-                              color: AppColors.inkSubtle,
-                              size: 18,
-                            ),
-                          ),
-                        ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Text(
-                      link.productName.isEmpty
-                          ? 'สินค้า #${link.productId}'
-                          : link.productName,
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: AppSpacing.xxs),
-                    Text(
-                      '${link.clicks} คลิก · ${link.orders} ออเดอร์ · '
-                      'แปลง ${link.conversionRate.toStringAsFixed(1)}%',
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: AppColors.inkMuted,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                tooltip: 'คัดลอกรหัสลิงก์',
-                icon: const Icon(Icons.copy_rounded, size: 18),
-                onPressed: () => _copyCode(context),
-              ),
-            ],
+  /// Product thumbnail, or a woven placeholder when there is no usable URL —
+  /// the design leans on texture rather than photography.
+  Widget _linkThumb({required String url}) {
+    if (url.isEmpty) {
+      return const WeaveTexture(
+        color: AppColors.weaveIndigo,
+        width: 44,
+        height: 44,
+        radius: AppRadius.md,
+        child: Icon(
+          Icons.image_not_supported_outlined,
+          size: 18,
+          color: Colors.white,
+        ),
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: Image.network(
+        url,
+        width: 44,
+        height: 44,
+        fit: BoxFit.cover,
+        // A dead Cloudinary URL must not take the tile down.
+        errorBuilder: (_, _, _) => const WeaveTexture(
+          color: AppColors.weaveIndigo,
+          width: 44,
+          height: 44,
+          radius: AppRadius.md,
+          child: Icon(
+            Icons.image_not_supported_outlined,
+            size: 18,
+            color: Colors.white,
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () =>
-                      context.push(AppRoutes.productDetail(link.productId)),
-                  icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                  label: const Text('ดูสินค้า'),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: ref.watch(affiliateLinkProvider)
-                      ? null
-                      : () => _confirmDelete(context, ref),
-                  icon: const Icon(Icons.delete_outline_rounded, size: 16),
-                  label: const Text('ลบลิงก์'),
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -736,9 +585,7 @@ class _LinkTile extends ConsumerWidget {
     Clipboard.setData(ClipboardData(text: link.code));
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text('คัดลอกรหัส ${link.code} แล้ว')),
-      );
+      ..showSnackBar(SnackBar(content: Text('คัดลอกรหัส ${link.code} แล้ว')));
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
@@ -767,82 +614,354 @@ class _LinkTile extends ConsumerWidget {
   }
 }
 
+/// A 36px square icon button. The copy/delete actions are secondary, so they
+/// stay compact — but the box keeps a 36px hit area rather than shrinking to
+/// the 18px glyph.
+class _MiniIconButton extends StatelessWidget {
+  const _MiniIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool enabled = onPressed != null;
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        enabled: enabled,
+        label: tooltip,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: Container(
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
+            ),
+            child: Icon(
+              icon,
+              size: 17,
+              color: enabled
+                  ? Theme.of(context).colorScheme.onSurfaceVariant
+                  : Theme.of(context).colorScheme.outline,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The commission table: product, amount, status. Rows are laid out as a fixed
+/// three-column grid rather than a `DataTable`, so it fits a phone and keeps
+/// the Thai status label readable.
+class _CommissionTable extends ConsumerWidget {
+  const _CommissionTable();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<List<AffiliateCommissionModel>> commissionsAsync = ref
+        .watch(myAffiliateCommissionsProvider);
+
+    return commissionsAsync.when(
+      loading: () => const SkeletonCards(itemCount: 3, height: 56),
+      error: (Object e, StackTrace _) => InlineErrorBanner(
+        message: AppStrings.errorBody,
+        detail: '$e',
+        onRetry: () => ref.invalidate(myAffiliateCommissionsProvider),
+      ),
+      data: (List<AffiliateCommissionModel> commissions) {
+        final ColorScheme scheme = Theme.of(context).colorScheme;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const AppSectionLabel('คอมมิชชัน'),
+            if (commissions.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.cardGutter,
+                ),
+                child: EmptyView(
+                  icon: Icons.payments_outlined,
+                  title: 'ยังไม่มีค่าคอมมิชชัน',
+                  body:
+                      'เมื่อมีออเดอร์ผ่านลิงก์ของคุณและผ่านการตรวจสอบ '
+                      'ค่าคอมมิชชันจะแสดงที่นี่',
+                  compact: true,
+                ),
+              )
+            else ...<Widget>[
+              for (final AffiliateCommissionModel c in commissions)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.cardGutter,
+                    0,
+                    AppSpacing.cardGutter,
+                    AppSpacing.sm,
+                  ),
+                  child: _CommissionRow(commission: c),
+                ),
+              // The MVP caveat is stated on the screen rather than hidden in a
+              // doc: an affiliate seeing a commission figure will assume it can
+              // be withdrawn, and it cannot.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.cardGutter,
+                  AppSpacing.sm,
+                  AppSpacing.cardGutter,
+                  0,
+                ),
+                child: AppBanner(
+                  tone: AppTone.off,
+                  icon: Icons.info_outline_rounded,
+                  child: Text(
+                    'คอมมิชชันยังไม่มีการถอนเงินจริงในเวอร์ชันนี้ '
+                    'ระบบจะสรุปยอดให้ที่เดือน',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      height: 1.45,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _CommissionRow extends StatelessWidget {
+  const _CommissionRow({required this.commission});
+
+  final AffiliateCommissionModel commission;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: <Widget>[
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  commission.productName.isEmpty
+                      ? 'ออเดอร์ #${commission.orderId}'
+                      : commission.productName,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    height: 1.35,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${Fmt.price(commission.orderTotal)} × '
+                  '${commission.rate.toStringAsFixed(0)}% · '
+                  '${Fmt.date(commission.createdAt)}',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    height: 1.35,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            Fmt.price(commission.amount),
+            style: TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w700,
+              color: commission.countsAsSales
+                  ? AppColors.success
+                  : scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          CommissionStatusChip(status: commission.status),
+        ],
+      ),
+    );
+  }
+}
+
+class CommissionStatusChip extends StatelessWidget {
+  const CommissionStatusChip({super.key, required this.status});
+
+  final CommissionStatus status;
+
+  /// The design's `.st` badges. Each carries its Thai label as well as its
+  /// colour, so the state is legible without colour vision.
+  @override
+  Widget build(BuildContext context) {
+    return AppStatusPill.semantic(
+      label: status.label,
+      dense: true,
+      tone: switch (status) {
+        CommissionStatus.pending => AppTone.wait,
+        CommissionStatus.approved => AppTone.good,
+        CommissionStatus.rejected => AppTone.bad,
+        CommissionStatus.cancelled => AppTone.off,
+      },
+    );
+  }
+}
+
 /// Picks a product to promote, then writes the link.
-class _ProductPickerDialog extends ConsumerWidget {
-  const _ProductPickerDialog();
+///
+/// A bottom sheet rather than a dialog: the design uses a sheet, and on a phone
+/// a keyboard-height dialog competes with the list for space.
+class _ProductPickerSheet extends ConsumerWidget {
+  const _ProductPickerSheet();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<List<ProductModel>> products = ref.watch(productsProvider);
 
-    return AlertDialog(
-      title: const Text('เลือกสินค้าที่จะโปรโมต'),
-      content: SizedBox(
-        width: double.maxFinite,
-        height: 380,
-        child: products.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (Object e, _) => Center(child: Text('$e')),
-          data: (List<ProductModel> all) => _list(context, ref, all),
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.md),
+        child: AppCard(
+          radius: AppRadius.xl * 1.5,
+          padding: EdgeInsets.zero,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                ),
+                child: Row(
+                  children: <Widget>[
+                    const Expanded(
+                      child: Text(
+                        'เลือกสินค้าที่จะโปรโมต',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    AppChip(
+                      label: 'ปิด',
+                      height: 40,
+                      onTap: () => Navigator.of(context).pop(false),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: products.when(
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(AppSpacing.xl),
+                    child: CircularProgressIndicator(),
+                  ),
+                  error: (Object e, StackTrace _) => Padding(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Text('โหลดสินค้าไม่สำเร็จ: $e'),
+                  ),
+                  data: (List<ProductModel> all) => _ProductList(products: all),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('ปิด'),
-        ),
-      ],
     );
   }
+}
 
-  Widget _list(
-    BuildContext context,
-    WidgetRef ref,
-    List<ProductModel> all,
-  ) {
+class _ProductList extends ConsumerWidget {
+  const _ProductList({required this.products});
+
+  final List<ProductModel> products;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     // Drafts are not buyable, so promoting one would produce a link that can
     // never convert.
-    final List<ProductModel> products = all
+    final List<ProductModel> visible = products
         .where((ProductModel p) => p.isVisible)
         .toList();
 
-    if (products.isEmpty) {
-      return const Center(child: Text('ยังไม่มีสินค้าที่เปิดขายให้โปรโมต'));
+    if (visible.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(AppSpacing.lg),
+        child: Text('ยังไม่มีสินค้าที่เปิดขายให้โปรโมต'),
+      );
     }
 
     final bool busy = ref.watch(affiliateLinkProvider);
 
-    return ListView.separated(
-      itemCount: products.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
-      itemBuilder: (BuildContext context, int index) {
-        final ProductModel product = products[index];
-        return ListTile(
-          title: Text(
-            product.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          subtitle: Text(Fmt.price(product.price)),
-          trailing: busy
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.add_link_rounded),
-          onTap: busy
-              ? null
-              : () async {
-                  final bool ok = await ref
-                      .read(affiliateLinkProvider.notifier)
-                      .create(product);
-                  if (ok && context.mounted) {
-                    Navigator.of(context).pop(true);
-                  }
-                },
-        );
-      },
+    // The sheet's `AppCard` is a decorated container, and a `ListTile` paints
+    // its ink on the nearest `Material` ancestor — which would be *above* the
+    // card, so every tap splash would be hidden by the card's own background.
+    // A transparent `Material` here gives the tiles their own ink surface.
+    return Material(
+      type: MaterialType.transparency,
+      child: ListView.separated(
+        shrinkWrap: true,
+        itemCount: visible.length,
+        separatorBuilder: (_, _) => const Divider(height: 1),
+        itemBuilder: (BuildContext context, int index) {
+          final ProductModel product = visible[index];
+          return ListTile(
+            title: Text(
+              product.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Text('${Fmt.price(product.price)} · ${product.province}'),
+            trailing: busy
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.add_link_rounded),
+            onTap: busy
+                ? null
+                : () async {
+                    final bool ok = await ref
+                        .read(affiliateLinkProvider.notifier)
+                        .create(product);
+                    if (ok && context.mounted) {
+                      Navigator.of(context).pop(true);
+                    }
+                  },
+          );
+        },
+      ),
     );
   }
 }

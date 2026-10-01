@@ -109,9 +109,7 @@ class ImageUploadPolicy {
     final List<String> parts = folder
         .split('/')
         .map((String part) => part.trim())
-        .where(
-          (String part) => part.isNotEmpty && part != '.' && part != '..',
-        )
+        .where((String part) => part.isNotEmpty && part != '.' && part != '..')
         .toList();
     if (parts.isEmpty) {
       throw const ImageUploadException('ยังไม่ได้ระบุตำแหน่งเก็บรูป');

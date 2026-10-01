@@ -38,11 +38,8 @@ final orderProvider = StreamProvider.autoDispose.family<OrderModel?, String>((
 /// `where('storeId', ...)` constraint; a filter-less `in` query over several
 /// stores would need a different rule. The list screen therefore watches one
 /// store at a time and re-keys when the seller picks another.
-final storeOrdersProvider =
-    StreamProvider.autoDispose.family<List<OrderModel>, String>((
-      Ref ref,
-      String storeId,
-    ) {
+final storeOrdersProvider = StreamProvider.autoDispose
+    .family<List<OrderModel>, String>((Ref ref, String storeId) {
       final OrderRepository repository = ref.watch(orderRepositoryProvider);
       return repository.watchStoreOrders(storeId);
     });
@@ -131,7 +128,8 @@ class CheckoutDraft {
   final String storeId;
   final String shippingAddress;
 
-  bool get isComplete => storeId.isNotEmpty && shippingAddress.trim().isNotEmpty;
+  bool get isComplete =>
+      storeId.isNotEmpty && shippingAddress.trim().isNotEmpty;
 }
 
 class CheckoutDraftController extends Notifier<CheckoutDraft?> {

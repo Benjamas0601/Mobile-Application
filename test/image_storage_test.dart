@@ -9,7 +9,7 @@ import 'package:thai_otop_marketplace/core/services/image/image_storage_service.
 import 'package:thai_otop_marketplace/providers/image_storage_provider.dart';
 
 void main() {
-    // ตรวจ policy, URL และข้อความผิดพลาดของ storage service
+  // ตรวจ policy, URL และข้อความผิดพลาดของ storage service
   group('the image service is reachable from the app', () {
     test('a provider returns a usable uploader', () {
       // The service used to exist with no caller, so nothing in the app could
@@ -67,27 +67,27 @@ void main() {
       );
     });
 
-    test('uploading without credentials fails with that same message', () async {
-      // Guarding in the UI is not enough: a direct call must fail loudly too.
-      final CloudinaryImageService service = CloudinaryImageService(
-        cloudName: '',
-        uploadPreset: '',
-      );
+    test(
+      'uploading without credentials fails with that same message',
+      () async {
+        // Guarding in the UI is not enough: a direct call must fail loudly too.
+        final CloudinaryImageService service = CloudinaryImageService(
+          cloudName: '',
+          uploadPreset: '',
+        );
 
-      await expectLater(
-        service.uploadImage(
-          file: _fakeImage(),
-          folder: 'payments/x/slips',
-        ),
-        throwsA(
-          isA<ImageUploadException>().having(
-            (ImageUploadException e) => e.message,
-            'message',
-            contains('CLOUDINARY_CLOUD_NAME'),
+        await expectLater(
+          service.uploadImage(file: _fakeImage(), folder: 'payments/x/slips'),
+          throwsA(
+            isA<ImageUploadException>().having(
+              (ImageUploadException e) => e.message,
+              'message',
+              contains('CLOUDINARY_CLOUD_NAME'),
+            ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   });
 
   group('a folder the user could tamper with cannot escape its own path', () {
@@ -137,22 +137,25 @@ void main() {
       );
     });
 
-    test('a file over the limit is refused with its size in the message', () async {
-      final Uint8List tooBig = Uint8List(ImageUploadPolicy.maxBytes + 1);
+    test(
+      'a file over the limit is refused with its size in the message',
+      () async {
+        final Uint8List tooBig = Uint8List(ImageUploadPolicy.maxBytes + 1);
 
-      await expectLater(
-        ImageUploadPolicy.validate(
-          XFile.fromData(tooBig, path: 'big.jpg', name: 'big.jpg'),
-        ),
-        throwsA(
-          isA<ImageUploadException>().having(
-            (ImageUploadException e) => e.message,
-            'message',
-            contains('5 MB'),
+        await expectLater(
+          ImageUploadPolicy.validate(
+            XFile.fromData(tooBig, path: 'big.jpg', name: 'big.jpg'),
           ),
-        ),
-      );
-    });
+          throwsA(
+            isA<ImageUploadException>().having(
+              (ImageUploadException e) => e.message,
+              'message',
+              contains('5 MB'),
+            ),
+          ),
+        );
+      },
+    );
 
     test('a valid image passes validation', () async {
       // The happy path, so the guards above are not simply rejecting everything.
@@ -180,14 +183,8 @@ void main() {
         ImageUploadPolicy.folderForStoreCover(storeId: 's1'),
         'stores/s1/cover',
       );
-      expect(
-        ImageUploadPolicy.folderForProfile(uid: 'u1'),
-        'users/u1/profile',
-      );
-      expect(
-        ImageUploadPolicy.folderForReview(reviewId: 'r1'),
-        'reviews/r1',
-      );
+      expect(ImageUploadPolicy.folderForProfile(uid: 'u1'), 'users/u1/profile');
+      expect(ImageUploadPolicy.folderForReview(reviewId: 'r1'), 'reviews/r1');
     });
 
     test('a non-image extension is not on the allow list', () {

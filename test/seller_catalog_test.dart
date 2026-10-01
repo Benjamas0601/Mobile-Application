@@ -18,6 +18,7 @@ import 'package:thai_otop_marketplace/providers/auth_provider.dart';
 import 'package:thai_otop_marketplace/providers/catalog_provider.dart';
 import 'package:thai_otop_marketplace/providers/seller_catalog_provider.dart';
 import 'package:thai_otop_marketplace/repositories/seller_catalog_repository.dart';
+import 'package:thai_otop_marketplace/widgets/design_system.dart';
 
 const UserModel _seller = UserModel(
   uid: 's1',
@@ -103,7 +104,8 @@ class _FakeSellerCatalogRepository implements SellerCatalogRepository {
   String allocateProductId() => 'new-p${++_allocated}';
 
   @override
-  Future<StoreModel?> getMyStore() async => stores.isEmpty ? null : stores.first;
+  Future<StoreModel?> getMyStore() async =>
+      stores.isEmpty ? null : stores.first;
 
   @override
   Future<List<StoreModel>> listMyStores() async => stores;
@@ -196,10 +198,7 @@ ProviderContainer _editContainer(
 
 /// Pumps the seller list inside a router-less app (the screen only navigates
 /// when a seller taps something).
-Future<void> _pumpList(
-  WidgetTester tester,
-  ProviderContainer container,
-) async {
+Future<void> _pumpList(WidgetTester tester, ProviderContainer container) async {
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
@@ -211,10 +210,7 @@ Future<void> _pumpList(
 
 /// Pumps the create form as a pushed route, so a successful save has a page
 /// to pop back to instead of unwinding the only route.
-Future<void> _pumpEdit(
-  WidgetTester tester,
-  ProviderContainer container,
-) async {
+Future<void> _pumpEdit(WidgetTester tester, ProviderContainer container) async {
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
@@ -241,6 +237,20 @@ Future<void> _pumpEdit(
   await tester.pumpAndSettle();
 }
 
+/// Fills the wizard's step-1 name and price.
+///
+/// The form became a four-step wizard, so the fields are addressed by their
+/// hint text: positional `find.byType(TextFormField).at(n)` silently filled the
+/// description box once the layout changed, and the test still passed for the
+/// wrong reason.
+Future<void> _fillBasics(WidgetTester tester) async {
+  await tester.enterText(
+    find.widgetWithText(TextFormField, AppStrings.productNameHint),
+    'ผ้าไหม',
+  );
+  await tester.enterText(find.widgetWithText(TextFormField, '250'), '1290');
+}
+
 ProductDraft _draft({
   String name = 'ผ้าไหม',
   double price = 1290,
@@ -254,16 +264,13 @@ ProductDraft _draft({
     categoryId: categoryId,
     imageUrls: const <String>[],
     status: ProductStatus.draft,
-    story: const ProductStory(
-      community: 'บ้านมะคำ',
-      productionMethod: 'ทอมือ',
-    ),
+    story: const ProductStory(community: 'บ้านมะคำ', productionMethod: 'ทอมือ'),
     variants: variants,
   );
 }
 
 void main() {
-    // ตรวจ draft สินค้าและพฤติกรรม CRUD ของหน้าจอผู้ขายด้วย repository ปลอม
+  // ตรวจ draft สินค้าและพฤติกรรม CRUD ของหน้าจอผู้ขายด้วย repository ปลอม
   setUpAll(() async {
     await initializeDateFormatting('th');
   });
@@ -310,22 +317,27 @@ void main() {
       expect(draft.stockTotal, 0, reason: 'a stored product has variants too');
     });
 
-    test('VariantDraft.toFirestore keeps the options shape and hides a null image',
-        () {
-      const VariantDraft plain = VariantDraft(name: 'แพ็คขวด');
-      final Map<String, dynamic> data = plain.toFirestore(productId: 'p1');
-      expect(data['productId'], 'p1');
-      expect(data['options'], <String, dynamic>{'color': null, 'size': null});
-      expect(data.containsKey('imageUrl'), isFalse,
-          reason: 'an empty write must not fabricate an image field');
+    test(
+      'VariantDraft.toFirestore keeps the options shape and hides a null image',
+      () {
+        const VariantDraft plain = VariantDraft(name: 'แพ็คขวด');
+        final Map<String, dynamic> data = plain.toFirestore(productId: 'p1');
+        expect(data['productId'], 'p1');
+        expect(data['options'], <String, dynamic>{'color': null, 'size': null});
+        expect(
+          data.containsKey('imageUrl'),
+          isFalse,
+          reason: 'an empty write must not fabricate an image field',
+        );
 
-      const VariantDraft pictured = VariantDraft(
-        name: 'แพ็คขวด',
-        color: 'แดง',
-        imageUrl: 'https://example.com/v.jpg',
-      );
-      expect(pictured.toFirestore(productId: 'p1')['imageUrl'], isNotNull);
-    });
+        const VariantDraft pictured = VariantDraft(
+          name: 'แพ็คขวด',
+          color: 'แดง',
+          imageUrl: 'https://example.com/v.jpg',
+        );
+        expect(pictured.toFirestore(productId: 'p1')['imageUrl'], isNotNull);
+      },
+    );
 
     test('a variant without a stored id is a new one', () {
       expect(const VariantDraft(name: 'ใหม่').isNew, isTrue);
@@ -335,33 +347,39 @@ void main() {
   });
 
   group('the catalogue controllers', () {
-    test('save creates through the repository and writes the computed stock',
-        () async {
-      final _FakeSellerCatalogRepository repo = _FakeSellerCatalogRepository();
-      final ProviderContainer container = _container(repo);
+    test(
+      'save creates through the repository and writes the computed stock',
+      () async {
+        final _FakeSellerCatalogRepository repo =
+            _FakeSellerCatalogRepository();
+        final ProviderContainer container = _container(repo);
 
-      final String? id = await container.read(saveProductProvider.notifier).save(
-        productId: 'new-p1',
-        store: _store,
-        draft: _draft(
-          variants: const <VariantDraft>[
-            VariantDraft(name: 'สีแดง', stock: 2),
-            VariantDraft(name: 'สีน้ำเงิน', stock: 3),
-          ],
-        ),
-      );
+        final String? id = await container
+            .read(saveProductProvider.notifier)
+            .save(
+              productId: 'new-p1',
+              store: _store,
+              draft: _draft(
+                variants: const <VariantDraft>[
+                  VariantDraft(name: 'สีแดง', stock: 2),
+                  VariantDraft(name: 'สีน้ำเงิน', stock: 3),
+                ],
+              ),
+            );
 
-      expect(id, 'new-p1');
-      expect(repo.created, <String>['new-p1']);
-      expect(repo.lastCreateStore, _store);
-      expect(repo.lastCreateDraft!.stockTotal, 5);
-    });
+        expect(id, 'new-p1');
+        expect(repo.created, <String>['new-p1']);
+        expect(repo.lastCreateStore, _store);
+        expect(repo.lastCreateDraft!.stockTotal, 5);
+      },
+    );
 
     test('a second save while the first is in flight is refused', () async {
       final _FakeSellerCatalogRepository repo = _FakeSellerCatalogRepository();
       final ProviderContainer container = _container(repo);
-      final SaveProductController controller = container
-          .read(saveProductProvider.notifier);
+      final SaveProductController controller = container.read(
+        saveProductProvider.notifier,
+      );
 
       // Park the first write, then fire both — the busy flag must stop a
       // double-write the way it stops a double order.
@@ -386,34 +404,41 @@ void main() {
       expect(container.read(saveProductProvider), isFalse);
     });
 
-    test('an invalid draft is refused before the repository is called', () async {
-      final _FakeSellerCatalogRepository repo = _FakeSellerCatalogRepository();
-      final ProviderContainer container = _container(repo);
+    test(
+      'an invalid draft is refused before the repository is called',
+      () async {
+        final _FakeSellerCatalogRepository repo =
+            _FakeSellerCatalogRepository();
+        final ProviderContainer container = _container(repo);
 
-      final String? id = await container.read(saveProductProvider.notifier).save(
-        productId: 'new-p1',
-        store: _store,
-        draft: _draft(name: ''),
-      );
+        final String? id = await container
+            .read(saveProductProvider.notifier)
+            .save(
+              productId: 'new-p1',
+              store: _store,
+              draft: _draft(name: ''),
+            );
 
-      expect(id, isNull);
-      expect(repo.created, isEmpty);
-    });
+        expect(id, isNull);
+        expect(repo.created, isEmpty);
+      },
+    );
 
-    test('an empty product id is refused before the repository is called',
-        () async {
-      final _FakeSellerCatalogRepository repo = _FakeSellerCatalogRepository();
-      final ProviderContainer container = _container(repo);
+    test(
+      'an empty product id is refused before the repository is called',
+      () async {
+        final _FakeSellerCatalogRepository repo =
+            _FakeSellerCatalogRepository();
+        final ProviderContainer container = _container(repo);
 
-      final String? id = await container.read(saveProductProvider.notifier).save(
-        productId: '',
-        store: _store,
-        draft: _draft(),
-      );
+        final String? id = await container
+            .read(saveProductProvider.notifier)
+            .save(productId: '', store: _store, draft: _draft());
 
-      expect(id, isNull);
-      expect(repo.created, isEmpty);
-    });
+        expect(id, isNull);
+        expect(repo.created, isEmpty);
+      },
+    );
 
     test('a failed write surfaces its failure instead of a success', () async {
       final _FakeSellerCatalogRepository repo = _FakeSellerCatalogRepository()
@@ -421,15 +446,16 @@ void main() {
       final ProviderContainer container = _container(repo);
 
       await expectLater(
-        container.read(saveProductProvider.notifier).save(
-          productId: 'new-p1',
-          store: _store,
-          draft: _draft(),
-        ),
+        container
+            .read(saveProductProvider.notifier)
+            .save(productId: 'new-p1', store: _store, draft: _draft()),
         throwsA(isA<ProductWriteException>()),
       );
-      expect(container.read(saveProductProvider), isFalse,
-          reason: 'the busy flag must clear even when the write throws');
+      expect(
+        container.read(saveProductProvider),
+        isFalse,
+        reason: 'the busy flag must clear even when the write throws',
+      );
     });
 
     test('delete removes by id and returns it', () async {
@@ -490,8 +516,11 @@ void main() {
 
       expect(find.text(_product.name), findsOneWidget);
       expect(find.text(ProductStatus.draft.label), findsWidgets);
-      expect(find.textContaining('5'), findsWidgets,
-          reason: 'the row shows the remaining stock');
+      expect(
+        find.textContaining('5'),
+        findsWidgets,
+        reason: 'the row shows the remaining stock',
+      );
     });
   });
 
@@ -506,8 +535,11 @@ void main() {
 
       expect(find.text(AppStrings.productNameLabel), findsOneWidget);
       expect(find.text(AppStrings.productPriceLabel), findsOneWidget);
-      expect(find.text(AppStrings.sellerEditProduct), findsWidgets,
-          reason: 'the bar and the app bar both carry the screen name');
+      expect(
+        find.text(AppStrings.sellerEditProduct),
+        findsWidgets,
+        reason: 'the bar and the app bar both carry the screen name',
+      );
     });
 
     testWidgets('refuses to write until the category is chosen', (
@@ -518,14 +550,17 @@ void main() {
 
       await _pumpEdit(tester, container);
 
-      await tester.enterText(find.byType(TextFormField).at(0), 'ผ้าไหม');
-      await tester.enterText(find.byType(TextFormField).at(2), '1290');
-      await tester.tap(find.text(AppStrings.sellerAddProduct));
+      await _fillBasics(tester);
+      // Step 1 is the basics step, so its primary button is "next", not save.
+      await tester.tap(find.text('ขั้นตอนถัดไป'));
       await tester.pumpAndSettle();
 
       expect(find.text(AppStrings.errCategoryRequired), findsOneWidget);
-      expect(repo.created, isEmpty,
-          reason: 'a half-filled product must never reach the catalogue');
+      expect(
+        repo.created,
+        isEmpty,
+        reason: 'a half-filled product must never reach the catalogue',
+      );
     });
 
     testWidgets('a valid product is created with its variants and pops back', (
@@ -536,8 +571,7 @@ void main() {
 
       await _pumpEdit(tester, container);
 
-      await tester.enterText(find.byType(TextFormField).at(0), 'ผ้าไหม');
-      await tester.enterText(find.byType(TextFormField).at(2), '1290');
+      await _fillBasics(tester);
 
       await tester.ensureVisible(find.byType(DropdownButtonFormField<String>));
       await tester.pumpAndSettle();
@@ -546,26 +580,63 @@ void main() {
       await tester.tap(find.text(_category.name).last);
       await tester.pumpAndSettle();
 
-      // The variants card sits below the fold; every TextField also contains
-      // a Scrollable, so name the one that scrolls the page.
-      final Finder pageScroller = find.byType(Scrollable).first;
-      await tester.scrollUntilVisible(find.text(AppStrings.addVariant), 300,
-          scrollable: pageScroller);
+      // Walk the wizard: basics -> images -> variants -> story, then publish.
+      // Step 1 will not advance without an image, so add one by URL.
+      await tester.tap(find.text('ขั้นตอนถัดไป'));
+      await tester.pumpAndSettle();
+      final Finder imageChip = find.ancestor(
+        of: find.text('เพิ่มรูป'),
+        matching: find.byType(AppChip),
+      );
+      expect(
+        imageChip,
+        findsOneWidget,
+        reason: 'the image step offers exactly one เพิ่มรูป chip',
+      );
+      await tester.tap(imageChip);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(AppStrings.addImageByUrl));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, AppStrings.imageUrlHint),
+        'https://example.com/a.jpg',
+      );
+      // `addImage` and the chip's label are the same string, so the dialog's
+      // confirm button has to be addressed inside the dialog.
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text(AppStrings.addImage),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('ขั้นตอนถัดไป'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text(AppStrings.addVariant));
+      await tester.pumpAndSettle();
       await tester.tap(find.text(AppStrings.addVariant));
       await tester.pumpAndSettle();
 
       await tester.enterText(
-        find.byWidgetPredicate((Widget w) =>
-            w is TextField && w.decoration?.hintText == AppStrings.variantNameExample),
+        find.byWidgetPredicate(
+          (Widget w) =>
+              w is TextField &&
+              w.decoration?.hintText == AppStrings.variantNameExample,
+        ),
         'แพ็คขวด',
       );
-      await tester.enterText(
-        find.byWidgetPredicate((Widget w) =>
-            w is TextField && w.decoration?.labelText == AppStrings.variantStockHint),
-        '5',
-      );
+      // Stock is a −/+ stepper, not a text box, so it is tapped up to 5.
+      final Finder stockUp = find.byKey(const ValueKey<String>('stock-up-0'));
+      for (int i = 0; i < 5; i++) {
+        await tester.tap(stockUp);
+        await tester.pumpAndSettle();
+      }
 
-      await tester.tap(find.text(AppStrings.sellerAddProduct));
+      await tester.tap(find.text('ขั้นตอนถัดไป'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(AppStrings.save));
       await tester.pumpAndSettle();
 
       expect(repo.created, <String>['new-p1']);
@@ -604,12 +675,10 @@ void main() {
           categoriesProvider.overrideWith(
             (Ref ref) async => const <CategoryModel>[_category],
           ),
-          productProvider.overrideWith(
-            (Ref ref, String id) async => _product,
-          ),
+          productProvider.overrideWith((Ref ref, String id) async => _product),
           productVariantsProvider.overrideWith(
-            (Ref ref, String id) async => repo.variantsByProduct[id] ??
-                const <ProductVariantModel>[],
+            (Ref ref, String id) async =>
+                repo.variantsByProduct[id] ?? const <ProductVariantModel>[],
           ),
         ],
       );
@@ -618,63 +687,68 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: const MaterialApp(
-            home: ProductEditScreen(productId: 'p1'),
-          ),
+          child: const MaterialApp(home: ProductEditScreen(productId: 'p1')),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text(_product.name), findsOneWidget,
-          reason: 'the seeded name must arrive in the name field');
-      expect(find.text('1290'), findsWidgets,
-          reason: 'the seeded price must arrive in the price field (plain baht)');
+      expect(
+        find.text(_product.name),
+        findsOneWidget,
+        reason: 'the seeded name must arrive in the name field',
+      );
+      expect(
+        find.text('1290'),
+        findsWidgets,
+        reason: 'the seeded price must arrive in the price field (plain baht)',
+      );
     });
 
-    testWidgets('an untouched seeded product still passes validation and saves', (
-      WidgetTester tester,
-    ) async {
-      final _FakeSellerCatalogRepository repo = _FakeSellerCatalogRepository();
-      final ProviderContainer container = ProviderContainer(
-        overrides: [
-          authUserProvider.overrideWith(
-            (Ref ref) => Stream<UserModel?>.value(_seller),
-          ),
-          sellerCatalogRepositoryProvider.overrideWithValue(repo),
-          storeProvider.overrideWith((Ref ref, String id) async => _store),
-          categoriesProvider.overrideWith(
-            (Ref ref) async => const <CategoryModel>[_category],
-          ),
-          productProvider.overrideWith(
-            (Ref ref, String id) async => _product,
-          ),
-          productVariantsProvider.overrideWith(
-            (Ref ref, String id) async => const <ProductVariantModel>[],
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
+    testWidgets(
+      'an untouched seeded product still passes validation and saves',
+      (WidgetTester tester) async {
+        final _FakeSellerCatalogRepository repo =
+            _FakeSellerCatalogRepository();
+        final ProviderContainer container = ProviderContainer(
+          overrides: [
+            authUserProvider.overrideWith(
+              (Ref ref) => Stream<UserModel?>.value(_seller),
+            ),
+            sellerCatalogRepositoryProvider.overrideWithValue(repo),
+            storeProvider.overrideWith((Ref ref, String id) async => _store),
+            categoriesProvider.overrideWith(
+              (Ref ref) async => const <CategoryModel>[_category],
+            ),
+            productProvider.overrideWith(
+              (Ref ref, String id) async => _product,
+            ),
+            productVariantsProvider.overrideWith(
+              (Ref ref, String id) async => const <ProductVariantModel>[],
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
 
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(
-            home: ProductEditScreen(productId: 'p1'),
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(home: ProductEditScreen(productId: 'p1')),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Regression: the category validator used to report "choose a category"
-      // no matter what, so editing a product that already had one was
-      // impossible to save.
-      await tester.tap(find.text('${AppStrings.save} ${_store.name}'));
-      await tester.pumpAndSettle();
+        // Regression: the category validator used to report "choose a category"
+        // no matter what, so editing a product that already had one was
+        // impossible to save. The seeded product has a category, so the draft
+        // save on step 1 must go through.
+        await tester.tap(find.text('บันทึกเป็นฉบับร่าง'));
+        await tester.pumpAndSettle();
 
-      expect(repo.updated, <String>['p1']);
-      expect(repo.lastUpdateDraft!.categoryId, _product.categoryId);
-      expect(repo.lastUpdateDraft!.price, _product.price);
-    });
+        expect(repo.updated, <String>['p1']);
+        expect(repo.lastUpdateDraft!.categoryId, _product.categoryId);
+        expect(repo.lastUpdateDraft!.price, _product.price);
+      },
+    );
   });
 
   group('StoreProfileDraft', () {
@@ -721,10 +795,7 @@ void main() {
 
       final bool ok = await container
           .read(saveStoreProfileProvider.notifier)
-          .save(
-            store: _store,
-            draft: StoreProfileDraft.fromModel(_store),
-          );
+          .save(store: _store, draft: StoreProfileDraft.fromModel(_store));
 
       expect(ok, isTrue);
       expect(repo.storeProfileWrites.single.storeId, _store.id);
@@ -763,10 +834,7 @@ void main() {
 
       final bool ok = await container
           .read(saveStoreProfileProvider.notifier)
-          .save(
-            store: _store,
-            draft: StoreProfileDraft.fromModel(_store),
-          );
+          .save(store: _store, draft: StoreProfileDraft.fromModel(_store));
 
       expect(ok, isFalse);
     });

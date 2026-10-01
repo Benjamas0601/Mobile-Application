@@ -42,9 +42,8 @@ class OrderDetailScreen extends ConsumerWidget {
       ),
       body: order.when(
         loading: () => const SkeletonListView(itemCount: 5, height: 96),
-        error: (Object error, StackTrace stackTrace) => ErrorView(
-          onRetry: () => ref.invalidate(orderProvider(orderId)),
-        ),
+        error: (Object error, StackTrace stackTrace) =>
+            ErrorView(onRetry: () => ref.invalidate(orderProvider(orderId))),
         data: (OrderModel? o) {
           if (o == null) {
             return EmptyView(
@@ -74,10 +73,7 @@ class _Detail extends ConsumerWidget {
       children: <Widget>[
         _headerCard(),
         const SizedBox(height: AppSpacing.lg),
-        Text(
-          AppStrings.orderStatusTitle,
-          style: AppTextStyles.labelMedium,
-        ),
+        Text(AppStrings.orderStatusTitle, style: AppTextStyles.labelMedium),
         const SizedBox(height: AppSpacing.sm),
         Card(
           child: Padding(
@@ -244,15 +240,9 @@ class _Detail extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
-              AppStrings.paymentMethod,
-              style: AppTextStyles.labelMedium,
-            ),
+            Text(AppStrings.paymentMethod, style: AppTextStyles.labelMedium),
             const SizedBox(height: AppSpacing.sm),
-            Text(
-              order.paymentMethod.label,
-              style: AppTextStyles.bodyMedium,
-            ),
+            Text(order.paymentMethod.label, style: AppTextStyles.bodyMedium),
             const SizedBox(height: AppSpacing.xs),
             Text(
               '${AppStrings.paymentStatus}: ${order.paymentStatus.label}',
@@ -261,10 +251,7 @@ class _Detail extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            Text(
-              AppStrings.shippingAddress,
-              style: AppTextStyles.labelMedium,
-            ),
+            Text(AppStrings.shippingAddress, style: AppTextStyles.labelMedium),
             const SizedBox(height: AppSpacing.sm),
             Text(order.shippingAddress, style: AppTextStyles.bodyMedium),
             if (order.note != null) ...<Widget>[

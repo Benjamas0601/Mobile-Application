@@ -17,12 +17,13 @@ final Provider<SellerCatalogRepository> sellerCatalogRepositoryProvider =
     Provider<SellerCatalogRepository>((Ref ref) => SellerCatalogRepository());
 
 /// The signed-in seller's single store (1 Seller = 1 Store).
-final FutureProvider<StoreModel?> myStoreProvider =
-    FutureProvider<StoreModel?>((Ref ref) {
-      final String? uid = ref.watch(authUserProvider).asData?.value?.uid;
-      if (uid == null) return Future.value(null);
-      return ref.watch(sellerCatalogRepositoryProvider).getMyStore();
-    });
+final FutureProvider<StoreModel?> myStoreProvider = FutureProvider<StoreModel?>(
+  (Ref ref) {
+    final String? uid = ref.watch(authUserProvider).asData?.value?.uid;
+    if (uid == null) return Future.value(null);
+    return ref.watch(sellerCatalogRepositoryProvider).getMyStore();
+  },
+);
 
 /// Backward compatibility: returns the seller's single store in a list.
 final FutureProvider<List<StoreModel>> myStoresProvider =
@@ -57,8 +58,8 @@ class SellerDashboardMetrics {
 }
 
 /// Computes live KPIs and metrics for one store's dashboard.
-final sellerDashboardMetricsProvider =
-    Provider.autoDispose.family<AsyncValue<SellerDashboardMetrics>, String>((
+final sellerDashboardMetricsProvider = Provider.autoDispose
+    .family<AsyncValue<SellerDashboardMetrics>, String>((
       Ref ref,
       String storeId,
     ) {
@@ -77,7 +78,10 @@ final sellerDashboardMetricsProvider =
         return AsyncValue.error(ordersAsync.error!, ordersAsync.stackTrace!);
       }
       if (productsAsync.hasError) {
-        return AsyncValue.error(productsAsync.error!, productsAsync.stackTrace!);
+        return AsyncValue.error(
+          productsAsync.error!,
+          productsAsync.stackTrace!,
+        );
       }
 
       final List<OrderModel> orders = ordersAsync.value ?? const <OrderModel>[];
@@ -89,8 +93,7 @@ final sellerDashboardMetricsProvider =
       int awaitingShipment = 0;
 
       for (final OrderModel o in orders) {
-        if (!o.isCancelled &&
-            o.status != OrderStatus.pendingPayment) {
+        if (!o.isCancelled && o.status != OrderStatus.pendingPayment) {
           revenue += o.total;
         }
         if (o.status == OrderStatus.paid ||
@@ -123,10 +126,94 @@ final sellerDashboardMetricsProvider =
 /// Every product of one store, drafts included, newest first.
 final myProductsProvider = FutureProvider.autoDispose
     .family<List<ProductModel>, String>(
-      (Ref ref, String storeId) => ref
-          .watch(sellerCatalogRepositoryProvider)
-          .listMyProducts(storeId),
+      (Ref ref, String storeId) =>
+          ref.watch(sellerCatalogRepositoryProvider).listMyProducts(storeId),
     );
+
+/// A product variant that has almost run out, paired with its product.
+///
+/// The dashboard warns per *variant*, not per product: "the indigo one is
+/// nearly gone" is a different fact from "the shop is nearly gone", and the
+/// HTML design lists the colour in the warning line for exactly that reason.
+/// Products whose variants carry no colour/size fall back to a null label so
+/// the row still reads as the product name alone.
+class LowStockVariant {
+  const LowStockVariant({
+    required this.product,
+    required this.stock,
+    this.variantName,
+  });
+
+  final ProductModel product;
+  final int stock;
+  final String? variantName;
+
+  /// `ผ้าทอมือ (สีคราม)` — the product name plus the variant, so the seller
+  /// can tell two rows apart at a glance.
+  String get displayName =>
+      variantName == null ? product.name : '${product.name} ($variantName)';
+}
+
+/// Everything that needs restocking, worst first.
+///
+/// A product counts as low when its own `stockTotal` is low OR any of its
+/// variants is. `stockTotal` is recomputed from the variants on every save, so
+/// the two agree for a freshly written product; the per-variant check is what
+/// catches a multi-colour product where one colour sold out and the rest did
+/// not — the case the dashboard exists to surface.
+final lowStockVariantsProvider = FutureProvider.autoDispose
+    .family<List<LowStockVariant>, String>((Ref ref, String storeId) async {
+      final SellerCatalogRepository repository = ref.watch(
+        sellerCatalogRepositoryProvider,
+      );
+      final List<ProductModel> products = await repository.listMyProducts(
+        storeId,
+      );
+
+      final List<LowStockVariant> low = <LowStockVariant>[];
+      for (final ProductModel product in products) {
+        // A draft is the seller's own work in progress; warning about it is
+        // noise, and a product with no variants falls back to stockTotal.
+        if (product.status == ProductStatus.draft) continue;
+
+        final List<ProductVariantModel> variants = await repository
+            .listVariants(product.id);
+
+        if (variants.isEmpty) {
+          if (product.stockTotal <= lowStockThreshold) {
+            low.add(
+              LowStockVariant(product: product, stock: product.stockTotal),
+            );
+          }
+          continue;
+        }
+
+        for (final ProductVariantModel variant in variants) {
+          if (variant.stock > lowStockThreshold) continue;
+          low.add(
+            LowStockVariant(
+              product: product,
+              stock: variant.stock,
+              variantName: variant.name.trim().isEmpty
+                  ? null
+                  : variant.name.trim(),
+            ),
+          );
+        }
+      }
+
+      low.sort(
+        (LowStockVariant a, LowStockVariant b) => a.stock.compareTo(b.stock),
+      );
+      return low;
+    });
+
+/// At or below this many units a variant is flagged as running out.
+///
+/// Three matches the HTML copy ("เหลือไม่ถึง 3 ชิ้น") and is small enough to be
+/// worth restocking before a link dies, large enough not to nag on every unit
+/// sale.
+const int lowStockThreshold = 3;
 
 /// Saves a product: creates when [existing] is null, otherwise updates it.
 ///
@@ -170,7 +257,7 @@ class SaveProductController extends Notifier<bool> {
 final NotifierProvider<SaveProductController, bool> saveProductProvider =
     NotifierProvider<SaveProductController, bool>(SaveProductController.new);
 
-  /// Deletes a product (with its variants).
+/// Deletes a product (with its variants).
 class DeleteProductController extends Notifier<bool> {
   @override
   bool build() => false;
@@ -226,7 +313,6 @@ class SaveStoreProfileController extends Notifier<bool> {
 }
 
 final NotifierProvider<SaveStoreProfileController, bool>
-saveStoreProfileProvider =
-    NotifierProvider<SaveStoreProfileController, bool>(
-      SaveStoreProfileController.new,
-    );
+saveStoreProfileProvider = NotifierProvider<SaveStoreProfileController, bool>(
+  SaveStoreProfileController.new,
+);
