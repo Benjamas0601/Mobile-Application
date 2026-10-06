@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/admin/screens/admin_home_screen.dart';
-import '../../features/affiliate/screens/affiliate_home_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/cart/screens/cart_screen.dart';
@@ -50,9 +49,6 @@ class AppRoutes {
   static const String sellerProducts = '/seller/products';
   static const String sellerOrders = '/seller/orders';
   static const String sellerStoreProfile = '/seller/store';
-
-  /// Affiliate console root — account-bound, and role-gated inside the screen.
-  static const String affiliateRoot = '/affiliate';
 
   /// Takes the product id as a path parameter: `/product/p-silk-scarf-red`.
   static String productDetail(String productId) => '/product/$productId';
@@ -109,11 +105,6 @@ String? authRedirect({
   final bool isSellerRoute =
       location.startsWith('${AppRoutes.sellerRoot}/') ||
       location == AppRoutes.sellerRoot;
-  // The affiliate console gets the same prefix treatment as the seller one, so
-  // a future `/affiliate/links` is covered by the rule that is already here.
-  final bool isAffiliateRoute =
-      location.startsWith('${AppRoutes.affiliateRoot}/') ||
-      location == AppRoutes.affiliateRoot;
   final bool isAdminRoute =
       location == AppRoutes.adminRoot ||
       location.startsWith('${AppRoutes.adminRoot}/');
@@ -125,7 +116,6 @@ String? authRedirect({
   if (!signedIn) {
     if (!accountRequired.contains(location) &&
         !isSellerRoute &&
-        !isAffiliateRoute &&
         !isOrderRoute) {
       return null;
     }
@@ -148,19 +138,6 @@ String? authRedirect({
         location == AppRoutes.login ||
         location == AppRoutes.register) {
       return AppRoutes.sellerRoot;
-    }
-  }
-
-  // An affiliate-only account lands on their own dashboard. Ranked *below* the
-  // seller branch on purpose: one account can hold both roles, and a real OTOP
-  // producer promoting their own products should still open the seller console.
-  // The affiliate dashboard stays reachable from the button on whichever
-  // console they land on.
-  if (user?.isAffiliate == true) {
-    if (location == AppRoutes.home ||
-        location == AppRoutes.login ||
-        location == AppRoutes.register) {
-      return AppRoutes.affiliateRoot;
     }
   }
 
@@ -256,13 +233,6 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
         path: '/order/:orderId',
         builder: (BuildContext context, GoRouterState state) =>
             OrderDetailScreen(orderId: state.pathParameters['orderId'] ?? ''),
-      ),
-      // Affiliate console: account-bound (redirect above) and role-gated inside
-      // the screen, because a role lives in Firestore, not in the route.
-      GoRoute(
-        path: AppRoutes.affiliateRoot,
-        builder: (BuildContext context, GoRouterState state) =>
-            const AffiliateHomeScreen(),
       ),
       // Seller console: account-bound (redirect above) and role-gated inside
       // the screens, because a role lives in Firestore, not in the route.

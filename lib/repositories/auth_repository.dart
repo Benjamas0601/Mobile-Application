@@ -102,19 +102,12 @@ class AuthRepository {
     String community = '',
     String storeDescription = '',
     String region = '',
-    String affiliatePlatform = '',
-    String affiliateHandle = '',
-    String affiliateProfileUrl = '',
   }) async {
     final String cleanEmail = email.trim();
     final String cleanName = displayName.trim();
     final String cleanPhone = phone.trim();
     final String cleanProvince = province.trim();
-    if (!<UserRole>{
-      UserRole.customer,
-      UserRole.seller,
-      UserRole.affiliate,
-    }.contains(accountType)) {
+    if (!<UserRole>{UserRole.customer, UserRole.seller}.contains(accountType)) {
       throw const AuthFailure('ประเภทบัญชีไม่ถูกต้อง');
     }
     if (cleanName.isEmpty || cleanPhone.isEmpty || cleanProvince.isEmpty) {
@@ -126,15 +119,6 @@ class AuthRepository {
             storeDescription.trim().isEmpty ||
             ThaiRegion.fromValue(region) == null)) {
       throw const AuthFailure('กรุณากรอกข้อมูลร้านค้าให้ครบ');
-    }
-    if (accountType == UserRole.affiliate &&
-        (affiliatePlatform.trim().isEmpty ||
-            affiliateHandle.trim().isEmpty ||
-            Uri.tryParse(affiliateProfileUrl.trim())?.host.isNotEmpty !=
-                true)) {
-      throw const AuthFailure(
-        'กรุณากรอกช่องทางและลิงก์โปรไฟล์ Affiliate ให้ครบ',
-      );
     }
 
     User? createdUser;
@@ -162,11 +146,6 @@ class AuthRepository {
         'createdAt': FieldValue.serverTimestamp(),
         'phone': cleanPhone,
         'province': cleanProvince,
-        if (accountType == UserRole.affiliate) ...<String, dynamic>{
-          'affiliatePlatform': affiliatePlatform.trim(),
-          'affiliateHandle': affiliateHandle.trim(),
-          'affiliateProfileUrl': affiliateProfileUrl.trim(),
-        },
       };
 
       profileRef = _db.collection(_users).doc(uid);
@@ -198,15 +177,6 @@ class AuthRepository {
         phone: cleanPhone,
         province: cleanProvince,
         roles: roles,
-        affiliatePlatform: accountType == UserRole.affiliate
-            ? affiliatePlatform.trim()
-            : '',
-        affiliateHandle: accountType == UserRole.affiliate
-            ? affiliateHandle.trim()
-            : '',
-        affiliateProfileUrl: accountType == UserRole.affiliate
-            ? affiliateProfileUrl.trim()
-            : '',
       );
     } on FirebaseAuthException catch (e) {
       await _rollbackRegistration(createdUser, profileRef);

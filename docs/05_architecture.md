@@ -81,7 +81,6 @@ lib/
 │   ├── checkout/     ⏳
 │   ├── orders/       ⏳
 │   ├── seller/       ⏳
-│   ├── affiliate/    ⏳
 │   ├── chat/         ⏳
 │   └── profile/      ⏳
 │
@@ -154,9 +153,6 @@ coupons/{couponId}             code, type(percentage|fixed), value, minSpend, ma
 reviews/{reviewId}             productId, userId, orderId, rating, comment, images[], createdAt
 chat_threads/{threadId}        participantUids[], storeId, buyerUid, lastMessage, lastAt
   └─ messages/{messageId}      threadId, senderUid, type(text|image), text, imageUrl, createdAt, readBy[]
-affiliate_links/{linkId}       affiliateUid, productId, code, clicks, orders, createdAt
-affiliate_clicks/{clickId}     linkId, createdAt, source
-affiliate_commissions/{id}     affiliateUid, orderId, amount, rate, status, createdAt
 notifications/{id}             userId, type, title, body, data, read, createdAt
 ```
 
@@ -175,8 +171,7 @@ notifications/{id}             userId, type, title, body, data, read, createdAt
 |---|---|---|
 | Customer | product / store / category (สาธารณะ) | profile ตัวเอง, cart ตัวเอง, order ตัวเอง, review ตัวเอง, chat ที่อยู่ในนั้น |
 | Seller | ของสาธารณะ + **เฉพาะ store ของตัวเอง** | store ตัวเอง, product/variant ของ store ตัวเอง, **เฉพาะ order ที่มี store ตัวเอง** |
-| Affiliate | ของสาธารณะ | link/comission **เฉพาะของตัวเอง** |
-| Admin | ทุกอย่าง | ข้อมูลพื้นฐาน (หมวด, coupon, สถานะ commission) |
+| Admin | ทุกอย่าง | ข้อมูลพื้นฐาน (หมวด, coupon, ข้อมูลร้าน/ผู้ใช้) |
 
 > **ชั้นที่ 1:** Firestore Security Rules — บังคับที่เซิร์ฟเวอร์ (เขียนใน Week 3)
 > **ชั้นที่ 2:** UI ซ่อนปุ่มที่กดไม่ได้อยู่แล้ว (เพื่อ UX)

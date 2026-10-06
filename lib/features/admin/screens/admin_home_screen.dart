@@ -12,7 +12,6 @@ import '../../../models/user_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../widgets/state_views.dart';
 import '../providers/admin_provider.dart';
-import '../repositories/admin_repository.dart';
 
 /// หน้าจอผู้ดูแลสำหรับตรวจและจัดการข้อมูลหลักตามสิทธิ์ admin
 class AdminHomeScreen extends ConsumerWidget {
@@ -65,13 +64,10 @@ class AdminHomeScreen extends ConsumerWidget {
             tabs: <Widget>[
               Tab(icon: Icon(Icons.store_outlined), text: 'ร้านค้า'),
               Tab(icon: Icon(Icons.people_outline_rounded), text: 'ผู้ใช้'),
-              Tab(icon: Icon(Icons.campaign_outlined), text: 'Affiliate'),
             ],
           ),
         ),
-        body: const TabBarView(
-          children: <Widget>[_StoresTab(), _UsersTab(), _AffiliatesTab()],
-        ),
+        body: const TabBarView(children: <Widget>[_StoresTab(), _UsersTab()]),
       ),
     );
   }
@@ -388,9 +384,6 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
               _DetailLine('อีเมล', user.email),
               _DetailLine('โทรศัพท์', user.phone),
               _DetailLine('จังหวัด', user.province),
-              _DetailLine('ช่องทาง Affiliate', user.affiliatePlatform),
-              _DetailLine('ชื่อบัญชี', user.affiliateHandle),
-              _DetailLine('ลิงก์โปรไฟล์', user.affiliateProfileUrl),
               _DetailLine(
                 'บทบาท',
                 user.roles.map((UserRole role) => role.label).join(' · '),
@@ -422,177 +415,9 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
     );
     if (saved == true && mounted) {
       ref.invalidate(adminUsersProvider);
-      ref.invalidate(adminAffiliatesProvider);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('บันทึกข้อมูลผู้ใช้แล้ว')));
-    }
-  }
-}
-
-class _AffiliatesTab extends ConsumerStatefulWidget {
-  const _AffiliatesTab();
-
-  @override
-  ConsumerState<_AffiliatesTab> createState() => _AffiliatesTabState();
-}
-
-class _AffiliatesTabState extends ConsumerState<_AffiliatesTab> {
-  final TextEditingController _searchController = TextEditingController();
-  String _search = '';
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ref
-        .watch(adminAffiliatesProvider)
-        .when(
-          loading: () => const LoadingView(),
-          error: (Object error, StackTrace stack) => ErrorView(
-            message: '$error',
-            onRetry: () => ref.invalidate(adminAffiliatesProvider),
-          ),
-          data: (List<AdminAffiliateRecord> records) {
-            final List<AdminAffiliateRecord> visible = records.where((record) {
-              final String value = <String>[
-                record.user.displayName,
-                record.user.email,
-                record.user.phone,
-                record.user.province,
-              ].join(' ').toLowerCase();
-              return value.contains(_search.toLowerCase());
-            }).toList();
-
-            return Column(
-              children: <Widget>[
-                _SearchBox(
-                  controller: _searchController,
-                  onChanged: (String value) => setState(() => _search = value),
-                  hint: 'ค้นหาพาร์ทเนอร์',
-                ),
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: () =>
-                        ref.refresh(adminAffiliatesProvider.future),
-                    child: visible.isEmpty
-                        ? ListView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            children: <Widget>[
-                              SizedBox(
-                                height: 300,
-                                child: EmptyView(
-                                  icon: Icons.campaign_outlined,
-                                  title: _search.isEmpty
-                                      ? 'ยังไม่มี Affiliate'
-                                      : 'ไม่พบ Affiliate',
-                                  body:
-                                      'ผู้ใช้ที่มีบทบาทพาร์ทเนอร์จะแสดงในหน้านี้',
-                                ),
-                              ),
-                            ],
-                          )
-                        : ListView.separated(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.only(
-                              left: AppSpacing.gutter,
-                              right: AppSpacing.gutter,
-                              bottom: AppSpacing.xxl,
-                            ),
-                            itemCount: visible.length,
-                            separatorBuilder:
-                                (BuildContext context, int index) =>
-                                    const Divider(height: 1),
-                            itemBuilder: (BuildContext context, int index) {
-                              final AdminAffiliateRecord record =
-                                  visible[index];
-                              return ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                leading: const CircleAvatar(
-                                  child: Icon(Icons.campaign_outlined),
-                                ),
-                                title: Text(
-                                  record.user.displayName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                subtitle: Text(
-                                  '${record.user.email}\n${record.linkCount} ลิงก์ · ${record.commissionCount} รายการคอมมิชชัน',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                isThreeLine: true,
-                                trailing: IconButton(
-                                  tooltip: 'แก้ไขข้อมูลพาร์ทเนอร์',
-                                  icon: const Icon(Icons.edit_outlined),
-                                  onPressed: () => _editAffiliate(record),
-                                ),
-                                onTap: () => _showAffiliateDetails(record),
-                              );
-                            },
-                          ),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-  }
-
-  Future<void> _showAffiliateDetails(AdminAffiliateRecord record) async {
-    final UserModel user = record.user;
-    final bool? edit = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: Text(user.displayName),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              _DetailLine('อีเมล', user.email),
-              _DetailLine('โทรศัพท์', user.phone),
-              _DetailLine('จังหวัด', user.province),
-              _DetailLine('ช่องทาง', user.affiliatePlatform),
-              _DetailLine('ชื่อบัญชี', user.affiliateHandle),
-              _DetailLine('โปรไฟล์', user.affiliateProfileUrl),
-              _DetailLine('ลิงก์ Affiliate', '${record.linkCount} รายการ'),
-              _DetailLine('คอมมิชชัน', '${record.commissionCount} รายการ'),
-              _DetailLine('User ID', user.uid),
-            ],
-          ),
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('ปิด'),
-          ),
-          FilledButton.icon(
-            onPressed: () => Navigator.pop(context, true),
-            icon: const Icon(Icons.edit_outlined),
-            label: const Text('แก้ข้อมูล'),
-          ),
-        ],
-      ),
-    );
-    if (edit == true) await _editAffiliate(record);
-  }
-
-  Future<void> _editAffiliate(AdminAffiliateRecord record) async {
-    final bool? saved = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) => _UserEditor(user: record.user),
-    );
-    if (saved == true && mounted) {
-      ref.invalidate(adminUsersProvider);
-      ref.invalidate(adminAffiliatesProvider);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('บันทึกข้อมูลพาร์ทเนอร์แล้ว')),
-      );
     }
   }
 }
@@ -808,7 +633,6 @@ class _UserEditorState extends ConsumerState<_UserEditor> {
                 for (final UserRole role in <UserRole>[
                   UserRole.customer,
                   UserRole.seller,
-                  UserRole.affiliate,
                 ])
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,

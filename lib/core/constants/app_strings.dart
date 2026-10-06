@@ -57,11 +57,6 @@ class AppStrings {
   static const String navSellerStore = 'ร้าน';
   static const String navSellerOrders = 'คำสั่งซื้อ';
 
-  // --- Navigation (affiliate) ---------------------------------------------
-  static const String navAffiliateDashboard = 'ภาพรวม';
-  static const String navAffiliateLinks = 'ลิงก์';
-  static const String navAffiliateCommission = 'ค่าคอมมิชชัน';
-
   // --- Auth ----------------------------------------------------------------
   static const String login = 'เข้าสู่ระบบ';
   static const String register = 'สมัครสมาชิก';

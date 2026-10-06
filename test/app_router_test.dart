@@ -338,23 +338,18 @@ void main() {
       expect(find.text(AppStrings.errPasswordShort), findsNothing);
     });
 
-    testWidgets('registration type reveals store and affiliate fields', (
+    testWidgets('registration type reveals store fields', (
       WidgetTester tester,
     ) async {
       await pumpAuth(tester, const RegisterScreen());
+
+      expect(find.text('Affiliate'), findsNothing);
 
       await tester.tap(find.text('ร้านค้า'));
       await tester.pump();
       expect(find.text('ชื่อร้าน'), findsOneWidget);
       expect(find.text('ชุมชน / กลุ่มผู้ผลิต'), findsOneWidget);
       expect(find.text('เรื่องราวและรายละเอียดร้าน'), findsOneWidget);
-
-      await tester.tap(find.text('Affiliate'));
-      await tester.pump();
-      expect(find.text('ช่องทางหลัก'), findsOneWidget);
-      expect(find.text('ชื่อบัญชี / Handle'), findsOneWidget);
-      expect(find.text('ลิงก์โปรไฟล์สาธารณะ'), findsOneWidget);
-      expect(find.text('ชื่อร้าน'), findsNothing);
     });
   });
 }

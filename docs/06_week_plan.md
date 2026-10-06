@@ -25,7 +25,7 @@
 | # | งาน | หลักฐาน | สถานะ |
 |---|---|---|---|
 | 1 | Problem / Target User / Value Prop | `docs/01_product_problem.md` | ✅ |
-| 2 | โฟลว์หลัก 4 บทบาท + error/empty state | `docs/02_user_flows.md` | ✅ |
+| 2 | โฟลว์หลัก 3 บทบาท + error/empty state | `docs/02_user_flows.md` | ✅ |
 | 3 | Wireframe 6 หน้าจอ | `docs/03_wireframes.md` | ✅ (เกิน 5 ที่กำหนด) |
 | 4 | ธีม / visual identity / 3D direction | `docs/04_design_direction.md` | ✅ |
 | 5 | โครงสร้างโฟลเดอร์ + architecture | `docs/05_architecture.md` | ✅ |
@@ -479,19 +479,18 @@ build **ไม่มี flag เลยสักตัว** แล้วอัป
 commit `fd156e7` (22:09) เพิ่ม Admin Hub + order tracking + กฎ register/role ทำให้
 `firestore.rules` ยาว 506 บรรทัด แต่ตัวที่ deploy ไว้ยังเป็นชุดเดิม 438 บรรทัด
 (first diff บรรทัด 112 — กฎ `users.create` ตอนสมัครสมาชิก) ทำให้ **สมัครเป็นผู้ขาย
-หรือ affiliate ไม่ได้** เพราะกฎเก่าบังคับ `roles == ['customer']` แต่โค้ดเขียน
+ไม่ได้** เพราะกฎเก่าบังคับ `roles == ['customer']` แต่โค้ดเขียน
 `['customer','seller']` + `phone`/`province` (`auth_repository.dart:152`)
 
 หลัง deploy ใหม่ → ruleset `c04029c3-2009-43d1-baad-62eeefc641d6`
 ตรวจแล้วว่า **บน cloud ตรงกับไฟล์ในเครื่องทุกบรรทัด**
 
 เพิ่มเทสต์ `users.create` / `users.update` อีก 22 เคส (เดิมมีแค่ orders/stores 14 เคส
-คือกฎที่เพิ่ง deploy ไปไม่เคยถูกทดสอบเลย) รวมเป็น **36/36 ผ่าน** (แล้วขยายเป็น 47 เมื่อเพิ่มเทสต์ `affiliate_*` อีก 11 เคส — ดูหัวข้อ Affiliate ด้านล่าง):
+คือกฎที่เพิ่ง deploy ไปไม่เคยถูกทดสอบเลย) รวมเป็น **36/36 ผ่าน**:
 
 | ต้องผ่าน | ต้องถูกบล็อก |
 |---|---|
 | สมัคร `['customer']` / `['customer','seller']` | role `admin` ตั้งเอง |
-| สมัคร `['customer','affiliate']` ครบ 3 ฟิลด์ | affiliate ไม่กรอก platform/handle/url |
 | แก้ `displayName` ของตัวเอง | `['customer','superuser']` (role ไม่รู้จัก) |
 | แอดมินเพิ่ม/ลบ role ได้ | `['seller']` โดยไม่มี `customer` |
 | | `phone`/`province`/`displayName` ว่าง · ฟิลด์แปลกปลอม |
@@ -516,7 +515,7 @@ commit `fd156e7` (22:09) เพิ่ม Admin Hub + order tracking + กฎ reg
 
 | การทดสอบ | ผล |
 |---|---|
-| Rules unit test บน Firestore Emulator | **47/47 ผ่าน** — orders.list 6 · stores.update 5 · orders.get 3 · users.create 11 · users.update 6 · **affiliate 16** |
+| Rules unit test บน Firestore Emulator | ตอนนั้น **47/47 ผ่าน** — orders.list 6 · stores.update 5 · orders.get 3 · users.create 11 · users.update 6 · affiliate 16 (เทสต์ affiliate ถูกยกเลิกไปพร้อมการตัดขอบเขต 6 ต.ค. 2569 — ตัวเลขหลังตัดยังไม่ได้วัด ดูหัวข้อ "ตัดขอบเขต" ท้ายเอกสาร) |
 | กฎบน cloud vs ไฟล์ในเครื่อง | ตรงกันทุกบรรทัด (ruleset `c04029c3`) · สำรองชุดก่อนหน้าไว้ที่ `%TEMP%\opencode\deployed-before-cloud.firestore.json` |
 | E2E Seller CRUD บน emulator | ผ่าน (`create → edit price → delete`) |
 | `flutter analyze --no-pub` | `No issues found!` |
@@ -537,62 +536,29 @@ commit `fd156e7` (22:09) เพิ่ม Admin Hub + order tracking + กฎ reg
 > ยืนยันแล้วว่า `flutter test` ไม่เขียนลง Firestore (นับก่อน/หลังรันเท่ากันทุก collection)
 > ขยะ 4 เอกสารจึงมาจากการเปิดแอปบน emulator ไม่ใช่จาก unit test
 
-### ✅ Affiliate Dashboard — เพิ่มแล้ว
+### ~~Affiliate Dashboard~~ — ถูกตัดออกแล้ว
 
-`docs/02_user_flows.md:115` เขียนไว้ว่าพาร์ทเนอร์ต้องมีแดชบอร์ด
-(ภาพรวม · ลิงก์ · คอมมิชชัน) แต่โค้ดไม่มีเลย — `lib/features/affiliate/` ว่างเปล่า
-มีแต่ `.gitkeep` และมีแค่ฝั่งแอดมินที่ดูรายชื่อ affiliate ได้ ตอนนี้เติมแล้ว
+หัวข้อนี้เคยบรรยายการสร้าง `lib/features/affiliate/screens/affiliate_home_screen.dart`
++ route `/affiliate` + เทสต์ 22 เคส + กฎ `affiliate_*` 11 เคส ซึ่งถูก deploy ไว้แล้ว
 
-**หน้าจอ** `lib/features/affiliate/screens/affiliate_home_screen.dart`
-โชว์ 4 ตัวเลขตามสเปก — ยอดขายที่ทำให้เกิด · คอมมิชชันที่ได้รับ · ออเดอร์ · คลิก
-พร้อมอัตราการแปลง รายการคอมมิชชันล่าสุด และลิงก์ของตัวเอง (คัดลอกรหัส/ลบได้)
-
-**เส้นทางเข้า** `/affiliate` ผูกกับบัญชี + role-gate ในหน้าจอแบบเดียวกับ `/seller`
-- พาร์ทเนอร์เดี่ยว → `/home` พาไป `/affiliate`
-- คนที่มีทั้ง seller + affiliate → `/home` พาไป `/seller` (อันดับชัดเจนและมีเทสต์กัน)
-  และมีปุ่ม affiliate อยู่บนแดชบอร์ดผู้ขาย จึงยังเข้าถึงได้ครบ
-- ลูกค้าธรรมดาไม่ถูกดันเข้าคอนโซลใด
-
-**ยอดขายมาจากไหน — จุดที่ต้องตัดสินใจให้ชัด**
-`affiliate_clicks` เปิดอ่านให้แค่แอดมิน (แถวคลิกมีข้อมูลผู้คลิก) พาร์ทเนอร์จึงนับคลิกเองไม่ได้
-และอ่าน `orders` ก็ไม่ได้ (ออเดอร์มีชื่อผู้ซื้อ/ผู้ขาย) ถ้าอ่านได้ก็ต้องเปิดกฎใหม่
-
-สอง collection ที่กฎอนุญาตอยู่แล้วคือ `affiliate_links` + `affiliate_commissions` ซึ่งเอกสารสเปก
-(`docs/05_architecture.md:157`) วาง `clicks`/`orders` ไว้บน link doc อยู่แล้ว จึงทำตามนั้น:
-- คลิก/ออเดอร์/อัตราแปลง ← รวมจาก `clicks`/`orders` บน link doc
-- **ยอดขายที่ทำให้เกิด** ← `orderTotal` ที่ denormalize ไว้บน commission doc
-  (หลักการเดียวกับที่ `docs/05_architecture.md:164` ใช้กับ order_items)
-
-> ถ้าวันหนึ่งอยากให้พาร์ทเนอร์เห็นยอดขายสดจาก `orders` ต้องแก้ `firestore.rules`
-> ให้อ่าน order ที่มี `affiliateUid == ตัวเอง` แล้ว deploy ใหม่ — รอบนี้ยังไม่ทำเพราะเปิด
-> สิทธิ์กว้างเกินจำเป็นโดยไม่ต้องการ
-
-**เทสต์** `test/affiliate_dashboard_test.dart` 22 เคส + กฎ 11 เคสบน emulator
-ปิดช่องโหว่ที่เจอระหว่างออกแบบ: พาร์ทเนอร์แก้ `clicks` ตัวเองไม่ได้ · อนุมัติคอมมิชชันเองไม่ได้ ·
-สร้างลิงก์ในชื่อคนอื่นไม่ได้ · อ่านของคนอื่น/ของลูกค้าไม่ได้
+**ถูกยกเลิกทั้งหมดเมื่อ 6 ต.ค. 2569** — ดูหัวข้อ "ตัดขอบเขต: ลบ Affiliate" ท้ายเอกสาร
+(โค้ด, กฎ, เทสต์, seed และเอกสารอ้างอิงถูกลบออกจาก repo แล้ว)
 
 ### ⚠️ ที่ยังค้าง
 
 1. **รูป probe บน Cloudinary 2 ใบ** — `smoke-test/probe/…` และ `smoke-test/escaped/…` ลบเองไม่ได้
    (unsigned preset ต้องใช้ API secret) · ลบผ่าน Media Library หรือส่ง secret มาให้ลบแทน
 2. **iOS ยังไม่ได้ build** — ต้องใช้ macOS + Xcode
-3. **เทสต์กฎ Firestore ยังอยู่นอกโปรเจกต์** — อยู่ที่ `%TEMP%\opencode\rules-test\check.js`
-   ยังไม่ได้ย้ายเข้า repo (เพราะต้องเพิ่ม npm deps `firebase` + `@firebase/rules-unit-testing`
-   ในโปรเจกต์ Flutter) → ถ้าไม่ย้าย กฎใหม่ที่เพิ่ง deploy จะไม่มี regression test
+3. **เทสต์กฎ Firestore ยังอยู่นอกโปรเจกต์** — เคยอยู่ที่ `%TEMP%\opencode\rules-test\check.js`
+   แต่ไฟล์สคริปต์หายไปแล้ว (เหลือแค่ `node_modules`) → **ต้องเขียนใหม่** หลังแก้กฎ
+   ไม่งั้นกฎที่ deploy จะไม่มี regression test
 4. **E2E ฝั่งผู้ขาย** — ทดสอบแค่ Product CRUD (`create → edit price → delete`)
    ยังไม่ได้เดิน order status และ store profile บน emulator
-5. **Affiliate ยังไม่มี E2E** — มีแต่ unit test + widget test (22 เคส)
-6. **ยังไม่ได้รัน seed ที่เพิ่มข้อมูลพาร์ทเนอร์** — `tool/seed_firestore.js` เขียนบัญชี
-   `affiliate@example.com` + 4 ลิงก์ + 4 คอมมิชชัน (ทุกสถานะ) แล้ว แต่ยังไม่ deploy
-   ข้อมูลนี้ไปยัง Firestore จริง
-7. **คลิก/ออเดอร์ยังไม่มีระบบนับจริง** — ตัวเลขใน seed เป็นค่าตัวอย่างที่เขียนเป็น counter
-   ต้องมี Cloud Function หรือ backend ไป increment ตอนมีคนคลิกลิงก์/สั่งซื้อ
 
 ### ✅ ปิดแล้วในรอบนี้
 
 - deploy กฎชุดใหม่ (`c04029c3`) และยืนยันว่าตรงกับไฟล์ในเครื่องทุกบรรทัด
 - เพิ่มเทสต์กฎ `users.create`/`users.update` 22 เคส → รวม 36/36 ผ่าน
-- เพิ่ม **Affiliate Dashboard** (ดูหัวข้อถัดไป) + เทสต์กฎ `affiliate_*` 11 เคส → รวม 47/47
 - รัน seed ใหม่ + ลบ `store-langdoi` ที่ค้าง (เช็คทุก collection แล้วว่าไม่มีอะไรอ้างถึง)
   → 1 ผู้ขาย = 1 ร้าน ตรงกับโค้ดแล้ว
 - ลบ `storage.rules` + ถอด block `storage` ออกจาก `firebase.json`
@@ -601,3 +567,48 @@ commit `fd156e7` (22:09) เพิ่ม Admin Hub + order tracking + กฎ reg
 - แก้ตัวเลขเทสต์ในเอกสาร: 139/129 → **146** (จริงคือ commit `fd156e7` เพิ่ม
   `payment_and_order_test` จาก 14 → 21 เคส)
 
+
+---
+
+## ✂️ ตัดขอบเขต: ลบ Affiliate ออกจากระบบทั้งหมด (6 ต.ค. 2569)
+
+**การตัดสินใจ:** เอาบทบาท/ฟีเจอร์ Affiliate (พาร์ทเนอร์/ครีเอเตอร์) ออกทั้งแอป เหลือ 3 บทบาท
+ที่ผู้ใช้เลือกได้เอง — `customer`, `seller`, `admin` (ยังคงกติกาเดิมที่บัญชีเดียวถือหลาย role ได้)
+
+### สิ่งที่ถูกลบ
+
+| รายการ | รายละเอียด |
+|---|---|
+| หน้าจอ + route | โฟลเดอร์ `lib/features/affiliate/` ทั้งหมด · `/affiliate` · ปุ่ม affiliate บน Home และ Seller Dashboard |
+| Model | `affiliate_link_model.dart` · `affiliate_commission_model.dart` · `affiliate_provider.dart` · `affiliate_repository.dart` |
+| บทบาท + ฟิลด์ | `UserRole.affiliate` · `CommissionStatus` · `UserModel.affiliatePlatform/Handle/ProfileUrl` · ฟิลด์ register |
+| ฟอร์มสมัคร | ตัวเลือก "Affiliate" ใน Register + validation `_validateProfileUrl` |
+| Admin Hub | แท็บ Affiliate + `adminAffiliatesProvider` + `AdminAffiliateRecord` |
+| Security Rules | บล็อก `affiliate_links` / `affiliate_clicks` / `affiliate_commissions` · ตัดฟิลด์/role affiliate ออกจาก `users.create` และ `users.update` (506 → 463 บรรทัด) |
+| เทสต์ | `integration_test/affiliate_dashboard_flow_test.dart` · `test/affiliate_dashboard_test.dart` (22 เคส) |
+| Seed | บัญชี `affiliate@example.com` · `AFFILIATE_LINKS` · `AFFILIATE_COMMISSIONS` ใน `tool/seed_firestore.js` |
+| เอกสาร | `01` persona D + VP 3.3 · `02` section 3 · `03` บล็อกแนะนำพาร์ทเนอร์ · `05` folder tree + collections + role matrix |
+
+### ผลตรวจหลังลบ
+
+| การทดสอบ | ผล |
+|---|---|
+| `flutter analyze --no-pub` | **No issues found!** |
+| `flutter test --no-pub` | **173/173 ผ่าน** |
+| `dart format lib test integration_test tool` | แก้ 2 ไฟล์ (format ล้วน) |
+| grep `affiliate` ใน `lib/` `integration_test/` `firestore.rules` `firestore.indexes.json` `tool/` | **0 จุดทุกไฟล์** |
+| `node --check tool/seed_firestore.js` | ผ่าน |
+| build + install + launch บน emulator (Pixel_7) | APK ติดตั้งและเปิดได้ ไม่มี FATAL / ไม่มี `Unhandled Exception` ใน logcat |
+| deploy `firestore.rules` ขึ้น cloud | ruleset **`459d82c8-d412-4ea6-9ae4-ab362e56fbca`** (แทน `c04029c3`) |
+| rules บน cloud vs ไฟล์ในเครื่อง | **IDENTICAL** · 463 บรรทัด · affiliate 0 จุด |
+| ข้อมูล affiliate ใน Firestore | `affiliate_links` 5 · `affiliate_commissions` 4 ถูกลบหมด · users 6 รายโดนตัดฟิลด์ · เหลือ 0 |
+
+> เทสต์ `test/app_router_test.dart` เหลือ assertion 1 จุดที่จงใจเช็คว่า `find.text('Affiliate')` ได้ `findsNothing`
+> ข้อมูลที่ลบสำรองไว้ที่ `%TEMP%\opencode\affiliate_backup.json` (17 KB) — restore ได้ถ้าต้องการ
+
+### ⚠️ งานที่ยังค้างจากการตัดครั้งนี้
+
+1. **ยังไม่มี regression test สำหรับกฎ** — harness เทสต์กฎเดิมหายไปจาก
+   `%TEMP%\opencode\rules-test\` (เหลือแค่ `node_modules`) → ต้องเขียนใหม่
+   แล้วค่อยตัดตัวเลข rules test ในเอกสารหัวข้อ 29 ก.ย. ให้ตรงของจริง
+   (ตัวเลข 47/47 ข้างบนนั้นเป็นของ **ก่อน** ตัด affiliate)

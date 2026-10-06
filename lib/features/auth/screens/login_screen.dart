@@ -10,9 +10,9 @@ import '../../../core/theme/app_typography.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../repositories/auth_repository.dart';
 
-/// Entry screen for every role (customer / seller / affiliate).
+/// Entry screen for every role (customer / seller / admin).
 ///
-/// One screen serves all roles on purpose: the brief's four roles share the
+/// One screen serves all roles on purpose: the brief's roles share the
 /// same identity, and role selection happens after sign-in, not before —
 /// asking for a role up front is the most common drop-off in Thai
 /// marketplace apps.

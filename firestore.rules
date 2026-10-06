@@ -109,7 +109,7 @@ service cloud.firestore {
       // (เบอร์โทร/อีเมลถูกกรองออกที่ชั้น UI — UserModel.toPublicMap)
       allow read: if isSignedIn();
 
-      // สมัครได้เป็นลูกค้า, ผู้ขาย หรือ Affiliate แต่ห้ามกำหนด role admin เอง
+      // สมัครได้เป็นลูกค้าหรือผู้ขาย แต่ห้ามกำหนด role admin เอง
       allow create: if isSignedIn()
         && request.auth.uid == userId
         && request.resource.data.keys().hasOnly([
@@ -119,14 +119,11 @@ service cloud.firestore {
              'createdAt',
              'phone',
              'province',
-             'affiliatePlatform',
-             'affiliateHandle',
-             'affiliateProfileUrl',
            ])
         && request.resource.data.roles is list
         && 'customer' in request.resource.data.roles
         && request.resource.data.roles.hasOnly(
-             ['customer', 'seller', 'affiliate']
+             ['customer', 'seller']
            )
         && request.resource.data.displayName is string
         && request.resource.data.displayName.size() > 0
@@ -134,13 +131,6 @@ service cloud.firestore {
         && request.resource.data.phone.size() > 0
         && request.resource.data.province is string
         && request.resource.data.province.size() > 0
-        && (!('affiliate' in request.resource.data.roles)
-          || (request.resource.data.affiliatePlatform is string
-            && request.resource.data.affiliatePlatform.size() > 0
-            && request.resource.data.affiliateHandle is string
-            && request.resource.data.affiliateHandle.size() > 0
-            && request.resource.data.affiliateProfileUrl is string
-            && request.resource.data.affiliateProfileUrl.size() > 0))
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.createdAt == request.time;
 
@@ -158,7 +148,7 @@ service cloud.firestore {
             && request.resource.data.roles is list
             && request.resource.data.roles.size() > 0
             && request.resource.data.roles.hasOnly(
-                 ['customer', 'seller', 'affiliate', 'admin']
+                 ['customer', 'seller', 'admin']
                )
             && ('admin' in request.resource.data.roles)
                  == ('admin' in resource.data.roles))
@@ -443,40 +433,6 @@ service cloud.firestore {
     match /coupons/{couponId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
-    }
-
-    // ================================================================ //
-    // affiliate_* — พาร์ทเนอร์เห็นแค่ของตัวเอง
-    // ================================================================ //
-    match /affiliate_links/{linkId} {
-      allow read: if isSignedIn() && (
-        resource.data.affiliateUid == request.auth.uid || isAdmin()
-      );
-
-      allow create: if isSignedIn()
-        && hasRole('affiliate')
-        && request.resource.data.affiliateUid == request.auth.uid;
-
-      // คลิก/ออเดอร์ถูกนับโดยระบบ ไม่ใช่ผู้ใช้
-      allow update: if isAdmin();
-
-      allow delete: if isSignedIn() && (
-        resource.data.affiliateUid == request.auth.uid || isAdmin()
-      );
-    }
-
-    match /affiliate_clicks/{clickId} {
-      // คลิกจากลิงก์ต้องบันทึกได้แม้ผู้คลิกยังไม่ได้ล็อกอิน
-      allow create: if true;
-      allow read, update, delete: if isAdmin();
-    }
-
-    match /affiliate_commissions/{commissionId} {
-      allow read: if isSignedIn() && (
-        resource.data.affiliateUid == request.auth.uid || isAdmin()
-      );
-      allow create, update: if isAdmin();
-      allow delete: if neverDelete();
     }
 
     // ================================================================ //

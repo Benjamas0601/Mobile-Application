@@ -13,7 +13,7 @@ import '../../../repositories/auth_repository.dart';
 import '../widgets/hero_3d.dart';
 
 /// ประเภทบัญชีที่ฟอร์มสมัครรองรับ โดยทุกประเภทมี role customer พื้นฐาน
-enum _RegistrationType { customer, store, affiliate }
+enum _RegistrationType { customer, store }
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key, this.redirect});
@@ -36,16 +36,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final TextEditingController _communityController = TextEditingController();
   final TextEditingController _storeDescriptionController =
       TextEditingController();
-  final TextEditingController _affiliateHandleController =
-      TextEditingController();
-  final TextEditingController _affiliateProfileController =
-      TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmController = TextEditingController();
 
   _RegistrationType _registrationType = _RegistrationType.customer;
   ThaiRegion _region = ThaiRegion.central;
-  String _affiliatePlatform = 'facebook';
   bool _busy = false;
   bool _obscure = true;
   String? _error;
@@ -59,8 +54,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _storeNameController.dispose();
     _communityController.dispose();
     _storeDescriptionController.dispose();
-    _affiliateHandleController.dispose();
-    _affiliateProfileController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
     super.dispose();
@@ -86,15 +79,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             accountType: switch (_registrationType) {
               _RegistrationType.customer => UserRole.customer,
               _RegistrationType.store => UserRole.seller,
-              _RegistrationType.affiliate => UserRole.affiliate,
             },
             storeName: _storeNameController.text,
             community: _communityController.text,
             storeDescription: _storeDescriptionController.text,
             region: _region.value,
-            affiliatePlatform: _affiliatePlatform,
-            affiliateHandle: _affiliateHandleController.text,
-            affiliateProfileUrl: _affiliateProfileController.text,
           );
       if (!mounted) return;
       final String? redirect = widget.redirect;
@@ -145,11 +134,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           value: _RegistrationType.store,
                           label: Text('ร้านค้า'),
                           icon: Icon(Icons.storefront_outlined),
-                        ),
-                        ButtonSegment<_RegistrationType>(
-                          value: _RegistrationType.affiliate,
-                          label: Text('Affiliate'),
-                          icon: Icon(Icons.campaign_outlined),
                         ),
                       ],
                       selected: <_RegistrationType>{_registrationType},
@@ -301,8 +285,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       'สมัครเพื่อค้นหาและสั่งซื้อสินค้า OTOP ทั่วประเทศ',
     _RegistrationType.store =>
       'สร้างบัญชีผู้ขายพร้อมเปิดหน้าร้านสำหรับลงสินค้า',
-    _RegistrationType.affiliate =>
-      'สมัครพาร์ทเนอร์และเชื่อมช่องทางที่ใช้โปรโมตสินค้า',
   };
 
   List<Widget> _roleSpecificFields() {
@@ -366,56 +348,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           validator: _validateRequired,
         ),
       ],
-      _RegistrationType.affiliate => <Widget>[
-        const SizedBox(height: AppSpacing.md),
-        DropdownButtonFormField<String>(
-          initialValue: _affiliatePlatform,
-          decoration: const InputDecoration(
-            labelText: 'ช่องทางหลัก',
-            prefixIcon: Icon(Icons.public_outlined),
-          ),
-          items: const <DropdownMenuItem<String>>[
-            DropdownMenuItem(value: 'facebook', child: Text('Facebook')),
-            DropdownMenuItem(value: 'instagram', child: Text('Instagram')),
-            DropdownMenuItem(value: 'tiktok', child: Text('TikTok')),
-            DropdownMenuItem(value: 'youtube', child: Text('YouTube')),
-            DropdownMenuItem(
-              value: 'website',
-              child: Text('เว็บไซต์ / อื่น ๆ'),
-            ),
-          ],
-          onChanged: _busy
-              ? null
-              : (String? value) {
-                  if (value != null) setState(() => _affiliatePlatform = value);
-                },
-        ),
-        const SizedBox(height: AppSpacing.md),
-        TextFormField(
-          controller: _affiliateHandleController,
-          textInputAction: TextInputAction.next,
-          enabled: !_busy,
-          decoration: const InputDecoration(
-            labelText: 'ชื่อบัญชี / Handle',
-            prefixIcon: Icon(Icons.alternate_email_rounded),
-          ),
-          validator: _validateRequired,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        TextFormField(
-          controller: _affiliateProfileController,
-          keyboardType: TextInputType.url,
-          textInputAction: TextInputAction.next,
-          autocorrect: false,
-          enabled: !_busy,
-          decoration: const InputDecoration(
-            labelText: 'ลิงก์โปรไฟล์สาธารณะ',
-            hintText: 'https://...',
-            prefixIcon: Icon(Icons.link_rounded),
-          ),
-          validator: _validateProfileUrl,
-        ),
-      ],
     };
   }
 
@@ -447,15 +379,4 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   static String? _validateRequired(String? value) =>
       value == null || value.trim().isEmpty ? AppStrings.errRequired : null;
-
-  static String? _validateProfileUrl(String? value) {
-    final String url = (value ?? '').trim();
-    final Uri? uri = Uri.tryParse(url);
-    if (uri == null ||
-        !<String>{'http', 'https'}.contains(uri.scheme) ||
-        uri.host.isEmpty) {
-      return 'กรุณากรอกลิงก์ที่ขึ้นต้นด้วย https://';
-    }
-    return null;
-  }
 }

@@ -20,10 +20,10 @@
                                │
         ล็อกอินแล้ว ──► แยกตาม role ที่บัญชีมี
                                │
-        ┌──────────────┬───────┴───────┬──────────────┐
-        ▼              ▼               ▼              ▼
-    Customer       Seller          Affiliate        Admin
-   (5 แท็บ)        (5 แท็บ)         (4 แท็บ)      (จัดการข้อมูล)
+        ┌────────────┬────────────┬────────────┬────────────┐
+        ▼            ▼            ▼            ▼
+        Customer     Seller                     Admin
+        (5 แท็บ)      (5 แท็บ)                  (จัดการข้อมูล)
 ```
 
 ---
@@ -112,36 +112,13 @@ Seller Dashboard
 
 ---
 
-## 3. Affiliate — โปรโมต → ได้คอมมิชชัน
-
-```
-Login (บัญชีที่มี role = affiliate)
-  │
-  ▼
-Affiliate Dashboard
-  ├─ Clicks / Orders / Conversion / Commission
-  │
-  ├─► Products (สินค้าที่เลือกโปรโมตได้)
-  │      └─► Generate Affiliate Link (เลือกสินค้า → ได้ลิงก์ที่มีชื่อตัวเอง)
-  │
-  ├─► Links ──► รายการลิงก์ของตัวเอง + จำนวนคลิกสะสม
-  │
-  └─► Commission
-         ตัวอย่าง: สินค้า 500 บาท × คอมมิชชัน 5% = 25 บาท
-         สถานะ: รอตรวจสอบ → อนุมัติแล้ว / ไม่อนุมัติ / ยกเลิก
-```
-
-> **ไม่มีการถอนเงินจริงใน MVP** — เป็น business logic ภายในระบบเพื่อสาธิตแนวคิด ตามที่กำหนดไว้
-
----
-
-## 4. Admin — ดูแลระบบ
+## 3. Admin — ดูแลระบบ
 
 ```
 Login (role = admin)
   │
   ▼
-จัดการ: Users / Stores / Products / Categories / Orders / Commission
+จัดการ: Users / Stores / Products / Categories / Orders
   └─ หมวดหมู่สินค้าเป็นรายการที่ admin ต้องจัดการ (ร้านเลือกได้แค่หมวดที่ admin เปิด)
 ```
 
@@ -149,7 +126,7 @@ Login (role = admin)
 
 ---
 
-## 5. Error / Empty / Loading — ทุกโฟลว์ต้องมี
+## 4. Error / Empty / Loading — ทุกโฟลว์ต้องมี
 
 | สถานการณ์ | ข้อความที่ต้องแสดง | ปุ่ม |
 |---|---|---|

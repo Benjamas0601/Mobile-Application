@@ -97,16 +97,6 @@ class HomeScreen extends ConsumerWidget {
                 icon: const Icon(Icons.storefront_outlined),
                 onPressed: () => context.push(AppRoutes.sellerRoot),
               ),
-            // Affiliate console. Its own button rather than a shared "console"
-            // entry because one account can be both: `docs/01_product_problem.md`
-            // argues a real OTOP producer sells *and* promotes, so each console
-            // has to stay one tap away instead of the other being unreachable.
-            if (user.isAffiliate || user.isAdmin)
-              IconButton(
-                tooltip: AppStrings.navAffiliateDashboard,
-                icon: const Icon(Icons.campaign_outlined),
-                onPressed: () => context.push(AppRoutes.affiliateRoot),
-              ),
             IconButton(
               tooltip: AppStrings.navOrders,
               icon: const Icon(Icons.receipt_long_outlined),

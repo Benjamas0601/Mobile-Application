@@ -13,7 +13,6 @@ library;
 enum UserRole {
   customer('customer', 'ลูกค้า'),
   seller('seller', 'ผู้ขาย OTOP'),
-  affiliate('affiliate', 'พาร์ทเนอร์'),
   admin('admin', 'ผู้ดูแลระบบ');
 
   const UserRole(this.value, this.label);
@@ -167,28 +166,6 @@ enum DiscountType {
           (e) => e.value == value,
         ) ??
         DiscountType.fixedAmount;
-  }
-}
-
-/// Affiliate commission lifecycle. No real payout in the MVP — this is
-/// business logic only, per the project brief.
-enum CommissionStatus {
-  pending('pending', 'รอตรวจสอบ'),
-  approved('approved', 'อนุมัติแล้ว'),
-  rejected('rejected', 'ไม่อนุมัติ'),
-  cancelled('cancelled', 'ยกเลิก');
-
-  const CommissionStatus(this.value, this.label);
-
-  final String value;
-  final String label;
-
-  static CommissionStatus fromValue(String? value) {
-    return ThaiEnumLookup.firstOrNull(
-          CommissionStatus.values,
-          (e) => e.value == value,
-        ) ??
-        CommissionStatus.pending;
   }
 }
 

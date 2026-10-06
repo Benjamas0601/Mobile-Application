@@ -1,15 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:thai_otop_marketplace/core/constants/app_enums.dart';
 import 'package:thai_otop_marketplace/core/theme/app_colors.dart';
 import 'package:thai_otop_marketplace/core/theme/app_theme.dart';
-import 'package:thai_otop_marketplace/features/affiliate/screens/affiliate_home_screen.dart';
-import 'package:thai_otop_marketplace/models/affiliate_commission_model.dart';
-import 'package:thai_otop_marketplace/models/affiliate_link_model.dart';
-import 'package:thai_otop_marketplace/models/user_model.dart';
-import 'package:thai_otop_marketplace/providers/affiliate_provider.dart';
-import 'package:thai_otop_marketplace/providers/auth_provider.dart';
 import 'package:thai_otop_marketplace/widgets/design_system.dart';
 
 /// Renders the shared design components under both themes.
@@ -167,78 +160,4 @@ void main() {
       });
     });
   }
-
-  group('affiliate banner under both themes', () {
-    const UserModel affiliate = UserModel(
-      uid: 'af1',
-      displayName: 'โบราณ',
-      email: 'affiliate@example.com',
-      roles: <UserRole>[UserRole.customer, UserRole.affiliate],
-      affiliatePlatform: 'TikTok',
-      affiliateHandle: 'otop.boran',
-    );
-
-    testWidgets('the channel line renders without a doubled prefix', (
-      WidgetTester tester,
-    ) async {
-      // The regression that shipped: a handle stored as `otop.boran` was
-      // rendered as `otop.otop.boran` because the prefix was unconditional.
-      for (final Brightness brightness in <Brightness>[
-        Brightness.light,
-        Brightness.dark,
-      ]) {
-        final String mode = brightness == Brightness.light ? 'light' : 'dark';
-        final ProviderContainer container = ProviderContainer(
-          overrides: [
-            authUserProvider.overrideWith(
-              (Ref ref) => Stream<UserModel?>.value(affiliate),
-            ),
-            myAffiliateLinksProvider.overrideWith(
-              (Ref ref) async => <AffiliateLinkModel>[],
-            ),
-            myAffiliateCommissionsProvider.overrideWith(
-              (Ref ref) async => <AffiliateCommissionModel>[],
-            ),
-          ],
-        );
-        addTearDown(container.dispose);
-        await container.read(myAffiliateLinksProvider.future);
-        await container.read(myAffiliateCommissionsProvider.future);
-
-        await tester.pumpWidget(
-          UncontrolledProviderScope(
-            container: container,
-            child: MaterialApp(
-              theme: brightness == Brightness.light
-                  ? AppTheme.light
-                  : AppTheme.dark,
-              home: const AffiliateHomeScreen(),
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        // The handle is already fully qualified in storage, so the
-        // channel line must read exactly `otop.boran · TikTok`. It
-        // appears twice by design: the AppBar title and the banner in
-        // the body. Neither may carry a second prefix.
-        expect(
-          find.text('otop.boran · TikTok'),
-          findsNWidgets(2),
-          reason: 'the AppBar and the banner both show the channel in $mode',
-        );
-        expect(
-          find.textContaining('otop.otop.'),
-          findsNothing,
-          reason: 'the handle must never be prefixed twice',
-        );
-
-        // The screen mirrors scroll position, which leaves a timer running
-        // past teardown, so the tree is disposed explicitly before the test
-        // ends.
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pumpAndSettle();
-      }
-    });
-  });
 }

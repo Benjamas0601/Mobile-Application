@@ -13,9 +13,6 @@ class UserModel {
     required this.email,
     this.phone = '',
     this.province = '',
-    this.affiliatePlatform = '',
-    this.affiliateHandle = '',
-    this.affiliateProfileUrl = '',
     this.avatarUrl,
     this.roles = const <UserRole>[],
   });
@@ -25,15 +22,11 @@ class UserModel {
   final String email;
   final String phone;
   final String province;
-  final String affiliatePlatform;
-  final String affiliateHandle;
-  final String affiliateProfileUrl;
   final String? avatarUrl;
   final List<UserRole> roles;
 
   bool get isSeller => roles.contains(UserRole.seller);
   bool get isAdmin => roles.contains(UserRole.admin);
-  bool get isAffiliate => roles.contains(UserRole.affiliate);
 
   /// First name only — used for a friendly greeting.
   String get shortName => displayName.split(' ').first;
@@ -46,9 +39,6 @@ class UserModel {
       email: r.string('email'),
       phone: r.string('phone'),
       province: r.string('province'),
-      affiliatePlatform: r.string('affiliatePlatform'),
-      affiliateHandle: r.string('affiliateHandle'),
-      affiliateProfileUrl: r.string('affiliateProfileUrl'),
       avatarUrl: r.stringOrNull('avatarUrl'),
       roles: r
           .stringList('roles')

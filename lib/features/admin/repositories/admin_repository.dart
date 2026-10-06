@@ -37,59 +37,6 @@ class AdminRepository {
     return users;
   }
 
-  Future<List<AdminAffiliateRecord>> listAffiliates() async {
-    final List<QuerySnapshot<Map<String, dynamic>>> snapshots =
-        await Future.wait(<Future<QuerySnapshot<Map<String, dynamic>>>>[
-          _firestore
-              .collection('users')
-              .where('roles', arrayContains: UserRole.affiliate.value)
-              .limit(200)
-              .get(),
-          _firestore.collection('affiliate_links').limit(500).get(),
-          _firestore.collection('affiliate_commissions').limit(500).get(),
-        ]);
-
-    final Map<String, int> linksByAffiliate = <String, int>{};
-    for (final QueryDocumentSnapshot<Map<String, dynamic>> doc
-        in snapshots[1].docs) {
-      final String? uid = doc.data()['affiliateUid'] as String?;
-      if (uid != null) {
-        linksByAffiliate.update(
-          uid,
-          (int count) => count + 1,
-          ifAbsent: () => 1,
-        );
-      }
-    }
-
-    final Map<String, int> commissionsByAffiliate = <String, int>{};
-    for (final QueryDocumentSnapshot<Map<String, dynamic>> doc
-        in snapshots[2].docs) {
-      final String? uid = doc.data()['affiliateUid'] as String?;
-      if (uid != null) {
-        commissionsByAffiliate.update(
-          uid,
-          (int count) => count + 1,
-          ifAbsent: () => 1,
-        );
-      }
-    }
-
-    final List<AdminAffiliateRecord> records = snapshots[0].docs.map((doc) {
-      final UserModel user = UserModel.fromFirestore(doc.id, doc.data());
-      return AdminAffiliateRecord(
-        user: user,
-        linkCount: linksByAffiliate[user.uid] ?? 0,
-        commissionCount: commissionsByAffiliate[user.uid] ?? 0,
-      );
-    }).toList();
-    records.sort(
-      (AdminAffiliateRecord a, AdminAffiliateRecord b) =>
-          a.user.displayName.compareTo(b.user.displayName),
-    );
-    return records;
-  }
-
   Future<void> updateStoreBasics({
     required StoreModel store,
     required String name,
@@ -142,16 +89,4 @@ class AdminRepository {
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
-}
-
-class AdminAffiliateRecord {
-  const AdminAffiliateRecord({
-    required this.user,
-    required this.linkCount,
-    required this.commissionCount,
-  });
-
-  final UserModel user;
-  final int linkCount;
-  final int commissionCount;
 }

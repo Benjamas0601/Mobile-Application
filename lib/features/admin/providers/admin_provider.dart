@@ -17,8 +17,3 @@ final FutureProvider<List<UserModel>> adminUsersProvider =
     FutureProvider<List<UserModel>>((Ref ref) {
       return ref.watch(adminRepositoryProvider).listUsers();
     });
-
-final FutureProvider<List<AdminAffiliateRecord>> adminAffiliatesProvider =
-    FutureProvider<List<AdminAffiliateRecord>>((Ref ref) {
-      return ref.watch(adminRepositoryProvider).listAffiliates();
-    });

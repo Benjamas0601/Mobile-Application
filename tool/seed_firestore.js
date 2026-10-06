@@ -67,10 +67,6 @@ const USERS = [
   { key: 'sellerCentral',email: 'seller.central@example.com',name: 'ลุงบุญส่ง ศรีสุขใจ',   phone: '0812345672', province: 'สุราษฎร์ธานี',  roles: ['customer', 'seller'] },
   { key: 'sellerSouth',  email: 'seller.south@example.com',  name: 'ป้าสมจิตร์ แก้วงาม',   phone: '0812345673', province: 'นครศรีธรรมราช', roles: ['customer', 'seller'] },
   { key: 'customer',     email: 'customer@example.com',     name: 'ณัฐวุฒิ วัฒนกิจ',      phone: '0812345674', province: 'กรุงเทพมหานคร',  roles: ['customer'] },
-  // พาร์ทเนอร์ — บัญชีที่ `docs/02_user_flows.md:115` กำหนดไว้ว่าต้องมีแดชบอร์ด
-  // โชว์ยอดขาย/คลิก/คอมมิชชัน จึงต้องมีบัญชีตัวอย่างให้ล็อกอินดู
-  { key: 'affiliate',    email: 'affiliate@example.com',    name: 'โบราณ รักแพรว',        phone: '0812345676', province: 'เชียงใหม่',      roles: ['customer', 'affiliate'],
-    affiliatePlatform: 'TikTok', affiliateHandle: 'otop.boran', affiliateProfileUrl: 'https://tiktok.com/@otop.boran' },
   { key: 'admin',        email: 'admin@example.com',         name: 'ผู้ดูแลระบบ',          phone: '0812345675', province: 'กรุงเทพมหานคร',  roles: ['customer', 'admin'] },
 ];
 
@@ -316,39 +312,6 @@ const ORDERS = [
 ];
 
 // ------------------------------------------------------------------ //
-// Affiliate demo data — ให้แดชบอร์ดพาร์ทเนอร์มีตัวเลขจริงให้ดู ไม่ใช่ศูนย์
-// ทั้งหมด (`docs/02_user_flows.md:122` ระบุว่าต้องโชว์
-// Clicks / Orders / Conversion / Commission)
-//
-// หมายเหตุการออกแบบ: `clicks`/`orders` เก็บเป็น counter บน link doc
-// ไม่ใช่การนับแถวใน `affiliate_clicks` เพราะกฎ firestore.rules ให้อ่าน
-// collection นั้นเฉพาะแอดมิน (แถวคลิกมีข้อมูลผู้คลิก) ดังนั้นยอดรวมต้องอยู่
-// ในเอกสารที่พาร์ทเนอร์อ่านได้
-//
-// `orderTotal` บน commission เป็นการ denormalize เช่นเดียวกัน เพราะพาร์ทเนอร์
-// อ่าน collection `orders` ไม่ได้ (ออเดอร์มีชื่อผู้ซื้อและผู้ขาย) ยอดขายที่แดชบอร์ด
-// โชว์จึง join ตอนอ่านไม่ได้
-// ------------------------------------------------------------------ //
-const AFFILIATE_LINKS = [
-  { id: 'al-boran-silk',   productId: 'p-silk-scarf-red', clicks: 148, orders: 4, days: 40 },
-  { id: 'al-boran-coffee', productId: 'p-arabica-1kg',    clicks: 96,  orders: 2, days: 28 },
-  { id: 'al-boran-herb',   productId: 'p-khanom-thai',    clicks: 41,  orders: 0, days: 12 },
-  { id: 'al-boran-sugar',  productId: 'p-palm-sugar',     clicks: 7,   orders: 0, days: 4  },
-];
-
-const AFFILIATE_COMMISSIONS = [
-  { id: 'ac-boran-1', orderId: 'o-demo-1', productId: 'p-silk-scarf-red',
-    orderTotal: 2230, rate: 5, status: 'approved',  days: 30 },
-  { id: 'ac-boran-2', orderId: 'o-demo-2', productId: 'p-arabica-1kg',
-    orderTotal: 1450, rate: 5, status: 'approved',  days: 20 },
-  { id: 'ac-boran-3', orderId: 'o-demo-3', productId: 'p-arabica-250',
-    orderTotal: 840,  rate: 5, status: 'pending',   days: 12 },
-  // ยกเลิกแล้ว — ต้องไม่ถูกนับในยอดขาย/ออเดอร์บนแดชบอร์ด
-  { id: 'ac-boran-4', orderId: 'o-demo-6', productId: 'p-palm-sugar',
-    orderTotal: 350,  rate: 5, status: 'cancelled', days: 1  },
-];
-
-// ------------------------------------------------------------------ //
 // Auth + Firestore helpers
 // ------------------------------------------------------------------ //
 async function getToken(tokens) {
@@ -458,11 +421,6 @@ async function ensureAuthUser(token, user) {
       province: u.province,
       avatarUrl: null,
       createdAt: daysAgo(60),
-      // บัญชีพาร์ทเนอร์ต้องมี 3 ฟิลด์นี้ครบ (firestore.rules บังคับตอนสมัคร)
-      // บัญชีอื่นเขียนค่าว่างให้ชัดว่า "ไม่ได้มี" แทนการไม่มีฟิลด์เลย
-      affiliatePlatform: u.affiliatePlatform || '',
-      affiliateHandle: u.affiliateHandle || '',
-      affiliateProfileUrl: u.affiliateProfileUrl || '',
     });
   }
 
@@ -571,41 +529,6 @@ async function ensureAuthUser(token, user) {
     }
   }
 
-  // ข้อมูลตัวอย่างของบัญชีพาร์ทเนอร์ — ลิงก์โปรโมต + คอมมิชชันทุกสถานะ
-  // (อนุมัติ/รอตรวจสอบ/ยกเลิก) เพื่อให้ทั้ง 3 สถานะมีข้อมูลให้ดูตามสเปก
-  console.log('\n2.6) demo affiliate links + commissions');
-  const productById = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]));
-
-  for (const l of AFFILIATE_LINKS) {
-    const p = productById[l.productId];
-    add('affiliate_links', l.id, {
-      affiliateUid: uids['affiliate'],
-      productId: l.productId,
-      productName: p ? p.name : '',
-      productImageUrl: p ? img(l.productId + '-1') : '',
-      storeId: p ? p.storeId : '',
-      code: l.id.replace('al-boran-', 'otop-'),
-      clicks: l.clicks,
-      orders: l.orders,
-      createdAt: daysAgo(l.days),
-    });
-  }
-
-  for (const c of AFFILIATE_COMMISSIONS) {
-    const p = productById[c.productId];
-    add('affiliate_commissions', c.id, {
-      affiliateUid: uids['affiliate'],
-      orderId: c.orderId,
-      productId: c.productId,
-      productName: p ? p.name : '',
-      orderTotal: c.orderTotal,
-      rate: c.rate,
-      amount: Math.round(c.orderTotal * c.rate) / 100,
-      status: c.status,
-      createdAt: daysAgo(c.days),
-    });
-  }
-
   console.log('3) batchWrite ' + writes.length + ' documents');
   const res = await api(docsBase + ':batchWrite', token, {
     method: 'POST',
@@ -625,8 +548,6 @@ async function ensureAuthUser(token, user) {
   console.log('  product_variants    ' + VARIANTS.length);
   console.log('  orders              ' + ordersCount);
   console.log('  payments            ' + paymentsCount);
-  console.log('  affiliate_links     ' + AFFILIATE_LINKS.length);
-  console.log('  affiliate_commissions ' + AFFILIATE_COMMISSIONS.length);
   console.log('\ndemo accounts (password: ' + DEMO_PASSWORD + ')');
   for (const u of USERS) {
     console.log('  ' + u.roles.join('+').padEnd(16) + u.email);
