@@ -5,6 +5,8 @@ import 'firestore_codec.dart';
 ///
 /// Roles live in Firestore (not in the Auth token) so a role change takes
 /// effect on the next read instead of needing a token refresh.
+/// ปัจจุบันมีแค่ 3 บทบาท customer/seller/admin — affiliate ถูกลบ (6 ต.ค. 2569)
+/// ฝั่ง client ไว้ใจบทบาทจากเอกสารนี้ และ `firestore.rules` เป็นคนตรวจอีกชั้นหนึ่ง
 /// โปรไฟล์ผู้ใช้และบทบาทที่อ่านจากเอกสาร `users/{uid}`
 class UserModel {
   const UserModel({

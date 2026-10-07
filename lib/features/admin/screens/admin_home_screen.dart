@@ -578,7 +578,9 @@ class _UserEditorState extends ConsumerState<_UserEditor> {
   late final TextEditingController _province = TextEditingController(
     text: widget.user.province,
   );
-  late final Set<UserRole> _roles = widget.user.roles
+  // กล่องนี้ปล่อยให้แก้แค่ customer/seller — admin ถ้าเป็นอยู่ก็ถูกตัดออก
+    // ไม่ให้แก้ผ่าน UI เพื่อกัน privilege escalation
+    late final Set<UserRole> _roles = widget.user.roles
       .where((UserRole role) => role != UserRole.admin)
       .toSet();
   bool _saving = false;

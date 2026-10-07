@@ -549,9 +549,9 @@ commit `fd156e7` (22:09) เพิ่ม Admin Hub + order tracking + กฎ reg
 1. **รูป probe บน Cloudinary 2 ใบ** — `smoke-test/probe/…` และ `smoke-test/escaped/…` ลบเองไม่ได้
    (unsigned preset ต้องใช้ API secret) · ลบผ่าน Media Library หรือส่ง secret มาให้ลบแทน
 2. **iOS ยังไม่ได้ build** — ต้องใช้ macOS + Xcode
-3. **เทสต์กฎ Firestore ยังอยู่นอกโปรเจกต์** — เคยอยู่ที่ `%TEMP%\opencode\rules-test\check.js`
-   แต่ไฟล์สคริปต์หายไปแล้ว (เหลือแค่ `node_modules`) → **ต้องเขียนใหม่** หลังแก้กฎ
-   ไม่งั้นกฎที่ deploy จะไม่มี regression test
+3. ~~**เทสต์กฎ Firestore อยู่นอกโปรเจกต์**~~ → ✅ **ย้ายเข้าอยู่ใน repo แล้ว** ที่ `tool/rules-test/`
+   (รันผ่าน Firestore Emulator, `npm test`) — **64/64 ผ่าน** และเจอ/แก้ bug จริงที่ `isParticipant()`
+   ดูหัวข้อ "ตัดขอบเขต: ลบ Affiliate" ด้านล่าง
 4. **E2E ฝั่งผู้ขาย** — ทดสอบแค่ Product CRUD (`create → edit price → delete`)
    ยังไม่ได้เดิน order status และ store profile บน emulator
 
@@ -602,13 +602,13 @@ commit `fd156e7` (22:09) เพิ่ม Admin Hub + order tracking + กฎ reg
 | deploy `firestore.rules` ขึ้น cloud | ruleset **`459d82c8-d412-4ea6-9ae4-ab362e56fbca`** (แทน `c04029c3`) |
 | rules บน cloud vs ไฟล์ในเครื่อง | **IDENTICAL** · 463 บรรทัด · affiliate 0 จุด |
 | ข้อมูล affiliate ใน Firestore | `affiliate_links` 5 · `affiliate_commissions` 4 ถูกลบหมด · users 6 รายโดนตัดฟิลด์ · เหลือ 0 |
+| **rules regression test บน Firestore Emulator** (7 ต.ค. 2569) | **`tool/rules-test/` ใน repo — 64/64 ผ่าน**<br>เจอ bug จริง: `isParticipant()` อ่าน `resource.data` ของตัว message (เป็น null ตอนสร้าง) → **ส่งข้อความแชทไม่ได้ตลอด**<br>แก้ให้ hop ไปที่ `chat_threads/{threadId}` แล้ว deploy ใหม่ → ruleset **`5ff11dd7-9388-412b-ab40-411c7cec0099`**<br>cloud vs local: **IDENTICAL** · 468 บรรทัด · affiliate 0 จุด |
 
 > เทสต์ `test/app_router_test.dart` เหลือ assertion 1 จุดที่จงใจเช็คว่า `find.text('Affiliate')` ได้ `findsNothing`
 > ข้อมูลที่ลบสำรองไว้ที่ `%TEMP%\opencode\affiliate_backup.json` (17 KB) — restore ได้ถ้าต้องการ
 
 ### ⚠️ งานที่ยังค้างจากการตัดครั้งนี้
 
-1. **ยังไม่มี regression test สำหรับกฎ** — harness เทสต์กฎเดิมหายไปจาก
-   `%TEMP%\opencode\rules-test\` (เหลือแค่ `node_modules`) → ต้องเขียนใหม่
-   แล้วค่อยตัดตัวเลข rules test ในเอกสารหัวข้อ 29 ก.ย. ให้ตรงของจริง
-   (ตัวเลข 47/47 ข้างบนนั้นเป็นของ **ก่อน** ตัด affiliate)
+- ~~ยังไม่มี regression test สำหรับกฎ~~ → ✅ **เสร็จ: `tool/rules-test/` ใน repo 64/64 ผ่าน**
+- ~~กฎชุดแรกที่ deploy (หลังตัด) ยังเป็นของเดิม~~ → ✅ **deploy รอบ 7 ต.ค. 2569 (ruleset `5ff11dd7…`) แก้ bug แชทแล้ว** (รายละเอียดตารางด้านบน)
+- กำลังใส่ comment ภาษาไทยสำคัญ ๆ ลงไฟล์ lib ที่แก้ระหว่างลบ affiliate

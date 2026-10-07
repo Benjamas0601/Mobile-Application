@@ -393,8 +393,13 @@ service cloud.firestore {
     // ================================================================ //
     match /chat_threads/{threadId} {
 
+      // สมาชิกห้อง (อ่านจากเอกสาร thread ไม่ใช่เอกสารปัจจุบัน —
+      // ตอน create message ยังไม่มี resource ทำให้ resource.data เป็น null
+      // ต้อง hop ไปที่ chat_threads/{threadId} แทน)
       function isParticipant() {
-        return isSignedIn() && request.auth.uid in resource.data.participantUids;
+        return isSignedIn()
+          && exists(/databases/$(database)/documents/chat_threads/$(threadId))
+          && request.auth.uid in get(/databases/$(database)/documents/chat_threads/$(threadId)).data.participantUids;
       }
 
       function isThreadSeller() {

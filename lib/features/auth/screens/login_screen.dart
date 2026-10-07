@@ -17,6 +17,7 @@ import '../../../repositories/auth_repository.dart';
 /// asking for a role up front is the most common drop-off in Thai
 /// marketplace apps.
 /// รับข้อมูลล็อกอินและพาผู้ใช้กลับไปยังปลายทางเดิมหลังยืนยันตัวตน
+/// (บทบาทมี 3: customer / seller / admin — affiliate ถูกลบ 6 ต.ค. 2569)
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key, this.redirect});
 

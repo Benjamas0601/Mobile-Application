@@ -107,6 +107,8 @@ class AuthRepository {
     final String cleanName = displayName.trim();
     final String cleanPhone = phone.trim();
     final String cleanProvince = province.trim();
+    // แอปสมัครสดได้เฉพาะ customer/seller เท่านั้น — ไม่มีทางขอ role admin
+    // จากฝั่ง client (firestore.rules users.create จำกัด hasOnly อยู่อีกชั้นหนึ่ง)
     if (!<UserRole>{UserRole.customer, UserRole.seller}.contains(accountType)) {
       throw const AuthFailure('ประเภทบัญชีไม่ถูกต้อง');
     }

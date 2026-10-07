@@ -13,6 +13,8 @@ import '../../../repositories/auth_repository.dart';
 import '../widgets/hero_3d.dart';
 
 /// ประเภทบัญชีที่ฟอร์มสมัครรองรับ โดยทุกประเภทมี role customer พื้นฐาน
+/// บทบาท `affiliate` ถูกลบไปแล้ว (6 ต.ค. 2569) — เหลือแค่ ลูกค้า / ร้านค้า
+/// ตรงกับที่ firestore.rules อนุญาตให้สมัครได้
 enum _RegistrationType { customer, store }
 
 class RegisterScreen extends ConsumerStatefulWidget {

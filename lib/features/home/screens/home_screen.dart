@@ -54,6 +54,7 @@ class HomeScreen extends ConsumerWidget {
           ],
         ),
         actions: <Widget>[
+          // จุดนี้เดิมเคยมีปุ่ม Affiliate — ถูกลบออกพร้อมทั้งฟีเจอร์เมื่อ 6 ต.ค. 2569
           // Explore is the redesigned browse entry point, so it gets the first
           // slot in the AppBar rather than hiding behind the store list.
           IconButton(

@@ -65,6 +65,7 @@ class SellerHomeScreen extends ConsumerWidget {
           ],
         ),
         actions: <Widget>[
+          // ปุ่ม "รายงาน Affiliate" เคยอยู่หลังปุ่มนี้ — ลบแล้ว (6 ต.ค. 2569)
           IconButton(
             tooltip: 'ดูตลาด OTOP',
             icon: const Icon(Icons.storefront_outlined),

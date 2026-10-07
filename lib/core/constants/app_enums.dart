@@ -6,10 +6,13 @@
 /// the whole codebase.
 library;
 
-/// Who the account acts as. A single account may hold several roles —
+/// Who the account acts as. A single account may hold several roles -
 /// that is intentional and matches how real OTOP sellers often also promote
 /// their own products.
 /// ค่าบทบาทที่เก็บในฐานข้อมูลและป้ายภาษาไทยที่แสดงใน UI
+/// บทบาท `affiliate` ถูกลบออกไปแล้ว (6 ต.ค. 2569) — สมัครสดได้แค่
+/// customer/seller ส่วน admin สร้างผ่าน Firestore โดยตรงเท่านั้น
+/// (ตรงกับ hasOnly ใน `firestore.rules` users.create / users.update)
 enum UserRole {
   customer('customer', 'ลูกค้า'),
   seller('seller', 'ผู้ขาย OTOP'),
