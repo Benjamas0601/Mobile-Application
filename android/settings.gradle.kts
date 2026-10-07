@@ -1,3 +1,4 @@
+// โหลด Flutter Gradle plugin จาก SDK ที่ระบุไว้ใน android/local.properties
 pluginManagement {
     val flutterSdkPath =
         run {
@@ -18,6 +19,7 @@ pluginManagement {
 }
 
 plugins {
+    // ระบุเวอร์ชัน plugin ที่ใช้ร่วมกัน และโหลด Flutter plugin ก่อนประเมินโมดูล
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "9.0.1" apply false
     // START: FlutterFire Configuration

@@ -1,3 +1,4 @@
+// การตั้งค่า launch ของ VS Code (ไฟล์นี้รองรับ JSONC) สำหรับรันแอปบน Android emulator และ Chrome
 {
   "version": "0.2.0",
   "configurations": [

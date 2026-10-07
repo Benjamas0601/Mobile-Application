@@ -1,1 +1,2 @@
+# ใช้กฎ lint มาตรฐานของ Flutter เพื่อตรวจคุณภาพและรูปแบบโค้ด Dart
 include: package:flutter_lints/flutter.yaml

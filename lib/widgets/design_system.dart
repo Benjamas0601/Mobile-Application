@@ -3,10 +3,16 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
 
+/// คอมโพเนนต์ UI ที่ใช้ร่วมกันเพื่อให้หน้าจอต่าง ๆ ใช้รูปแบบและระยะห่างเดียวกัน
+///
+/// รวมการ์ด ปุ่ม ป้าย และองค์ประกอบพื้นฐานอื่น ๆ โดยอิงค่าจาก design tokens
+/// ใน `core/theme` เพื่อปรับหน้าตาแอปได้อย่างสอดคล้อง
+
 /// Wraps a child in the design's rounded-square icon plate.
 ///
 /// Used by [EmptyStateView] / [ErrorStateView] and the small warning tiles so
 /// an icon always sits on the same soft disc instead of floating loose.
+/// แสดงไอคอนบนพื้นหลังทรงมนที่มีสีและขนาดกำหนดได้
 class AppIconPlate extends StatelessWidget {
   const AppIconPlate({
     super.key,

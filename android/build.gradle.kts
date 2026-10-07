@@ -1,3 +1,4 @@
+// การตั้งค่าร่วมของ Gradle ทุกโมดูลในโปรเจกต์ Android
 allprojects {
     repositories {
         google()
@@ -6,6 +7,7 @@ allprojects {
 }
 
 val newBuildDir: Directory =
+    // แยกไฟล์ build ออกจาก android/ ไปไว้ที่ build/ ระดับ root ของ Flutter
     rootProject.layout.buildDirectory
         .dir("../../build")
         .get()

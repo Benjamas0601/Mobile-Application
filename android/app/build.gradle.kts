@@ -1,3 +1,4 @@
+// ตั้งค่าการ build โมดูลแอป Android และเชื่อม plugin ของ Flutter/Firebase
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -13,6 +14,7 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // ใช้ Java 17 ให้สอดคล้องกับเวอร์ชัน Gradle และ Kotlin ของโปรเจกต์
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -30,6 +32,7 @@ android {
 
     buildTypes {
         release {
+            // ใช้ debug signing เฉพาะเพื่อให้รัน release ในเครื่องได้; ก่อนเผยแพร่ต้องตั้ง signing จริง
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
