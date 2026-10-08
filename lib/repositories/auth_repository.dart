@@ -69,16 +69,34 @@ class AuthRepository {
         email: email.trim(),
         password: password,
       );
-      final UserModel? profile = await loadUser(credential.user!.uid);
-      // Signing in without a profile is survivable — browsing is public — so
-      // fall back to a profile built from the Auth token rather than failing.
-      return profile ??
-          UserModel(
-            uid: credential.user!.uid,
-            displayName:
-                credential.user!.displayName ?? credential.user!.email ?? '',
-            email: credential.user!.email ?? email.trim(),
-          );
+      final User user = credential.user!;
+      final UserModel? profile = await loadUser(user.uid);
+      if (profile != null) return profile;
+
+      // บัญชีที่เพิ่มผ่าน Firebase Console โดยตรง (เช่น gogo@mail.com) ไม่มี
+      // โพรไฟล์ใน Firestore — สร้างให้อัตโนมัติตอนล็อกอินครั้งแรก ทำงานบน
+      // แผนฟรี Spark (Cloud Function แบบ auto-trigger ต้องแผน Blaze)
+      // บทบาทเป็น customer ธรรมดา และ firestore.rules ยืนยันอีกชั้นว่า
+      // ตั้งเป็น admin ไม่ได้
+      final String displayName =
+          user.displayName ?? user.email ?? email.trim();
+      final String profileEmail = user.email ?? email.trim();
+      await _db.collection(_users).doc(user.uid).set(<String, dynamic>{
+        'displayName': displayName,
+        'email': profileEmail,
+        'roles': <String>[UserRole.customer.value],
+        'createdAt': FieldValue.serverTimestamp(),
+        'phone': '',
+        'province': '',
+      });
+      return UserModel(
+        uid: user.uid,
+        displayName: displayName,
+        email: profileEmail,
+        phone: '',
+        province: '',
+        roles: const <UserRole>[UserRole.customer],
+      );
     } on FirebaseAuthException catch (e) {
       throw AuthFailure(_messageFor(e));
     } catch (e) {

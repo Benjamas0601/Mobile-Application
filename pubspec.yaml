@@ -46,7 +46,6 @@ dependencies:
   cross_file: ^0.3.5+4            # ชนิดไฟล์ข้ามแพลตฟอร์ม (Android/iOS/Web) ใช้ร่วมกับ image_picker
   thai_promptpay: ^0.3.0
   qr_flutter: ^4.1.0
-
 dev_dependencies:
   flutter_test:
     sdk: flutter

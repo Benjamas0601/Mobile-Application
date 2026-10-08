@@ -8,6 +8,7 @@ import '../../../core/routes/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../models/user_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../repositories/auth_repository.dart';
 import '../widgets/hero_3d.dart';
@@ -88,10 +89,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             region: _region.value,
           );
       if (!mounted) return;
+
+      // auth stream ปล่อย event ก่อนที่การเขียนโพรไฟล์ด้านบนจะเสร็จ
+      // provider จึงอาจค้างค่า null อยู่ ต้อง invalidate และรออ่านค่าจาก
+      // Firestore ใหม่ — ไม่งั้นหน้า home/tab router จะยังแสดงสถานะแขก
+      // (ไม่มีชื่อทักทาย) และ redirect ของผู้ขาย/แอดมินอาจเด้งผู้ที่เพิ่งสมัคร
+      // กลับไปที่หน้าล็อกอิน การอ่านโพรไฟล์พลาดต้องไม่ทำให้ดูเหมือนสมัคร
+      // ไม่สำเร็จ จึงถอยไปใช้บทบาทที่ฟอร์มกรอกไว้แล้วแทน
+      ref.invalidate(authUserProvider);
+      UserModel? profile;
+      try {
+        profile = await ref.read(authUserProvider.future);
+      } catch (_) {
+        profile = null;
+      }
+
+      if (!mounted) return;
       final String? redirect = widget.redirect;
       if (redirect != null && redirect.isNotEmpty) {
         context.go(redirect);
-      } else if (_registrationType == _RegistrationType.store) {
+      } else if (profile?.isAdmin == true) {
+        context.go(AppRoutes.adminRoot);
+      } else if (profile?.isSeller == true || _registrationType == _RegistrationType.store) {
         context.go(AppRoutes.sellerRoot);
       } else {
         context.go(AppRoutes.home);

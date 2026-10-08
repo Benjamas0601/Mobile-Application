@@ -83,6 +83,7 @@ class _StoresTab extends ConsumerStatefulWidget {
 class _StoresTabState extends ConsumerState<_StoresTab> {
   final TextEditingController _searchController = TextEditingController();
   String _search = '';
+  String? _deletingId;
 
   @override
   void dispose() {
@@ -121,7 +122,9 @@ class _StoresTabState extends ConsumerState<_StoresTab> {
                 ),
                 Expanded(
                   child: RefreshIndicator(
-                    onRefresh: () => ref.refresh(adminStoresProvider.future),
+                    onRefresh: () async {
+                      ref.invalidate(adminStoresProvider);
+                    },
                     child: visible.isEmpty
                         ? ListView(
                             physics: const AlwaysScrollableScrollPhysics(),
@@ -174,10 +177,33 @@ class _StoresTabState extends ConsumerState<_StoresTab> {
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                trailing: IconButton(
-                                  tooltip: 'แก้ไขข้อมูลร้าน',
-                                  icon: const Icon(Icons.edit_outlined),
-                                  onPressed: () => _editStore(store),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    IconButton(
+                                      tooltip: 'แก้ไขข้อมูลร้าน',
+                                      icon: const Icon(Icons.edit_outlined),
+                                      onPressed: () => _editStore(store),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'ลบร้านค้า',
+                                      icon: _deletingId == store.id
+                                          ? const SizedBox.square(
+                                              dimension: 20,
+                                              child:
+                                                  CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Icon(
+                                              Icons.delete_outline_rounded,
+                                              color: AppColors.danger,
+                                            ),
+                                      onPressed: _deletingId == store.id
+                                          ? null
+                                          : () => _deleteStore(store),
+                                    ),
+                                  ],
                                 ),
                                 onTap: () => _showStoreDetails(store),
                               );
@@ -249,6 +275,52 @@ class _StoresTabState extends ConsumerState<_StoresTab> {
       ).showSnackBar(const SnackBar(content: Text('บันทึกข้อมูลร้านแล้ว')));
     }
   }
+
+  Future<void> _deleteStore(StoreModel store) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('ลบร้านค้า'),
+        content: Text(
+          'จะลบร้าน "${store.name}" พร้อมสินค้าและสินค้าย่อยทั้งหมดในร้าน '
+          'อย่างถาวร (ประวัติคำสั่งซื้อจะยังถูกเก็บไว้)\n\n'
+          'การกระทำนี้ย้อนกลับไม่ได้ ยืนยันที่จะลบหรือไม่?',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ยกเลิก'),
+          ),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.delete_outline_rounded),
+            label: const Text('ลบ'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _deletingId = store.id);
+    try {
+      await ref.read(adminRepositoryProvider).deleteStore(store.id);
+      if (!mounted) return;
+      ref.invalidate(adminStoresProvider);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('ลบร้าน "${store.name}" แล้ว')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('ลบร้านไม่สำเร็จ: $error')));
+    } finally {
+      if (mounted) setState(() => _deletingId = null);
+    }
+  }
 }
 
 class _UsersTab extends ConsumerStatefulWidget {
@@ -261,6 +333,7 @@ class _UsersTab extends ConsumerStatefulWidget {
 class _UsersTabState extends ConsumerState<_UsersTab> {
   final TextEditingController _searchController = TextEditingController();
   String _search = '';
+  String? _deletingId;
 
   @override
   void dispose() {
@@ -279,6 +352,8 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
             onRetry: () => ref.invalidate(adminUsersProvider),
           ),
           data: (List<UserModel> users) {
+            final String actingUid =
+                ref.read(authUserProvider).asData?.value?.uid ?? '';
             final List<UserModel> visible = users.where((UserModel user) {
               final String value = <String>[
                 user.displayName,
@@ -299,7 +374,9 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
                 ),
                 Expanded(
                   child: RefreshIndicator(
-                    onRefresh: () => ref.refresh(adminUsersProvider.future),
+                    onRefresh: () async {
+                      ref.invalidate(adminUsersProvider);
+                    },
                     child: visible.isEmpty
                         ? ListView(
                             physics: const AlwaysScrollableScrollPhysics(),
@@ -329,6 +406,10 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
                                     const Divider(height: 1),
                             itemBuilder: (BuildContext context, int index) {
                               final UserModel user = visible[index];
+                              final bool isSelf = user.uid == actingUid;
+                              final IconData deleteIcon = isSelf
+                                  ? Icons.person_outline_rounded
+                                  : Icons.delete_outline_rounded;
                               return ListTile(
                                 contentPadding: EdgeInsets.zero,
                                 leading: CircleAvatar(
@@ -354,10 +435,39 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                trailing: IconButton(
-                                  tooltip: 'แก้ไขข้อมูลผู้ใช้',
-                                  icon: const Icon(Icons.edit_outlined),
-                                  onPressed: () => _editUser(user),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    IconButton(
+                                      tooltip: 'แก้ไขข้อมูลผู้ใช้',
+                                      icon: const Icon(Icons.edit_outlined),
+                                      onPressed: () => _editUser(user),
+                                    ),
+                                    IconButton(
+                                      tooltip: isSelf
+                                          ? 'ลบบัญชีตัวเองไม่ได้'
+                                          : 'ลบผู้ใช้',
+                                      icon: _deletingId == user.uid
+                                          ? const SizedBox.square(
+                                              dimension: 20,
+                                              child:
+                                                  CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : Icon(
+                                              deleteIcon,
+                                              color: user.isAdmin
+                                                  ? AppColors.inkMuted
+                                                  : AppColors.danger,
+                                            ),
+                                      onPressed: user.isAdmin ||
+                                              isSelf ||
+                                              _deletingId == user.uid
+                                          ? null
+                                          : () => _deleteUser(user),
+                                    ),
+                                  ],
                                 ),
                                 onTap: () => _showUserDetails(user),
                               );
@@ -418,6 +528,67 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('บันทึกข้อมูลผู้ใช้แล้ว')));
+    }
+  }
+
+  Future<void> _deleteUser(UserModel user) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('ลบผู้ใช้'),
+        content: Text(
+          'จะลบข้อมูลของ "${user.displayName}" (${user.email}) อย่างถาวร — '
+          'โพรไฟล์ ร้านค้าและสินค้าที่เป็นเจ้าของทั้งหมด\n\n'
+          'บนแผนฟรี บัญชีเข้าสู่ระบบ (Firebase Auth) จะยังคงอยู่โดยไม่สามารถ '
+          'ใช้งานแอปได้ ถ้าต้องการลบออกจากระบบจริง ต้องลบใน Firebase Console '
+          'หลังลบแล้ว\n\n'
+          'ประวัติคำสั่งซื้อที่คนนี้เคยสั่งยังถูกเก็บไว้ '
+          'การกระทำนี้ย้อนกลับไม่ได้ ยืนยันที่จะลบหรือไม่?',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ยกเลิก'),
+          ),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.delete_outline_rounded),
+            label: const Text('ลบ'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final String actingUid =
+        ref.read(authUserProvider).asData?.value?.uid ?? '';
+    setState(() => _deletingId = user.uid);
+    try {
+      await ref
+          .read(adminRepositoryProvider)
+          .deleteUser(uid: user.uid, actingAdminUid: actingUid);
+      if (!mounted) return;
+      ref.invalidate(adminUsersProvider);
+      ref.invalidate(adminStoresProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'ลบข้อมูลผู้ใช้ "${user.displayName}" แล้ว (โพรไฟล์/ร้าน/สินค้า) — '
+            'บัญชีเข้าสู่ระบบยังอยู่ใน Firebase Auth ถ้าต้องการลบจริง '
+            'ให้ลบใน Firebase Console (แผนฟรี)',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('ลบผู้ใช้ไม่สำเร็จ: $error')));
+    } finally {
+      if (mounted) setState(() => _deletingId = null);
     }
   }
 }

@@ -110,6 +110,9 @@ service cloud.firestore {
       allow read: if isSignedIn();
 
       // สมัครได้เป็นลูกค้าหรือผู้ขาย แต่ห้ามกำหนด role admin เอง
+      // phone/province ไม่บังคับที่นี่ เพราะบัญชี console-import (เพิ่มผ่าน
+      // Firebase Console ตรง ๆ) ไม่มีข้อมูลเหล่านี้ — แอปจะสร้างโพรไฟล์ให้
+      // อัตโนมัติตอนล็อกอินครั้งแรก ฟอร์มสมัครยังตรวจความครบถ้วนที่ฝั่งแอป
       allow create: if isSignedIn()
         && request.auth.uid == userId
         && request.resource.data.keys().hasOnly([
@@ -128,9 +131,7 @@ service cloud.firestore {
         && request.resource.data.displayName is string
         && request.resource.data.displayName.size() > 0
         && request.resource.data.phone is string
-        && request.resource.data.phone.size() > 0
         && request.resource.data.province is string
-        && request.resource.data.province.size() > 0
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.createdAt == request.time;
 
@@ -154,8 +155,14 @@ service cloud.firestore {
                  == ('admin' in resource.data.roles))
         );
 
-      // ลบบัญชีได้เฉพาะตัวเอง (ไม่ใช่แอดมิน เพื่อไม่ให้หลักฐานการซื้อขายหาย)
-      allow delete: if isSignedIn() && request.auth.uid == userId;
+      // ลบบัญชีได้เฉพาะตัวเอง (เพื่อไม่ให้หลักฐานการซื้อขายหาย) —
+      // หรือแอดมินลบผู้ใช้/ผู้ขายได้ แต่ห้ามลบแอดมินด้วยกันเอง
+      // (บัญชี Firebase Auth เองลบจาก client SDK ไม่ได้ คงเหลือแค่โพรไฟล์ที่ถูกลบ)
+      allow delete: if isSignedIn()
+        && (
+          request.auth.uid == userId
+          || (isAdmin() && !('admin' in resource.data.roles))
+        );
     }
 
     // ================================================================ //

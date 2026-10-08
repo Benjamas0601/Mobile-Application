@@ -9,11 +9,17 @@ import '../repositories/auth_repository.dart';
 final Provider<AuthRepository> authRepositoryProvider =
     Provider<AuthRepository>((Ref ref) => AuthRepository());
 
-/// The signed-in profile, or null when signed out.
+/// โปรไฟล์ของผู้ใช้ที่ล็อกอินอยู่ หรือ null เมื่อยังไม่ได้ล็อกอิน
 ///
-/// Built from [AuthRepository.authStateChanges] so the router can react to
-/// sign-in/sign-out without a second listener, and the profile document is
-/// re-read on every auth event so a role change shows up immediately.
+/// สร้างจาก [AuthRepository.authStateChanges] เพื่อให้ router ตอบสนองการ
+/// เข้า/ออกระบบได้โดยไม่ต้องมี listener ซ้ำ และอ่านโปรไฟล์ใหม่ทุกครั้งที่มี
+/// auth event เพื่อให้การเปลี่ยนบทบาทแสดงผลทันที
+///
+/// หน้าจอที่เพิ่งเขียนโปรไฟล์ (เช่น หน้าสมัคร) ต้องเรียก
+/// `ref.invalidate(authUserProvider)` ตามหลัง เพราะตอนสมัคร auth stream
+/// ปล่อย event *ก่อน* ที่เอกสาร `users/{uid}` จะถูกเขียนเสร็จ — ถ้าไม่อ่านซ้ำ
+/// provider จะค้างค่า null จนกว่าจะมี auth event ใหม่ และ greeting บนหน้า
+/// home จะไม่แสดงชื่อผู้ใช้
 final StreamProvider<UserModel?> authUserProvider = StreamProvider<UserModel?>((
   Ref ref,
 ) async* {
