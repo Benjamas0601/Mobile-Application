@@ -8,7 +8,6 @@ import '../../features/auth/screens/register_screen.dart';
 import '../../features/cart/screens/cart_screen.dart';
 import '../../features/cart/screens/checkout_screen.dart';
 import '../../features/cart/screens/payment_screen.dart';
-import '../../features/explore/screens/explore_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/orders/screens/order_detail_screen.dart';
 import '../../features/orders/screens/order_list_screen.dart';
@@ -34,7 +33,6 @@ class AppRoutes {
   static const String login = '/login';
   static const String register = '/register';
   static const String home = '/home';
-  static const String explore = '/explore';
   static const String stores = '/stores';
   static const String orders = '/orders';
   static const String ordersHistory = '/order-history';
@@ -173,13 +171,6 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
         path: AppRoutes.home,
         builder: (BuildContext context, GoRouterState state) =>
             const HomeScreen(),
-      ),
-      // Public: browsing by province is what the marketplace is for, so it
-      // stays reachable while signed out.
-      GoRoute(
-        path: AppRoutes.explore,
-        builder: (BuildContext context, GoRouterState state) =>
-            const ExploreScreen(),
       ),
       GoRoute(
         path: AppRoutes.adminRoot,

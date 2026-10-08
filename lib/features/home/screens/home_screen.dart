@@ -55,13 +55,6 @@ class HomeScreen extends ConsumerWidget {
         ),
         actions: <Widget>[
           // จุดนี้เดิมเคยมีปุ่ม Affiliate — ถูกลบออกพร้อมทั้งฟีเจอร์เมื่อ 6 ต.ค. 2569
-          // Explore is the redesigned browse entry point, so it gets the first
-          // slot in the AppBar rather than hiding behind the store list.
-          IconButton(
-            tooltip: 'สำรวจไทย',
-            icon: const Icon(Icons.travel_explore_rounded),
-            onPressed: () => context.push(AppRoutes.explore),
-          ),
           IconButton(
             tooltip: AppStrings.stores,
             icon: const Icon(Icons.storefront_outlined),
@@ -156,8 +149,10 @@ class HomeScreen extends ConsumerWidget {
       );
     }
 
-    final List<CategoryModel> items =
-        categories.asData?.value ?? const <CategoryModel>[];
+    final List<CategoryModel> items = (categories.asData?.value ??
+        const <CategoryModel>[])
+    .where((CategoryModel c) => !kHomeHiddenCategoryIds.contains(c.id))
+    .toList();
     if (items.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(AppSpacing.gutter),

@@ -612,3 +612,27 @@ commit `fd156e7` (22:09) เพิ่ม Admin Hub + order tracking + กฎ reg
 - ~~ยังไม่มี regression test สำหรับกฎ~~ → ✅ **เสร็จ: `tool/rules-test/` ใน repo 64/64 ผ่าน**
 - ~~กฎชุดแรกที่ deploy (หลังตัด) ยังเป็นของเดิม~~ → ✅ **deploy รอบ 7 ต.ค. 2569 (ruleset `5ff11dd7…`) แก้ bug แชทแล้ว** (รายละเอียดตารางด้านบน)
 - กำลังใส่ comment ภาษาไทยสำคัญ ๆ ลงไฟล์ lib ที่แก้ระหว่างลบ affiliate
+
+---
+
+## ✂️ ปรับขอบเขต: ลบ Explore (สำรวจไทย) + ซ่อนหมวด 2 อัน (7 ต.ค. 2569)
+
+**การตัดสินใจ:** หน้าแรกมีแถบค้นหา/หมวด/ภูมิภาคเป็นจุดเข้าถึงหลักอยู่แล้ว — เอาหน้า
+Explore ("สำรวจไทย": แผนที่ไทย + บัตรจังหวัด + รายชื่อร้าน) ออกทั้งฟีเจอร์ และซ่อนหมวด
+"หัตถกรรม" กับ "อาหารและขนมไทย" ไม่ให้แสดงในแถวหมวดหมู่ของหน้าแรก
+
+### สิ่งที่ถูกลบ/ซ่อน
+
+| รายการ | รายละเอียด |
+|---|---|
+| ฟีเจอร์ Explore | `lib/features/explore/` ทั้งหมด (ExploreScreen, แผนที่ 2D `ThailandMap`) · route `/explore` · `AppRoutes.explore` · ปุ่มสำรวจไทยใน AppBar หน้าแรก |
+| Repository | `lib/repositories/product_index_repository.dart` (ถูกถอดจาก repo) · `exploreProductIndexProvider` + `productIndexRepositoryProvider` ใน `catalog_provider.dart` |
+| หมวดที่ซ่อน | `kHomeHiddenCategoryIds = {handicraft, food}` — ไม่โชว์ในแถวชิปหน้าแรก แต่ doc `categories` ยังอยู่ใน Firestore และสินค้าในหมวดนั้นยังอยู่ใน "ทั้งหมด" |
+
+### ผลตรวจหลังปรับ
+
+| การทดสอบ | ผล |
+|---|---|
+| `flutter analyze` | **No issues found!** |
+| `flutter test` | **174/174 ผ่าน** (+1 เคส: ปุ่มสำรวจไทย + หมวดที่ซ่อนหายจากโฮม) |
+| grep `explore|สำรวจ` ใน `lib/` | เหลือ `AppStrings.navExplore` ('สำรวจ') ที่ยังใช้เป็น Label หัวข้อสินค้าบนโฮม + ปุ่มไปหน้าแรกของตระกร้า/เช็คเอาต์ว่าง — ไม่ใช่หน้า explore อีกต่อไป |

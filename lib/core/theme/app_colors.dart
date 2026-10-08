@@ -86,8 +86,8 @@ class AppColors {
   static const Color disabledDark = Color(0xFF98A0BF);
 
   // --- Province accents -----------------------------------------------------
-  // Used to give each Thai region its own colour on the Explore map and
-  // province cards, so browsing by region feels like a place, not a filter.
+  // Used to give each Thai region its own colour on Home's region chips and
+  // the seller tints, so browsing by region feels like a place, not a filter.
   // Values match the HTML design set exactly.
   static const Color regionNorth = Color(0xFF3E6B8A);
   static const Color regionNortheast = Color(0xFF8A6A3E);

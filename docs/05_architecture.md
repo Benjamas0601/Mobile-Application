@@ -74,7 +74,6 @@ lib/
 │       └── providers/            # state ของ feature นั้น
 │   ├── auth/         ✅ login_screen, hero_3d
 │   ├── home/         ⏳
-│   ├── explore/      ⏳
 │   ├── products/     ⏳
 │   ├── stores/       ⏳
 │   ├── cart/         ⏳

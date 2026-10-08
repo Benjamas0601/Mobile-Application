@@ -118,5 +118,63 @@ void main() {
       expect(find.text(AppStrings.navExplore), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
     });
+
+    testWidgets('the explore button and the hidden categories are gone', (
+      WidgetTester tester,
+    ) async {
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          categoriesProvider.overrideWith(
+            (Ref ref) async => const <CategoryModel>[
+              CategoryModel(
+                id: 'c1',
+                name: 'ผ้าทอไทย',
+                slug: 'textile',
+                icon: '🧶',
+                sortOrder: 1,
+              ),
+              CategoryModel(
+                id: 'handicraft',
+                name: 'หัตถกรรม',
+                slug: 'handicraft',
+                icon: '🎨',
+                sortOrder: 2,
+              ),
+              CategoryModel(
+                id: 'food',
+                name: 'อาหารและขนมไทย',
+                slug: 'food',
+                icon: '🍜',
+                sortOrder: 3,
+              ),
+            ],
+          ),
+          productsProvider.overrideWith(
+            (Ref ref) async => <ProductModel>[_product],
+          ),
+          authUserProvider.overrideWith(
+            (Ref ref) => Stream<UserModel?>.value(null),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: HomeScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // ปุ่มสำรวจไทยในแถบบนถูกลบพร้อมฟีเจอร์ Explore (7 ต.ค. 2569)
+      expect(find.byIcon(Icons.travel_explore_rounded), findsNothing);
+      expect(find.byTooltip('สำรวจไทย'), findsNothing);
+      // หมวดหัตถกรรม/อาหารและขนมไทยยังอยู่ในข้อมูล แต่ไม่โชว์ในแถวชิป
+      expect(find.text('หัตถกรรม'), findsNothing);
+      expect(find.text('อาหารและขนมไทย'), findsNothing);
+      // หมวดอื่นกับชิป "ทั้งหมด" ยังทำงานปกติ
+      expect(find.text('ทั้งหมด'), findsOneWidget);
+      expect(find.text('ผ้าทอไทย'), findsOneWidget);
+    });
   });
 }

@@ -35,7 +35,7 @@ enum UserRole {
   }
 }
 
-/// The six Thai regions, used for "Explore Thailand" grouping.
+/// The six Thai regions, used to group and filter the catalogue by region.
 ///
 /// [UserRole] ordering above is unrelated; this list is geographic.
 enum ThaiRegion {

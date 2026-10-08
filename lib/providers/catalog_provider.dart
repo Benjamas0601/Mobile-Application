@@ -5,13 +5,15 @@ import '../models/category_model.dart';
 import '../models/product_model.dart';
 import '../models/store_model.dart';
 import '../repositories/catalog_repository.dart';
-import '../repositories/product_index_repository.dart';
+
+/// หมวดหมู่ที่ซ่อนไม่ให้แสดงบนแถวหมวดหมู่ของหน้าแรก (7 ต.ค. 2569)
+///
+/// เอกสาร `categories/{id}` ยังอยู่จริงใน Firestore และสินค้าในหมวดนั้นยัง
+/// ปรากฏใน "ทั้งหมด" — มีแค่จุดนี้ที่ไม่แสดงเท่านั้น ข้อมูลไม่ถูกแตะ
+const Set<String> kHomeHiddenCategoryIds = <String>{'handicraft', 'food'};
 
 final Provider<CatalogRepository> catalogRepositoryProvider =
     Provider<CatalogRepository>((Ref ref) => CatalogRepository());
-
-final Provider<ProductIndexRepository> productIndexRepositoryProvider =
-    Provider<ProductIndexRepository>((Ref ref) => ProductIndexRepository());
 
 /// Active categories, ordered by `sortOrder`.
 final categoriesProvider = FutureProvider<List<CategoryModel>>(
@@ -105,15 +107,3 @@ final storeProvider = FutureProvider.autoDispose.family<StoreModel?, String>(
 final storesProvider = FutureProvider<List<StoreModel>>(
   (Ref ref) => ref.watch(catalogRepositoryProvider).listStores(),
 );
-
-/// Province/region pairs for the Explore map.
-///
-/// Separate from [productsProvider] because the map only needs the two
-/// geographic fields, and it filters by region client-side rather than
-/// re-querying — the list is small and the user taps regions repeatedly.
-final exploreProductIndexProvider =
-    FutureProvider<List<ProductProvinceSummary>>(
-      (Ref ref) => ref
-          .watch(productIndexRepositoryProvider)
-          .listVisibleProductProvinces(),
-    );
