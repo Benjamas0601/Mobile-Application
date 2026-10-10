@@ -15,6 +15,7 @@ import '../../features/orders/screens/order_detail_screen.dart';
 import '../../features/orders/screens/order_list_screen.dart';
 import '../../features/orders/screens/order_tracking_screen.dart';
 import '../../features/products/screens/product_detail_screen.dart';
+import '../../features/profile/screens/profile_screen.dart';
 import '../../features/seller/screens/product_edit_screen.dart';
 import '../../features/seller/screens/seller_home_screen.dart';
 import '../../features/seller/screens/seller_order_list_screen.dart';
@@ -246,6 +247,13 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
         path: '/chat/:threadId',
         builder: (BuildContext context, GoRouterState state) =>
             ChatThreadScreen(threadId: state.pathParameters['threadId'] ?? ''),
+      ),
+      // แก้ไขข้อมูลส่วนตัว — ผู้ล็อกอินทุกบัญชีเข้าถึงได้ (เก็บไว้ใน
+      // accountRequired ด้านบน กันผู้ที่ยังไม่ได้ล็อกอินไว้แล้ว)
+      GoRoute(
+        path: AppRoutes.profile,
+        builder: (BuildContext context, GoRouterState state) =>
+            const ProfileScreen(),
       ),
       // พื้นที่ผู้ขายต้องเข้าสู่ระบบตาม redirect ด้านบน และตรวจบทบาทซ้ำในหน้า
       // เนื่องจากข้อมูลบทบาทจัดเก็บใน Firestore ไม่ได้อยู่ใน path ของเส้นทาง

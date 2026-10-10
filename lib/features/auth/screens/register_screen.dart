@@ -224,17 +224,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                       validator: _validatePhone,
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                    TextFormField(
-                      controller: _provinceController,
-                      textInputAction: TextInputAction.next,
-                      enabled: !_busy,
-                      decoration: const InputDecoration(
-                        labelText: 'จังหวัด',
-                        prefixIcon: Icon(Icons.location_on_outlined),
+                    // จังหวัดเป็นข้อมูลที่ตั้งร้าน — ลูกค้าไม่ต้องกรอก (ค่าว่าง
+                    // ยังผ่าน firestore.rules เพราะกฎตรวจแค่ว่าเป็น string)
+                    if (_registrationType == _RegistrationType.store) ...<Widget>[
+                      const SizedBox(height: AppSpacing.md),
+                      TextFormField(
+                        controller: _provinceController,
+                        textInputAction: TextInputAction.next,
+                        enabled: !_busy,
+                        decoration: const InputDecoration(
+                          labelText: 'จังหวัด',
+                          prefixIcon: Icon(Icons.location_on_outlined),
+                        ),
+                        validator: _validateRequired,
                       ),
-                      validator: _validateRequired,
-                    ),
+                    ],
                     ..._roleSpecificFields(),
                     const SizedBox(height: AppSpacing.md),
                     TextFormField(

@@ -377,10 +377,8 @@ void main() {
         find.widgetWithText(TextFormField, AppStrings.phone),
         '0812345678',
       );
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'จังหวัด'),
-        'เชียงใหม่',
-      );
+      // ลูกค้าไม่ต้องกรอกจังหวัด — ช่องนี้มีเฉพาะโหมดร้านค้า
+      expect(find.widgetWithText(TextFormField, 'จังหวัด'), findsNothing);
       await tester.enterText(
         find.widgetWithText(TextFormField, AppStrings.password),
         'secret123',
@@ -404,12 +402,16 @@ void main() {
       await pumpAuth(tester, const RegisterScreen());
 
       expect(find.text('Affiliate'), findsNothing);
+      // โหมดลูกค้า: ไม่มีช่องจังหวัด
+      expect(find.widgetWithText(TextFormField, 'จังหวัด'), findsNothing);
 
       await tester.tap(find.text('ร้านค้า'));
       await tester.pump();
       expect(find.text('ชื่อร้าน'), findsOneWidget);
       expect(find.text('ชุมชน / กลุ่มผู้ผลิต'), findsOneWidget);
       expect(find.text('เรื่องราวและรายละเอียดร้าน'), findsOneWidget);
+      // โหมดร้านค้า: จังหวัดกลับมาให้กรอก (ที่ตั้งร้าน)
+      expect(find.widgetWithText(TextFormField, 'จังหวัด'), findsOneWidget);
     });
   });
 }

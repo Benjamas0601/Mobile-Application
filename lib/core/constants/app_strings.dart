@@ -71,6 +71,14 @@ class AppStrings {
   static const String dontHaveAccount = 'ยังไม่มีบัญชี?';
   static const String alreadyHaveAccount = 'มีบัญชีอยู่แล้ว?';
 
+  // --- Profile -------------------------------------------------------------
+  static const String profileEdit = 'แก้ไขข้อมูลส่วนตัว';
+  static const String emailLockedHint =
+      'อีเมลใช้สำหรับเข้าสู่ระบบและรับข้อมูล ไม่สามารถแก้ไขได้';
+  static const String saveProfile = 'บันทึกข้อมูล';
+  static const String profileSaved = 'บันทึกข้อมูลสำเร็จ';
+  static const String profileSaveFailed = 'บันทึกข้อมูลไม่สำเร็จ';
+
   // --- Validation ----------------------------------------------------------
   static const String errRequired = 'กรุณากรอกข้อมูลให้ครบ';
   static const String errEmailFormat = 'รูปแบบอีเมลไม่ถูกต้อง';

@@ -88,6 +88,12 @@ class SellerHomeScreen extends ConsumerWidget {
             icon: const Icon(Icons.forum_outlined),
             onPressed: () => context.push(AppRoutes.chat),
           ),
+          // แก้ไขข้อมูลส่วนตัวเช่นกัน — ผู้ขายก็เป็นผู้ใช้คนหนึ่ง
+          IconButton(
+            tooltip: AppStrings.navProfile,
+            icon: const Icon(Icons.person_outline_rounded),
+            onPressed: () => context.push(AppRoutes.profile),
+          ),
           IconButton(
             tooltip: AppStrings.logout,
             icon: const Icon(Icons.logout_rounded),

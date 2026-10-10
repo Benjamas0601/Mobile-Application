@@ -129,11 +129,12 @@ class AuthRepository {
     if (!<UserRole>{UserRole.customer, UserRole.seller}.contains(accountType)) {
       throw const AuthFailure('ประเภทบัญชีไม่ถูกต้อง');
     }
-    if (cleanName.isEmpty || cleanPhone.isEmpty || cleanProvince.isEmpty) {
-      throw const AuthFailure('กรุณากรอกชื่อ โทรศัพท์ และจังหวัดให้ครบ');
+    if (cleanName.isEmpty || cleanPhone.isEmpty) {
+      throw const AuthFailure('กรุณากรอกชื่อและเบอร์โทรให้ครบ');
     }
     if (accountType == UserRole.seller &&
-        (storeName.trim().isEmpty ||
+        (cleanProvince.isEmpty ||
+            storeName.trim().isEmpty ||
             community.trim().isEmpty ||
             storeDescription.trim().isEmpty ||
             ThaiRegion.fromValue(region) == null)) {
@@ -164,6 +165,8 @@ class AuthRepository {
         'roles': roles.map((UserRole role) => role.value).toList(),
         'createdAt': FieldValue.serverTimestamp(),
         'phone': cleanPhone,
+        // ลูกค้าส่ง province เป็น '' (ไม่กรอก) — ยังต้องมีคีย์นี้เพราะ
+        // firestore.rules users.create บังคับว่า province ต้องเป็น string
         'province': cleanProvince,
       };
 
@@ -231,6 +234,52 @@ class AuthRepository {
   }
 
   Future<void> signOut() => _auth.signOut();
+
+  /// อัปเดตข้อมูลส่วนตัวที่ผู้ใช้แก้ได้เอง (ชื่อ / เบอร์โทร)
+  ///
+  /// สอดคล้องกับ `firestore.rules` `users.update` ที่ห้ามผู้ใช้แตะ
+  /// `roles` / `email` / `createdAt` — ฟอร์มแก้โปรไฟล์จึงส่งเฉพาะฟิลด์ที่
+  /// แก้ได้จริง ไม่งั้นกฎจะปฏิเสธทั้งเอกสาร (Firestore ส่งทั้งเอกสารไปตรวจ
+  /// กับกฎเสมอ)
+  Future<UserModel> updateProfile({
+    required String displayName,
+    required String phone,
+  }) async {
+    final User? user = _auth.currentUser;
+    if (user == null) {
+      throw const AuthFailure('กรุณาเข้าสู่ระบบก่อนแก้ไขข้อมูล');
+    }
+    final String cleanName = displayName.trim();
+    final String cleanPhone = phone.trim();
+    if (cleanName.isEmpty || cleanPhone.isEmpty) {
+      throw const AuthFailure('กรุณากรอกชื่อและเบอร์โทรให้ครบ');
+    }
+
+    try {
+      await _db.collection(_users).doc(user.uid).update(<String, dynamic>{
+        'displayName': cleanName,
+        'phone': cleanPhone,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } on FirebaseException catch (e) {
+      throw AuthFailure('บันทึกข้อมูลไม่สำเร็จ: ${e.message ?? e.code}');
+    } catch (e) {
+      throw AuthFailure('บันทึกข้อมูลไม่สำเร็จ: $e');
+    }
+
+    // คืนโปรไฟล์ล่าสุด เพื่อให้ผู้เรียกแสดงผลได้ทันทีโดยไม่ต้องอ่านรอบคืน;
+    // ถ้าอ่านไม่เจอ (โพรไฟล์ถูกลบ) ให้ย้อนกลับไปใช้ค่าที่เพิ่งบันทึกแทน
+    final UserModel? profile = await loadUser(user.uid);
+    return profile ??
+        UserModel(
+          uid: user.uid,
+          displayName: cleanName,
+          email: user.email ?? '',
+          phone: cleanPhone,
+          province: '',
+          roles: const <UserRole>[UserRole.customer],
+        );
+  }
 
   /// Translates SDK codes into the wording in [AppStrings].
   static String _messageFor(FirebaseAuthException e) {
