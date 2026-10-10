@@ -38,7 +38,6 @@ param(
 # PowerShell 5.1 ใช้ codepage ของ console ที่ไม่ใช่ UTF-8 ทำให้ข้อความไทยใน
 # ไฟล์นี้ออกมาเป็นตัวยึก ต้องบอก console ให้รู้ก่อน
 try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
-.\tool\run.ps1 up -SkipBuild
 # ตั้งเป็น Continue เพราะ PowerShell 5.1 แปลง stderr จากคำสั่ง native (เช่น
 # Gradle ที่เตือนเรื่อง KGP) ให้เป็น error record ซึ่งจะทำให้ script หยุดกลางคัน
 # ทุกจุดที่ต้องการความล้มเหลวจึงตรวจ $LASTEXITCODE หรือ throw เองแทน
