@@ -50,6 +50,7 @@ class AppStrings {
   static const String navOrders = 'คำสั่งซื้อ';
   static const String navCart = 'ตะกร้า';
   static const String navProfile = 'โปรไฟล์';
+  static const String backToHome = 'กลับหน้าแรก';
 
   // --- Navigation (seller) -------------------------------------------------
   static const String navSellerDashboard = 'ภาพรวม';
@@ -79,6 +80,8 @@ class AppStrings {
   static const String errInvalidCredentials = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
   static const String errEmailInUse = 'อีเมลนี้ถูกใช้สมัครไว้แล้ว';
   static const String errNotAuthorised = 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้';
+  static const String errNotAuthorisedSeller =
+      'บัญชีนี้ไม่ได้เป็นผู้ขาย — กลับหน้าแรก หรือเข้าสู่ระบบใหม่';
 
   // --- Product -------------------------------------------------------------
   static const String productStory = 'เรื่องราวสินค้า';

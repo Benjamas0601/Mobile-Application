@@ -254,6 +254,10 @@ void main() {
       );
 
       expect(find.text(AppStrings.errNotAuthorised), findsOneWidget);
+      // ประตูต้องมีทางออก ไม่งั้นผู้ใช้จะติดค้างบนหน้า Seller
+      expect(find.text(AppStrings.errNotAuthorisedSeller), findsOneWidget);
+      expect(find.text(AppStrings.backToHome), findsOneWidget);
+      expect(find.text(AppStrings.logout), findsOneWidget);
     });
 
     testWidgets('offers products, orders and the store', (

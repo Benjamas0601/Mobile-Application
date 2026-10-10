@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_enums.dart' hide AsyncValue;
+import '../../../core/constants/app_strings.dart';
 import '../../../core/routes/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -25,17 +26,21 @@ class AdminHomeScreen extends ConsumerWidget {
       return const Scaffold(body: LoadingView());
     }
     if (user?.isAdmin != true) {
-      return const Scaffold(
+      return Scaffold(
         body: EmptyView(
           icon: Icons.lock_outline_rounded,
           title: 'ไม่มีสิทธิ์เข้าถึง',
           body: 'หน้านี้สำหรับผู้ดูแลระบบเท่านั้น',
+          actionLabel: AppStrings.backToHome,
+          onAction: () => context.go(AppRoutes.home),
+          secondaryActionLabel: AppStrings.logout,
+          onSecondaryAction: () => ref.read(authRepositoryProvider).signOut(),
         ),
       );
     }
 
     return DefaultTabController(
-      length: 3,
+      length: 2,
       child: Scaffold(
         appBar: AppBar(
           titleSpacing: AppSpacing.gutter,

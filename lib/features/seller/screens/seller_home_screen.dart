@@ -39,13 +39,18 @@ class SellerHomeScreen extends ConsumerWidget {
       );
     }
 
-    // Layer 2 role-gate
+    // Layer 2 role-gate — ต้องมีทางออกเสมอ ไม่งั้นผู้ใช้จะติดค้างบนหน้านี้
     if (user == null || (!user.isSeller && !user.isAdmin)) {
       return Scaffold(
         appBar: AppBar(title: const Text(AppStrings.navSellerDashboard)),
-        body: const EmptyView(
+        body: EmptyView(
           icon: Icons.lock_outline_rounded,
           title: AppStrings.errNotAuthorised,
+          body: AppStrings.errNotAuthorisedSeller,
+          actionLabel: AppStrings.backToHome,
+          onAction: () => context.go(AppRoutes.home),
+          secondaryActionLabel: AppStrings.logout,
+          onSecondaryAction: () => ref.read(authRepositoryProvider).signOut(),
         ),
       );
     }

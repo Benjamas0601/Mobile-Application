@@ -212,6 +212,44 @@ void main() {
       );
     });
 
+    test('a signed-in customer is sent home from the seller console', () {
+      const customer = UserModel(
+        uid: 'c1',
+        displayName: 'Customer',
+        email: 'customer@test.com',
+        roles: <UserRole>[UserRole.customer],
+      );
+      for (final String location in <String>[
+        AppRoutes.sellerRoot,
+        AppRoutes.sellerProducts,
+        AppRoutes.sellerOrders,
+        AppRoutes.sellerStoreProfile,
+        AppRoutes.sellerProductNew('s1'),
+        AppRoutes.sellerProductEdit('p1'),
+      ]) {
+        expect(
+          authRedirect(signedIn: true, location: location, user: customer),
+          AppRoutes.home,
+          reason: '$location must not strand a non-seller',
+        );
+      }
+      // แอดมินยังเข้าส่วนผู้ขายได้เหมือนเดิม
+      const admin = UserModel(
+        uid: 'a1',
+        displayName: 'Admin',
+        email: 'admin@test.com',
+        roles: <UserRole>[UserRole.admin],
+      );
+      expect(
+        authRedirect(
+          signedIn: true,
+          location: AppRoutes.sellerRoot,
+          user: admin,
+        ),
+        isNull,
+      );
+    });
+
     test('an unknown path is not guarded', () {
       expect(authRedirect(signedIn: false, location: '/nope'), isNull);
     });
