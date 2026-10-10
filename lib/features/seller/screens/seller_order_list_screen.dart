@@ -43,7 +43,14 @@ class _SellerOrderListScreenState extends ConsumerState<SellerOrderListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final UserModel? user = ref.watch(authUserProvider).asData?.value;
+    final AsyncValue<UserModel?> auth = ref.watch(authUserProvider);
+    final UserModel? user = auth.value;
+    if (auth.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text(AppStrings.sellerOrders)),
+        body: const LoadingView(),
+      );
+    }
 
     // Layer 2 of the role gate (layer 1 is firestore.rules): a customer who
     // types the URL sees a sentence, not a list of denied reads.

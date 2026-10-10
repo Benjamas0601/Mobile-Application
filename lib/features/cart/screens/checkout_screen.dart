@@ -26,7 +26,8 @@ class CheckoutScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final List<CartLine> lines = ref.watch(cartProvider);
-    final UserModel? user = ref.watch(authUserProvider).asData?.value;
+    final AsyncValue<UserModel?> auth = ref.watch(authUserProvider);
+    final UserModel? user = auth.value;
 
     if (lines.isEmpty) {
       return Scaffold(
@@ -38,6 +39,13 @@ class CheckoutScreen extends ConsumerWidget {
           actionLabel: AppStrings.navExplore,
           onAction: () => context.go(AppRoutes.home),
         ),
+      );
+    }
+
+    if (auth.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text(AppStrings.checkout)),
+        body: const LoadingView(),
       );
     }
 

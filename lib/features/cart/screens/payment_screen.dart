@@ -5,7 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:thai_promptpay/thai_promptpay.dart';
 
-import '../../../core/constants/app_enums.dart';
+import '../../../core/constants/app_enums.dart' hide AsyncValue;
 import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/payment_strings.dart';
 import '../../../core/routes/app_router.dart';
@@ -44,9 +44,10 @@ class PaymentScreen extends ConsumerWidget {
     // Everything comes from providers so this screen can be reached by URL as
     // well as by tapping through from checkout.
     final CheckoutDraft? draft = ref.watch(checkoutDraftProvider);
-    final UserModel? user = ref.watch(authUserProvider).asData?.value;
+    final AsyncValue<UserModel?> auth = ref.watch(authUserProvider);
+    final UserModel? user = auth.value;
 
-    if (draft == null || user == null) {
+    if (draft == null) {
       // Reached without a draft: either a deep link, or the cart was already
       // turned into an order. Send the buyer somewhere that can start over
       // rather than showing an empty payment form.
@@ -62,12 +63,47 @@ class PaymentScreen extends ConsumerWidget {
       );
     }
 
+    if (auth.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text(AppStrings.payNow)),
+        body: const LoadingView(),
+      );
+    }
+    if (user == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text(AppStrings.payNow)),
+        body: EmptyView(
+          title: AppStrings.noDraftTitle,
+          body: AppStrings.noDraftHint,
+          icon: Icons.lock_outline_rounded,
+          actionLabel: AppStrings.continueShopping,
+          onAction: () => context.go(AppRoutes.home),
+        ),
+      );
+    }
+
     // The store name is written onto the order so history reads correctly even
     // if the store is renamed or removed later.
-    final StoreModel? store = ref
-        .watch(storeProvider(draft.storeId))
-        .asData
-        ?.value;
+    final AsyncValue<StoreModel?> storeState = ref.watch(
+      storeProvider(draft.storeId),
+    );
+    if (storeState.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text(AppStrings.payNow)),
+        body: const LoadingView(),
+      );
+    }
+    if (storeState.hasError) {
+      return Scaffold(
+        appBar: AppBar(title: const Text(AppStrings.payNow)),
+        body: ErrorView(
+          message: 'ไม่โหลดข้อมูลร้านค้าได้',
+          detail: '${storeState.error}',
+          onRetry: () => ref.invalidate(storeProvider(draft.storeId)),
+        ),
+      );
+    }
+    final StoreModel? store = storeState.value;
 
     return _PaymentForm(
       lines: ref.watch(cartProvider),

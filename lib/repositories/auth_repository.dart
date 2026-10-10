@@ -75,7 +75,6 @@ class AuthRepository {
 
       // บัญชีที่เพิ่มผ่าน Firebase Console โดยตรง (เช่น gogo@mail.com) ไม่มี
       // โพรไฟล์ใน Firestore — สร้างให้อัตโนมัติตอนล็อกอินครั้งแรก ทำงานบน
-      // แผนฟรี Spark (Cloud Function แบบ auto-trigger ต้องแผน Blaze)
       // บทบาทเป็น customer ธรรมดา และ firestore.rules ยืนยันอีกชั้นว่า
       // ตั้งเป็น admin ไม่ได้
       final String displayName =

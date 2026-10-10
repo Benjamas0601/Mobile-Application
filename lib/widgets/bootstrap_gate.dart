@@ -12,10 +12,18 @@ import '../core/theme/app_typography.dart';
 /// gate, a missing `firebase_options.dart` produces a black screen and a
 /// stack trace the teacher cannot act on.
 class BootstrapGate extends StatelessWidget {
-  const BootstrapGate({super.key, required this.startup, required this.child});
+  const BootstrapGate({
+    super.key,
+    required this.startup,
+    this.child,
+    this.onRetry,
+  });
 
   final FirebaseStartupResult startup;
   final Widget? child;
+
+  /// เรียกเมื่อผู้ใช้กดปุ่ม "ลองเชื่อมต่อใหม่" บนหน้าจอ error
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +33,7 @@ class BootstrapGate extends StatelessWidget {
         _StartupErrorScreen(
           reason: reason,
           isConfigurationMissing: isConfigurationMissing,
+          onRetry: onRetry,
         ),
     };
   }
@@ -34,10 +43,12 @@ class _StartupErrorScreen extends StatelessWidget {
   const _StartupErrorScreen({
     required this.reason,
     required this.isConfigurationMissing,
+    this.onRetry,
   });
 
   final String reason;
   final bool isConfigurationMissing;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -87,6 +98,17 @@ class _StartupErrorScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xl),
+                  if (!isConfigurationMissing && onRetry != null) ...<Widget>[
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: onRetry,
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('ลองเชื่อมต่อใหม่'),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
                   Text(
                     'หน้าจอนี้จะหายไปเมื่อเชื่อมต่อ Firebase สำเร็จ',
                     style: AppTextStyles.bodySmall,

@@ -132,29 +132,43 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
     // own store when navigated to without one).
     if (!_isEdit) {
       final storeState = ref.watch(myStoreProvider);
-      final store = ref
-          .watch(storeProvider(widget.storeId ?? ''))
-          .asData
-          ?.value;
+      if (widget.storeId != null && widget.storeId!.isNotEmpty) {
+        final explicitStore = ref.watch(storeProvider(widget.storeId!));
+        if (explicitStore.isLoading) return _scaffold(const LoadingView());
+        if (explicitStore.hasError) {
+          return _scaffold(
+            ErrorView(
+              message: 'โหลดร้านค้าไม่สำเร็จ',
+              detail: '${explicitStore.error}',
+              onRetry: () =>
+                  ref.invalidate(storeProvider(widget.storeId!)),
+            ),
+          );
+        }
+        final StoreModel? store = explicitStore.value;
+        if (store != null) return _form(store);
+        return _scaffold(
+          const EmptyView(
+            icon: Icons.storefront_outlined,
+            title: AppStrings.sellerNoStoreTitle,
+            body: AppStrings.sellerNoStoreHint,
+          ),
+        );
+      }
 
-      if (store != null) return _form(store);
-      final StoreModel? myStore = storeState.asData?.value;
-      if (widget.storeId == null && myStore != null) {
-        // No explicit store in the URL, but the seller has one — fall back to
-        // it so the form is immediately usable.
-        return _form(myStore);
-      }
-      if (storeState.isLoading) {
-        return _scaffold(const LoadingView());
-      }
+      // ไม่มี store ใน URL — ใช้ร้านของผู้ขายเอง เพื่อให้ฟอร์มพร้อมใช้ทันที
+      if (storeState.isLoading) return _scaffold(const LoadingView());
       if (storeState.hasError) {
         return _scaffold(
           ErrorView(
+            message: 'โหลดร้านค้าไม่สำเร็จ',
             detail: '${storeState.error}',
             onRetry: () => ref.invalidate(myStoreProvider),
           ),
         );
       }
+      final StoreModel? myStore = storeState.value;
+      if (myStore != null) return _form(myStore);
       return _scaffold(
         const EmptyView(
           icon: Icons.storefront_outlined,
@@ -167,26 +181,64 @@ class _ProductEditScreenState extends ConsumerState<ProductEditScreen> {
     // Edit mode: wait for the product and its variants, then seed the form
     // once. Re-seeding on every rebuild would fight the user's typing.
     final productState = ref.watch(productProvider(widget.productId!));
-    final ProductModel? product = productState.asData?.value;
-    final variants = ref
-        .watch(productVariantsProvider(widget.productId!))
-        .asData
-        ?.value;
-    if (product != null && variants != null) {
-      _seedEdit(product, variants);
-      final store = ref.watch(storeProvider(product.storeId)).asData?.value;
-      if (store == null) {
-        return _scaffold(const LoadingView());
-      }
-      return _form(store);
-    }
-    if (productState.isLoading) return _scaffold(const LoadingView());
-    return _scaffold(
-      ErrorView(
-        detail: '${productState.error}',
-        onRetry: () => ref.invalidate(productProvider(widget.productId!)),
-      ),
+    final variantsState = ref.watch(
+      productVariantsProvider(widget.productId!),
     );
+    if (productState.isLoading || variantsState.isLoading) {
+      return _scaffold(const LoadingView());
+    }
+    if (productState.hasError) {
+      return _scaffold(
+        ErrorView(
+          detail: '${productState.error}',
+          onRetry: () => ref.invalidate(productProvider(widget.productId!)),
+        ),
+      );
+    }
+    if (variantsState.hasError) {
+      return _scaffold(
+        ErrorView(
+          message: 'โหลดตัวเลือกสินค้าไม่สำเร็จ',
+          detail: '${variantsState.error}',
+          onRetry: () =>
+              ref.invalidate(productVariantsProvider(widget.productId!)),
+        ),
+      );
+    }
+    final ProductModel? product = productState.value;
+    final List<ProductVariantModel>? variants = variantsState.value;
+    if (product == null || variants == null) {
+      return _scaffold(
+        const EmptyView(
+          icon: Icons.inventory_2_outlined,
+          title: 'ไม่พบสินค้า',
+          body: 'สินค้าถูกถูกลบไปแล้วหรือยังไม่เข้าสู่ระบบ',
+        ),
+      );
+    }
+    _seedEdit(product, variants);
+    final storeState = ref.watch(storeProvider(product.storeId));
+    if (storeState.isLoading) return _scaffold(const LoadingView());
+    if (storeState.hasError) {
+      return _scaffold(
+        ErrorView(
+          message: 'โหลดร้านค้าไม่สำเร็จ',
+          detail: '${storeState.error}',
+          onRetry: () => ref.invalidate(storeProvider(product.storeId)),
+        ),
+      );
+    }
+    final StoreModel? store = storeState.value;
+    if (store == null) {
+      return _scaffold(
+        const EmptyView(
+          icon: Icons.storefront_outlined,
+          title: AppStrings.sellerNoStoreTitle,
+          body: AppStrings.sellerNoStoreHint,
+        ),
+      );
+    }
+    return _form(store);
   }
 
   Widget _scaffold(Widget body) => Scaffold(

@@ -16,15 +16,34 @@ import 'widgets/bootstrap_gate.dart';
 ///  3. startup gate   — blocks the app with a readable message if Firebase
 ///                      could not start, so we never render a white screen
 /// ประกอบ router, theme และหน้ารอ Firebase ให้เป็นแอปเดียว
-class ThaiOtopApp extends StatelessWidget {
+class ThaiOtopApp extends StatefulWidget {
   const ThaiOtopApp({super.key, required this.startup});
 
   final Future<FirebaseStartupResult> startup;
 
   @override
+  State<ThaiOtopApp> createState() => _ThaiOtopAppState();
+}
+
+class _ThaiOtopAppState extends State<ThaiOtopApp> {
+  late Future<FirebaseStartupResult> _startup;
+
+  @override
+  void initState() {
+    super.initState();
+    _startup = widget.startup;
+  }
+
+  void _retry() {
+    setState(() {
+      _startup = FirebaseBootstrap.start();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<FirebaseStartupResult>(
-      future: startup,
+      future: _startup,
       builder:
           (
             BuildContext context,
@@ -45,6 +64,7 @@ class ThaiOtopApp extends StatelessWidget {
                   FirebaseUnavailable(
                     snapshot.error?.toString() ?? 'ไม่สามารถเริ่มต้นแอปได้',
                   ),
+              onRetry: _retry,
             );
           },
     );
@@ -52,9 +72,10 @@ class ThaiOtopApp extends StatelessWidget {
 }
 
 class _StartupStatusApp extends StatelessWidget {
-  const _StartupStatusApp({this.startup});
+  const _StartupStatusApp({this.startup, this.onRetry});
 
   final FirebaseStartupResult? startup;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +92,7 @@ class _StartupStatusApp extends StatelessWidget {
               ),
             ),
           )
-        : BootstrapGate(startup: startup!, child: null);
+        : BootstrapGate(startup: startup!, child: null, onRetry: onRetry);
 
     return MaterialApp(
       title: 'Thai OTOP Marketplace',

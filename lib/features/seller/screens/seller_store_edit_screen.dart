@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../../core/constants/app_enums.dart';
+import '../../../core/constants/app_enums.dart' hide AsyncValue;
 import '../../../core/constants/app_strings.dart';
 import '../../../core/services/image/image_storage_service.dart';
 import '../../../core/theme/app_colors.dart';
@@ -95,7 +95,14 @@ class _SellerStoreEditScreenState extends ConsumerState<SellerStoreEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final UserModel? user = ref.watch(authUserProvider).asData?.value;
+    final AsyncValue<UserModel?> auth = ref.watch(authUserProvider);
+    final UserModel? user = auth.value;
+    if (auth.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text(AppStrings.navSellerStore)),
+        body: const LoadingView(),
+      );
+    }
 
     if (user == null || (!user.isSeller && !user.isAdmin)) {
       return Scaffold(

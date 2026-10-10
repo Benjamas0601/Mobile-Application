@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/constants/app_enums.dart';
+import '../../../core/constants/app_enums.dart' hide AsyncValue;
 import '../../../core/routes/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -19,7 +19,11 @@ class AdminHomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final UserModel? user = ref.watch(authUserProvider).asData?.value;
+    final AsyncValue<UserModel?> auth = ref.watch(authUserProvider);
+    final UserModel? user = auth.value;
+    if (auth.isLoading) {
+      return const Scaffold(body: LoadingView());
+    }
     if (user?.isAdmin != true) {
       return const Scaffold(
         body: EmptyView(
@@ -538,12 +542,12 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
         title: const Text('ลบผู้ใช้'),
         content: Text(
           'จะลบข้อมูลของ "${user.displayName}" (${user.email}) อย่างถาวร — '
-          'โพรไฟล์ ร้านค้าและสินค้าที่เป็นเจ้าของทั้งหมด\n\n'
-          'บนแผนฟรี บัญชีเข้าสู่ระบบ (Firebase Auth) จะยังคงอยู่โดยไม่สามารถ '
+          'โปรไฟล์ ร้านค้าและสินค้าที่เป็นเจ้าของทั้งหมด\n\n'
+          ' บัญชี (Firebase Auth) จะยังอยู่โดยไม่สามารถ '
           'ใช้งานแอปได้ ถ้าต้องการลบออกจากระบบจริง ต้องลบใน Firebase Console '
           'หลังลบแล้ว\n\n'
           'ประวัติคำสั่งซื้อที่คนนี้เคยสั่งยังถูกเก็บไว้ '
-          'การกระทำนี้ย้อนกลับไม่ได้ ยืนยันที่จะลบหรือไม่?',
+          'การกระทำนี้ย้อนกลับไม่ได้ ยืนยันที่จะลบหรือไม่ หากจะลบลบได้เลยค่พ?',
         ),
         actions: <Widget>[
           TextButton(

@@ -300,8 +300,11 @@ class SaveStoreProfileController extends Notifier<bool> {
       await ref
           .read(sellerCatalogRepositoryProvider)
           .updateStoreProfile(store: store, draft: draft);
-      // The store's name, images and region appear on the customer-facing
-      // screens, so the shared store list has to re-read.
+      // ชื่อร้าน/รูป/ภาคปรากฏบนหน้าลูกค้า ต้องรีเฟรชรายการร้านใหม่ และหน้าแก้
+      // โปรไฟล์เองก็ดู myStoreProvider (โดด) ซึ่งเป็น dependency ของ
+      // myStoresProvider อีกชั้น — ถ้าไม่ invalidate เผื่อทั้งคู่ กลับเข้าหน้า
+      // แก้ซ้ำจะเห็นข้อมูลเก่าค้างจาก cache
+      ref.invalidate(myStoreProvider);
       ref.invalidate(myStoresProvider);
       return true;
     } on Object {
