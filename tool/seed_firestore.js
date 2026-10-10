@@ -529,6 +529,55 @@ async function ensureAuthUser(token, user) {
     }
   }
 
+  // แชทตัวอย่าง: ลูกค้าเดโมถามเรื่องผ้าไหม → seller ยังไม่ได้ตอบ
+  // (unreadBySeller = 1 เพื่อให้ไอคอนแชท / รายการแชทของผู้ขายมีจุดแจ้งเตือน)
+  console.log('\n2.6) demo chat for the demo customer');
+  const threadId = 'thread-singthai-customer';
+  add('chat_threads', threadId, {
+    participantUids: [uids['customer'], uids['sellerNorth']],
+    storeId: 'store-singthai',
+    storeName: storeNames['store-singthai'],
+    buyerUid: uids['customer'],
+    sellerUid: uids['sellerNorth'],
+    lastMessage: 'สินค้าจะจัดส่งได้วันไหนครับ ถ้าสั่งวันนี้',
+    unreadByBuyer: 0,
+    unreadBySeller: 1,
+    lastAt: daysAgo(1),
+  });
+  // ล้างข้อความเดิมทั้งหมดในห้องเดโมก่อน เพื่อให้ผลรันซ้ำคงที่
+  // (ข้อความที่ integration test ส่งรอบก่อน ๆ จะสะสมอยู่ ไม่ลบจะทำให้เทสต์นับผิด)
+  const existing = await api(
+    `${docsBase}/chat_threads/${threadId}/messages?pageSize=300`,
+    token,
+    { method: 'GET' },
+    'list chat messages',
+  ).catch(() => null);
+  if (existing && existing.documents) {
+    for (const d of existing.documents) {
+      const id = d.name.slice(d.name.lastIndexOf('/') + 1);
+      if (id === 'm1' || id === 'm2') continue;
+      writes.push({ delete: d.name });
+    }
+    console.log('  ล้างข้อความเก่า ' + existing.documents.length + ' ฉบับ');
+  }
+  const chatMessages = [
+    { id: 'm1', text: 'สวัสดีครับ เสื้อผ้าไหมแดงลายไทย ยังมีของอยู่ไหมครับ', at: 1.3 },
+    { id: 'm2', text: 'สินค้าจะจัดส่งได้วันไหนครับ ถ้าสั่งวันนี้', at: 1.05 },
+  ];
+  for (const m of chatMessages) {
+    add(`chat_threads/${threadId}/messages`, m.id, {
+      threadId: threadId,
+      senderUid: uids['customer'],
+      senderName: 'ณัฐวุฒิ วัฒนกิจ',
+      type: 'text',
+      text: m.text,
+      // participantUids ซ้ำลงข้อความทุกฉบับ เพื่อให้ rules messages.allow list
+      // (ซึ่งห้ามใช้ get() กลับไปที่ thread) ตรวจได้จากเอกสารเอง — ดู Bug #26
+      participantUids: [uids['customer'], uids['sellerNorth']],
+      createdAt: daysAgo(m.at),
+    });
+  }
+
   console.log('3) batchWrite ' + writes.length + ' documents');
   const res = await api(docsBase + ':batchWrite', token, {
     method: 'POST',
@@ -536,8 +585,17 @@ async function ensureAuthUser(token, user) {
     body: JSON.stringify({ writes }),
   }, 'batchWrite');
 
-  if (res.writeResults && res.writeResults.some((r) => r.updateTime === undefined)) {
-    throw new Error('some writes did not return updateTime');
+  // ตรวจว่าเขียนสำเร็จ: write ที่เป็น update ต้องได้ updateTime
+  // ส่วน delete ไม่มี updateTime (มีแค่ผลลัพธ์ว่าง) จึงข้ามไป
+  const results = res.writeResults || [];
+  for (let i = 0; i < writes.length; i += 1) {
+    const r = results[i] || {};
+    if (r.status && r.status.code) {
+      throw new Error('write ' + i + ' failed: ' + JSON.stringify(r.status));
+    }
+    if (writes[i].update && r.updateTime === undefined) {
+      throw new Error('update ' + i + ' did not return updateTime');
+    }
   }
 
   console.log('\n=== seed complete ===');
@@ -548,6 +606,7 @@ async function ensureAuthUser(token, user) {
   console.log('  product_variants    ' + VARIANTS.length);
   console.log('  orders              ' + ordersCount);
   console.log('  payments            ' + paymentsCount);
+  console.log('  chat_message        ' + chatMessages.length);
   console.log('\ndemo accounts (password: ' + DEMO_PASSWORD + ')');
   for (const u of USERS) {
     console.log('  ' + u.roles.join('+').padEnd(16) + u.email);

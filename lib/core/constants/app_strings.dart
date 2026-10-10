@@ -199,6 +199,15 @@ class AppStrings {
   // --- Chat ----------------------------------------------------------------
   static const String chat = 'แชท';
   static const String chatWithSeller = 'ส่งข้อความถึงร้าน';
+  static const String chatNoConversations = 'ยังไม่มีข้อความ';
+  static const String chatNoConversationsHint =
+      'กด "ส่งข้อความถึงร้าน" ในหน้าสินค้าเพื่อเริ่มคุยกับร้าน';
+  static const String chatEmptyRoom = 'ยังไม่มีข้อความในห้องนี้';
+  static const String chatEmptyRoomHint =
+      'พิมพ์ข้อความด้านล่างเพื่อคุยกับร้าน';
+  static const String chatSend = 'ส่ง';
+  static const String chatSendFailed = 'ส่งข้อความไม่สำเร็จ';
+  static const String chatOpenFailed = 'เปิดแชทไม่สำเร็จ กรุณาลองใหม่';
   static const String messageHint = 'พิมพ์ข้อความ...';
   static const String sendImage = 'ส่งรูป';
 

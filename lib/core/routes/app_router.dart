@@ -8,6 +8,8 @@ import '../../features/auth/screens/register_screen.dart';
 import '../../features/cart/screens/cart_screen.dart';
 import '../../features/cart/screens/checkout_screen.dart';
 import '../../features/cart/screens/payment_screen.dart';
+import '../../features/chat/screens/chat_list_screen.dart';
+import '../../features/chat/screens/chat_thread_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/orders/screens/order_detail_screen.dart';
 import '../../features/orders/screens/order_list_screen.dart';
@@ -41,6 +43,10 @@ class AppRoutes {
   static const String payment = '/checkout/payment';
   static const String profile = '/profile';
   static const String adminRoot = '/admin';
+
+  /// ห้องสนทนาผู้ซื้อ/ผู้ขาย — ทุก path ใต้ `/chat/...` ต้องล็อกอิน
+  static const String chat = '/chat';
+  static String chatThread(String threadId) => '/chat/$threadId';
 
   /// Seller console root — every `/seller/...` route is account-bound.
   static const String sellerRoot = '/seller';
@@ -94,8 +100,12 @@ String? authRedirect({
     AppRoutes.orders,
     AppRoutes.ordersHistory,
     AppRoutes.profile,
+    AppRoutes.chat,
   };
   final bool isOrderRoute = location.startsWith('/order/');
+  final bool isChatRoute =
+      location == AppRoutes.chat ||
+      location.startsWith('${AppRoutes.chat}/');
 
   // Path-parameter routes (e.g. `/seller/products/p-x`) arrive here with the
   // real id substituted, so membership in the set above is not enough — check
@@ -114,7 +124,8 @@ String? authRedirect({
   if (!signedIn) {
     if (!accountRequired.contains(location) &&
         !isSellerRoute &&
-        !isOrderRoute) {
+        !isOrderRoute &&
+        !isChatRoute) {
       return null;
     }
     // Hand the destination to the login screen as `redirect` so signing in
@@ -224,6 +235,19 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
         path: '/order/:orderId',
         builder: (BuildContext context, GoRouterState state) =>
             OrderDetailScreen(orderId: state.pathParameters['orderId'] ?? ''),
+      ),
+      // รายการแชทและห้องสนทนา — ต้องล็อกอิน (กันไว้ด้านบนแล้ว)
+      GoRoute(
+        path: AppRoutes.chat,
+        builder: (BuildContext context, GoRouterState state) =>
+            const ChatListScreen(),
+      ),
+      GoRoute(
+        path: '/chat/:threadId',
+        builder: (BuildContext context, GoRouterState state) =>
+            ChatThreadScreen(
+              threadId: state.pathParameters['threadId'] ?? '',
+            ),
       ),
       // Seller console: account-bound (redirect above) and role-gated inside
       // the screens, because a role lives in Firestore, not in the route.

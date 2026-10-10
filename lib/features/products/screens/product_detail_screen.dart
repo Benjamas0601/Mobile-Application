@@ -15,6 +15,7 @@ import '../../../models/user_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../providers/catalog_provider.dart';
+import '../../../providers/chat_provider.dart';
 import '../../../widgets/state_views.dart';
 
 /// Product detail — the screen that has to sell the "story", so the four
@@ -76,11 +77,8 @@ class ProductDetailScreen extends ConsumerWidget {
   }
 
   Widget _body(BuildContext context, WidgetRef ref, ProductModel product) {
-    final store = ref.watch(storeProvider(product.storeId)).asData?.value;
-    final variants = ref
-        .watch(productVariantsProvider(product.id))
-        .asData
-        ?.value;
+    final storeState = ref.watch(storeProvider(product.storeId));
+    final variantsState = ref.watch(productVariantsProvider(product.id));
 
     return ListView(
       padding: const EdgeInsets.only(bottom: AppSpacing.xxxl),
@@ -117,11 +115,44 @@ class ProductDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
               Text(product.description, style: AppTextStyles.bodyMedium),
-              if (variants != null && variants.isNotEmpty) ...<Widget>[
+              if (variantsState.hasError)
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.lg),
+                  child: InlineErrorBanner(
+                    message: 'โหลดตัวเลือกสินค้าไม่สำเร็จ',
+                    detail: '${variantsState.error}',
+                    onRetry: () => ref.invalidate(
+                      productVariantsProvider(product.id),
+                    ),
+                  ),
+                )
+              else if (variantsState.isLoading)
+                const Padding(
+                  padding: EdgeInsets.only(top: AppSpacing.lg),
+                  child: SkeletonTextBlock(lines: 2),
+                )
+              else if (variantsState.value != null &&
+                  variantsState.value!.isNotEmpty) ...<Widget>[
                 const SizedBox(height: AppSpacing.xl),
-                _variants(variants),
+                _variants(variantsState.value!),
               ],
-              if (store != null) _store(store),
+              if (storeState.hasError)
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.lg),
+                  child: InlineErrorBanner(
+                    message: 'โหลดข้อมูลร้านค้าไม่สำเร็จ',
+                    detail: '${storeState.error}',
+                    onRetry: () =>
+                        ref.invalidate(storeProvider(product.storeId)),
+                  ),
+                )
+              else if (storeState.isLoading)
+                const Padding(
+                  padding: EdgeInsets.only(top: AppSpacing.lg),
+                  child: SkeletonTextBlock(lines: 2),
+                )
+              else if (storeState.value != null)
+                _store(context, ref, storeState.value!),
               const Divider(height: AppSpacing.huge * 2),
               if (product.story.isEmpty)
                 const EmptyView(
@@ -271,7 +302,12 @@ class ProductDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _store(StoreModel store) {
+  Widget _store(BuildContext context, WidgetRef ref, StoreModel store) {
+    // ผู้ขายที่ดูแคตตาล็อกของตัวเองไม่จำเป็นต้องแชทกับตัวเอง
+    // ปุ่มนี้สำหรับลูกค้าเท่านั้น
+    final UserModel? user = ref.watch(authUserProvider).asData?.value;
+    final bool isMyStore = user != null && store.ownerUid == user.uid;
+
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.xl),
       child: Container(
@@ -320,10 +356,53 @@ class ProductDetailScreen extends ConsumerWidget {
                 color: AppColors.inkMuted,
               ),
             ),
+            if (!isMyStore) ...<Widget>[
+              const SizedBox(height: AppSpacing.md),
+              OutlinedButton.icon(
+                onPressed: () => _chatWithStore(context, ref, store),
+                icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                label: const Text(AppStrings.chatWithSeller),
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  /// เปิด (หรือสร้าง) ห้องสนทนาของผู้ซื้อกับร้าน [store] แล้วกระโดดเข้าห้อง
+  ///
+  /// ผู้ที่ยังไม่ล็อกอินจะถูกส่งไปหน้า login พร้อม redirect กลับมาหน้านี้ เพื่อให้
+  /// ล็อกอินเสร็จแล้วกลับมากดซ้ำได้ทันที — route แชทบังคับล็อกอินอยู่แล้ว แต่ต้อง
+  /// ตัดสินใจ redirect ที่นี่ เพราะ id ของห้องจะเกิดหลังสร้างห้องสำเร็จเท่านั้น
+  Future<void> _chatWithStore(
+    BuildContext context,
+    WidgetRef ref,
+    StoreModel store,
+  ) async {
+    final String? myUid = ref.read(authUserProvider).asData?.value?.uid;
+    if (myUid == null) {
+      final String back = Uri.encodeComponent(AppRoutes.productDetail(productId));
+      context.push('${AppRoutes.login}?redirect=$back');
+      return;
+    }
+    try {
+      final String id = await ref
+          .read(chatRepositoryProvider)
+          .getOrCreateThread(
+            storeId: store.id,
+            sellerUid: store.ownerUid,
+            storeName: store.name,
+          );
+      if (context.mounted) context.push(AppRoutes.chatThread(id));
+    } on Object {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          const SnackBar(content: Text(AppStrings.chatOpenFailed)),
+        );
+    }
   }
 
   Widget _story(ProductStory story) {

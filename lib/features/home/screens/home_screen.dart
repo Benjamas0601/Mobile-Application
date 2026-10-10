@@ -96,6 +96,13 @@ class HomeScreen extends ConsumerWidget {
               icon: const Icon(Icons.receipt_long_outlined),
               onPressed: () => context.push(AppRoutes.orders),
             ),
+            // กล่องข้อความผู้ซื้อ: route แชทบังคับล็อกอิน ไอคอนนี้จึงมีความหมาย
+            // หลังล็อกอินแล้ว วางถัดจากปุ่มออเดอร์
+            IconButton(
+              tooltip: AppStrings.chat,
+              icon: const Icon(Icons.forum_outlined),
+              onPressed: () => context.push(AppRoutes.chat),
+            ),
             IconButton(
               tooltip: AppStrings.logout,
               icon: const Icon(Icons.logout_rounded),

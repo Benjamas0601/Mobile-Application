@@ -74,6 +74,26 @@ void main() {
       }
     });
 
+    test('chat routes are account-bound, like orders', () {
+      // `/chat` และทุก `/chat/<thread>` ต้องมีเจ้าของจริง — ข้อความระบุชื่อผู้ส่ง
+      // คนที่ยังไม่ล็อกอินจึงเข้าถล่องข้อความไม่ได้
+      for (final String location in <String>[
+        AppRoutes.chat,
+        AppRoutes.chatThread('t1'),
+      ]) {
+        expect(
+          authRedirect(signedIn: false, location: location),
+          '${AppRoutes.login}?redirect=$location',
+          reason: '$location must send a signed-out visitor to login',
+        );
+        expect(
+          authRedirect(signedIn: true, location: location),
+          isNull,
+          reason: 'a signed-in user must reach $location',
+        );
+      }
+    });
+
     test('the login screen itself is never redirected', () {
       expect(authRedirect(signedIn: false, location: AppRoutes.login), isNull);
       expect(
@@ -98,6 +118,8 @@ void main() {
         AppRoutes.orders,
         AppRoutes.orderDetail('o1'),
         AppRoutes.orderTracking('o1'),
+        AppRoutes.chat,
+        AppRoutes.chatThread('t1'),
         AppRoutes.profile,
       ]) {
         expect(

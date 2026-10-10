@@ -395,49 +395,73 @@ service cloud.firestore {
       );
     }
 
-    // ================================================================ //
-    // chat_threads/{threadId} + messages/{messageId}
-    // ================================================================ //
-    match /chat_threads/{threadId} {
+// ================================================================ //
+      // chat_threads/{threadId} + messages/{messageId}
+      // ================================================================ //
+      match /chat_threads/{threadId} {
 
-      // สมาชิกห้อง (อ่านจากเอกสาร thread ไม่ใช่เอกสารปัจจุบัน —
-      // ตอน create message ยังไม่มี resource ทำให้ resource.data เป็น null
-      // ต้อง hop ไปที่ chat_threads/{threadId} แทน)
-      function isParticipant() {
-        return isSignedIn()
-          && exists(/databases/$(database)/documents/chat_threads/$(threadId))
-          && request.auth.uid in get(/databases/$(database)/documents/chat_threads/$(threadId)).data.participantUids;
+        // สมาชิกห้อง (อ่านจากเอกสาร thread ไม่ใช่เอกสารปัจจุบัน —
+        // ตอน create message ยังไม่มี resource ทำให้ resource.data เป็น null
+        // ต้อง hop ไปที่ chat_threads/{threadId} แทน)
+        function isParticipant() {
+          return isSignedIn()
+            && exists(/databases/$(database)/documents/chat_threads/$(threadId))
+            && request.auth.uid in get(/databases/$(database)/documents/chat_threads/$(threadId)).data.participantUids;
+        }
+
+        function isThreadSeller() {
+          return isSignedIn() && sellsInStore(resource.data.storeId);
+        }
+
+        // read แยก get/list เหมือน orders (Bug #26): list query อ้าง get()/
+        // exists() ไปเอกสารอื่นไม่ได้ → "ถูกปฏิเสธทั้ง query"
+        //  แยก read: get พิสูจน์ผ่าน isParticipant()/isThreadSeller()/isAdmin()
+        //  ส่วน list อ้างได้แค่ resource.data ของเอกสารตัวเอง → ผู้ที่อยู่ใน
+        //  participantUids เท่านั้น (query ต้องมี where participantUids
+        //  array-contains ตัวเอง ซึ่งเป็นที่มาของผลลัพธ์พอดี)
+        allow get: if isParticipant() || isThreadSeller() || isAdmin();
+        // list ห้าม reference ฟิลด์ที่อาจไม่มีใน candidate โดยตรง —
+        // emulator/backend ประเมิน rule กับเอกสารตัวอย่างที่ไม่มีฟิลด์ด้วย
+        // ถ้า `resource.data.participantUids` undefined → throw = deny ทั้ง query
+        // ตรวจ `keys().hasAny(...)` ก่อนเพื่อให้ผลเป็น false ปลอดภัย
+        allow list: if isSignedIn()
+          && resource.data.keys().hasAny(['participantUids'])
+          && resource.data.participantUids.hasAny([request.auth.uid]);
+
+        allow create: if isSignedIn()
+          && request.auth.uid in request.resource.data.participantUids
+          && request.resource.data.lastAt == request.time;
+
+        allow update: if (isParticipant() || isThreadSeller() || isAdmin())
+          && changesOnlyTo([
+            'lastMessage', 'lastAt', 'unreadByBuyer', 'unreadBySeller'
+          ]);
+
+        allow delete: if isAdmin();
+
+        match /messages/{messageId} {
+
+          // ฝั่ง app เก็บ participantUids ซ้ำลงในทุก message (denormalize)
+          // เพื่อให้ list rule ตรวจจาก resource.data ได้โดยไม่ต้อง get()
+          // กลับไปที่ thread — มิฉะนั้น message list จะเจอปัญหาเดียวกับ
+          // thread list (Bug #26: list ห้ามใช้ get()/exists())
+          allow get: if isParticipant() || isThreadSeller() || isAdmin();
+          allow list: if isSignedIn()
+            && resource.data.keys().hasAny(['participantUids'])
+            && resource.data.participantUids.hasAny([request.auth.uid]);
+
+          // ส่งได้เฉพาะคนในห้อง และต้องเป็นผู้ส่งเอง และ participantUids
+          // ในข้อความต้องตรงกับห้อง (กันปลอมปนจากคนนอก)
+          allow create: if isParticipant()
+            && request.resource.data.senderUid == request.auth.uid
+            && request.resource.data.createdAt == request.time
+            && request.resource.data.participantUids
+                 == get(/databases/$(database)/documents/chat_threads/$(threadId)).data.participantUids;
+
+          // แชทแก้ย้อนหลังไม่ได้
+          allow update, delete: if false;
+        }
       }
-
-      function isThreadSeller() {
-        return isSignedIn() && sellsInStore(resource.data.storeId);
-      }
-
-      allow read: if isParticipant() || isThreadSeller() || isAdmin();
-
-      allow create: if isSignedIn()
-        && request.auth.uid in request.resource.data.participantUids
-        && request.resource.data.lastAt == request.time;
-
-      allow update: if (isParticipant() || isThreadSeller() || isAdmin())
-        && changesOnlyTo([
-          'lastMessage', 'lastAt', 'unreadByBuyer', 'unreadBySeller'
-        ]);
-
-      allow delete: if isAdmin();
-
-      match /messages/{messageId} {
-        allow read: if isParticipant() || isThreadSeller() || isAdmin();
-
-        // ส่งได้เฉพาะคนในห้อง และต้องเป็นผู้ส่งเอง
-        allow create: if isParticipant()
-          && request.resource.data.senderUid == request.auth.uid
-          && request.resource.data.createdAt == request.time;
-
-        // แชทแก้ย้อนหลังไม่ได้
-        allow update, delete: if false;
-      }
-    }
 
     // ================================================================ //
     // coupons/{couponId} — แอดมินจัดการ, ผู้ใช้อ่านเพื่อไปใช้ตอน checkout

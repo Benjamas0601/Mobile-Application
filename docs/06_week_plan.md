@@ -11,8 +11,8 @@
 | สัปดาห์ | ส่ง | สถานะ |
 |---|---|---|
 | Week 2 | 30 ก.ย. 2569 | ✅ **เสร็จ** |
-| Week 3 | 7 ต.ค. 2569 | 🔄 **กำลังทำ** (Auth, catalog/cart, checkout/orders และ Seller Product CRUD เสร็จ; เหลือเก็บ error states, ย้าย Rules tests เข้า repo และ E2E บางส่วน) |
-| Week 4 | 14 ต.ค. 2569 | ⏳ |
+| Week 3 | 7 ต.ค. 2569 | 🔄 **ใกล้เสร็จ** (Auth, catalog/cart, checkout/orders, Seller Product CRUD, error/empty states ครบทุกหน้า และ E2E เดินสถานะ + โปรไฟล์ร้าน ผ่านแล้ว; เหลือย้าย Rules tests เข้า repo และ build บน iOS) |
+| Week 4 | 14 ต.ค. 2569 | 🔄 **ใกล้เสร็จ** (ระบบแชทครบ: models/repo/providers/UI list+thread/routes/seed/test · E2E แชทผ่าน · rules 67/67 & deploy แล้ว · analyze clean · unit 182/182 · integration 4/4; เหลือ build บน iOS ที่ทำบน Windows ไม่ได้) |
 | Week 5 | 21 ต.ค. 2569 | ⏳ |
 | Week 6 | 4 พ.ย. 2569 | ⏳ |
 
@@ -252,11 +252,11 @@
 
 ### ⏳ เหลือใน Week 3
 
-1. **Error/Empty state ครบทุกหน้า** — มี `state_views.dart` และหน้า Seller บางส่วนเรียกใช้แล้ว แต่ยังไม่ได้ไล่ตรวจทุกหน้า
-2. **Seller E2E เพิ่มเติม** — Product CRUD ผ่านแล้ว (`create → edit price → delete`); ยังไม่ได้เดิน order status และ store profile บน emulator
+~~1. **Error/Empty state ครบทุกหน้า** — มี `state_views.dart` และหน้า Seller บางส่วนเรียกใช้แล้ว แต่ยังไม่ได้ไล่ตรวจทุกหน้า~~ → **✅ เสร็จ 9 ต.ค. 2569** (ดูหัวข้อ "Week 3 — Error/Empty States + E2E ผู้ขาย" ด้านล่าง)
+~~2. **Seller E2E เพิ่มเติม** — Product CRUD ผ่านแล้ว (`create → edit price → delete`); ยังไม่ได้เดิน order status และ store profile บน emulator~~ → **✅ เสร็จ 9 ต.ค. 2569** — `integration_test/seller_orders_flow_test.dart` เดิน `awaiting_shipment → shipped` พร้อมเลขพัสดุ และแก้โปรไฟล์ร้านจนเขียนกลับได้จริง (ดูหัวข้อด้านล่าง)
 3. **ย้าย Firestore Rules tests เข้า repo** — ตอนนี้ชุด 36 เคสยังอยู่ที่ `%TEMP%\opencode\rules-test\check.js` ไม่ได้เป็น regression test ที่รันจากโปรเจกต์ได้
 4. **ทดสอบ build/run บน iOS** — ต้องใช้ macOS + Xcode
-5. **ลบ Cloudinary probe 2 รูป** — unsigned preset ลบไม่ได้ ต้องลบผ่าน Media Library
+~~5. **ลบ Cloudinary probe 2 รูป** — unsigned preset ลบไม่ได้ ต้องลบผ่าน Media Library~~ → **ยกเลิกตามคำสั่งผู้ใช้** ("Cloudinary ไม่ต้องใช้ตัวนี้แล้ว") — งานค้าง Cloudinary ทั้งหมดถูกงด ไม่ refactor โค้ดจนกว่าจะสั่ง
 
 > **ขอบเขต Local DB → Cloud Sync:** ยังไม่ได้ทำ ระบบตะกร้าตั้งใจเป็น in-memory เพื่อรองรับ guest และ Product/Order เขียนไป Firestore โดยตรงผ่าน repository; ยังไม่มี local database persistence หรือ sync queue ในแอป
 
@@ -636,3 +636,109 @@ Explore ("สำรวจไทย": แผนที่ไทย + บัตร�
 | `flutter analyze` | **No issues found!** |
 | `flutter test` | **174/174 ผ่าน** (+1 เคส: ปุ่มสำรวจไทย + หมวดที่ซ่อนหายจากโฮม) |
 | grep `explore|สำรวจ` ใน `lib/` | เหลือ `AppStrings.navExplore` ('สำรวจ') ที่ยังใช้เป็น Label หัวข้อสินค้าบนโฮม + ปุ่มไปหน้าแรกของตระกร้า/เช็คเอาต์ว่าง — ไม่ใช่หน้า explore อีกต่อไป |
+
+---
+
+## ✅ Week 3 — Error/Empty States + E2E ผู้ขาย (9 ต.ค. 2569)
+
+> ปิดงานค้าง Week 3 ชุดสุดท้าย: เก็บ error/loading/empty state ให้ครบทุกหน้า
+> พร้อมพิสูจน์ flow ผู้ขายจริงบน emulator-5554 กับ Firestore จริง
+
+### ขอบเขตที่ทำเสร็จ
+
+| # | งาน | ผล | สถานะ |
+|---|---|---|---|
+| 1 | 7 จุด auth-gate กะพริบ Loading | แต่ละหน้าดู `authUserProvider` แล้ว่เกต loading ก่อนเช็ค role (seller_order_list, seller_product_list, seller_store_edit, seller_home, admin_home, checkout, payment) | ✅ |
+| 2 | `payment_screen.dart` | store ของหน้าพลาด fallback เงียบ → มี loading + error + retry (แก้ import `AsyncValue` ชนกันด้วย) | ✅ |
+| 3 | `seller_home_screen.dart` dashboard 3 ส่วน | ยอดขายวันนี้ ("…" + "ลองใหม่" แตะ reload) · งานต้องทำ → ErrorBanner · สต็อกต่ำ → ErrorBanner | ✅ |
+| 4 | `product_edit_screen.dart` | build ใหม่ทั้งหน้า: create-mode ระบุร้านเอง / edit-mode โหลดสินค้า+variant+ร้าน มี loading/error/empty ครบ | ✅ |
+| 5 | `product_detail_screen.dart` | store กับ variant ที่ซ้อนกัน → InlineErrorBanner + Skeleton | ✅ |
+| 6 | bootstrap gate | `ThaiOtopApp` เป็น StatefulWidget + ปุ่ม "ลองเชื่อมต่อใหม่" re-run `FirebaseBootstrap.start()` | ✅ |
+| 7 | E2E ผู้ขาย | `integration_test/seller_orders_flow_test.dart` — เดิน `o-demo-3 awaiting_shipment → shipped` พร้อมเลขพัสดุ และแก้โปรไฟล์ร้าน → pop → กลับเข้าดูใหม่ว่าข้อมูลจริง | ✅ |
+
+### ✅ หลักฐาน
+
+| การทดสอบ | ผล |
+|---|---|
+| `flutter analyze` | **No issues found!** |
+| `flutter test` | **174/174 ผ่าน** |
+| `flutter test integration_test/seller_orders_flow_test.dart -d emulator-5554` | **ผ่าน** |
+| `flutter test integration_test -d emulator-5554` (ทั้ง suite หลัง reseed) | **3/3 ผ่าน** (seller_catalog + login_and_purchase + seller_orders) |
+
+### 🐛 Bug ที่ E2E ใหม่จับได้จริง
+
+| # | วันที่ | ส่วนที่พบ | อาการ | สาเหตุ | วิธีแก้ | สถานะ |
+|---|---|---|---|---|---|---|
+| 35 | 9 ต.ค. | `SaveStoreProfileController.save` | แก้โปรไฟล์ร้านแล้วบันทึกสำเร็จ แต่กลับเข้าหน้า edit ซ้ำยังเห็น**ข้อมูลเก่า** | save invalidate แค่ `myStoresProvider` (พหูพจน์) แต่หน้า edit ดู `myStoreProvider` (เอกพจน์) ซึ่งเป็น dependency ชั้นที่มัน watch → cache เก่าค้าง | invalidate ทั้ง `myStoreProvider` และ `myStoresProvider` | ✅ แก้แล้ว · E2E จับว่า description ใหม่โหลดกลับถูก |
+
+### หมายเหตุการรัน E2E
+
+- `seller_orders_flow_test.dart` แก้ seed โดยตั้งใจ (เลื่อน o-demo-3) → **ต้องรัน
+  `node tool/seed_firestore.js thaiotop-587f1` ก่อน** ทั้งรันเดี่ยวและรัน suite
+  (ไม่เช่นนั้นเจอ "ยังไม่เจอออเดอร์ awaiting_shipment" เพราะออเดอร์กลายเป็น shipped ไปแล้ว)
+- ปุ่มย้อนในแอปใช้ tooltip ภาษาไทย ('กลับ') → `pageBack()` ของ flutter_test หาเจอไม่ได้
+  เทสต์จึงใช้ `find.byType(BackButton)` แทน
+- งานค้าง Cloudinary (ลบ probe รูป) ถูก**ยกเลิกตามคำสั่งผู้ใช้** ("Cloudinary ไม่ต้องใช้ตัวนี้แล้ว")
+
+---
+
+## ✅ Week 4 — ระบบแชท (10 ต.ค. 2569)
+
+> เปิด scope Week 4 ตามแผน: แชทระหว่างผู้ซื้อ–ผู้ขาย ทำครบทั้ง data model,
+> repository, provider, UI (รายการแชท + หน้าคุย), routing, seed, unit test
+> และ integration test บน emulator กับ Firestore จริง — พร้อมปิดช่องโหว่ Rules
+
+### ขอบเขตที่ทำเสร็จ
+
+| # | งาน | ผล | สถานะ |
+|---|---|---|---|
+| 1 | Models | `chat_thread_model.dart` (`unreadFor(uid)`) · `chat_message_model.dart` (`MessageType`) | ✅ |
+| 2 | Repository | `chat_repository.dart`: `watchMyThreads` · `watchThread` · `watchMessages` · `getOrCreateThread` · `sendMessage` · `markThreadRead` + `ChatWriteException` | ✅ |
+| 3 | Providers | `chat_provider.dart`: streams + `SendChatMessageController` (busy flag กันกดซ้ำ) | ✅ |
+| 4 | UI | `chat_list_screen.dart` (รายการ + badge) · `chat_thread_screen.dart` (บับเบิล + คอมโพเซอร์) | ✅ |
+| 5 | Routing | `AppRoutes.chat` / `chatThread(id)` + authRedirect | ✅ |
+| 6 | Entry points | ปุ่ม "ส่งข้อความถึงร้าน" (product detail) · ไอคอนแชท buyer home + seller dashboard | ✅ |
+| 7 | Seed | thread `thread-singthai-customer` + 2 ข้อความ + ตัวนับ unread ผู้ขาย | ✅ |
+| 8 | Security Rules | แยก `get`/`list` สำหรับ `chat_threads` + `messages`; denormalize `participantUids` ลงทุกข้อความ | ✅ |
+| 9 | Unit/Widget test | `test/chat_test.dart` + เคสแชทใน `test/app_router_test.dart` | ✅ |
+| 10 | Integration test | `integration_test/chat_flow_test.dart` — เปิดห้อง → ส่ง → เห็นบับเบิล → inbox อัปเดต | ✅ |
+
+### ✅ หลักฐาน (รอบส่ง Week 4)
+
+| การทดสอบ | ผล |
+|---|---|
+| `flutter analyze` | **No issues found!** |
+| `flutter test` | **182/182 ผ่าน** |
+| `flutter test integration_test -d emulator-5554` (หลัง reseed) | **4/4 ผ่าน** (chat_flow + login_and_purchase + seller_catalog + seller_orders) |
+| `node tool/rules-test/test_rules.js` (Firestore Emulator) | **67/67 ผ่าน** (เพิ่มชุดแชท 4 เคส) |
+| `npx firebase deploy --only firestore:rules --project thaiotop-587f1` | Deploy rules ที่แยก `get`/`list` + guard เรียบร้อย |
+
+### 🐛 Bug ที่พบและแก้ใน Week 4
+
+| # | วันที่ | ส่วนที่พบ | อาการ | สาเหตุ | วิธีแก้ | สถานะ |
+|---|---|---|---|---|---|---|
+| 36 | 10 ต.ค. | `firestore.rules` `chat_threads.read` | เปิดห้องแชทจากหน้าสินค้าไม่ได้ — `getOrCreateThread` ถูก `PERMISSION_DENIED` | read ใช้ `isParticipant()` ที่เรียก `get()` ไปเอกสารอื่น → **list query ถูกปฏิเสธทั้ง query** (ซ้ำรอย bug #26 แต่กับแชท) | แยก `allow get` (ใช้ cross-doc) กับ `allow list` (อ้างเฉพาะ `resource.data.participantUids`) | ✅ แก้แล้ว · deploy + E2E ผ่าน |
+| 37 | 10 ต.ค. | `firestore.rules` `messages` | query ข้อความแบบ `array-contains` ยังถูกปฏิเสธ | `list` rule อ้าง `resource.data.participantUids` แต่เอกสารตัวอย่างของ query ไม่มีฟิลด์นั้น | เพิ่ม guard `resource.data.keys().hasAny(['participantUids'])` + denormalize `participantUids` ลงทุก message + แอป query ด้วย `where('participantUids', array-contains, uid)` | ✅ แก้แล้ว · rules test จับ |
+| 38 | 10 ต.ค. | `chat_thread_screen.dart` | เปิดหน้าคุยแล้วทันทีมี exception `ref.listen can only be used within the build method of a ConsumerWidget` | เรียก `ref.listen` นอก `build` | เปลี่ยนเป็น `ref.listenManual` + เก็บ `ProviderSubscription` แล้วปิดใน `dispose` | ✅ แก้แล้ว · E2E ผ่าน |
+| 39 | 10 ต.ค. | `chat_thread_screen.dart` | ส่งข้อความแล้ว `TextEditingController used after being disposed` | เคลียร์คอมโพเซอร์หลัง `await` โดยไม่เช็ค `mounted` | `if (mounted) _input.clear();` | ✅ แก้แล้ว |
+| 40 | 10 ต.ค. | `tool/seed_firestore.js` | rerun E2E แล้วนับข้อความได้ 2/4 ฉบับ แทน 1 | seed ไม่ล้างข้อความที่ E2E รอบก่อนส่งไว้ (id สุ่ม) → สะสมในห้องเดโม | seed เรียก `listDocuments` แล้ว push `delete` ข้อความเดิม (ยกเว้น m1/m2 ที่จะ re-add) | ✅ แก้แล้ว · E2E deterministic |
+| 41 | 10 ต.ค. | `tool/seed_firestore.js` | หลังเพิ่ม delete ขึ้น `batchWrite failed (400): the same document cannot be written more than once` | ลบ m1/m2 แล้ว re-add ใน batch เดียวกัน (เขียน doc ซ้ำ) | ข้ามการลบ doc id `m1`/`m2` | ✅ แก้แล้ว |
+| 42 | 10 ต.ค. | `tool/seed_firestore.js` | ขึ้น `ERROR: some writes did not return updateTime` ทั้งที่เขียนสำเร็จ | delete write ไม่มี `updateTime` แต่ตัวตรวจเหมารวม | ตรวจเฉพาะ write ที่เป็น `update` + ตรวจ `status.code` ของทุก write | ✅ แก้แล้ว |
+
+### 📝 หมายเหตุการรัน E2E (บทเรียนจาก environment)
+
+- **ต้อง reseed ก่อนรันทุกครั้ง**: `node tool/seed_firestore.js thaiotop-587f1`
+  (ตอนนี้ seed ล้างข้อความแชทเดิมในห้องเดโมให้แล้ว จึงรันซ้ำได้ผลคงที่)
+- **แชทเทสต์ยืนยันด้วย occurrence เดียว**: ข้อความ marker โผล่ทั้งในบับเบิลและ
+  คอมโพเซอร์ชั่วขณะหลังกดส่ง → เทสต์รอจนเหลือ occurrence เดียว (`pumpUntilTrue`)
+- **Emulator หลัง cold boot ต้องเช็ค 2 อย่าง**: `adb devices` = `device` (ไม่ใช่
+  `unauthorized`) และ DNS ใช้ได้ (`ping firestore.googleapis.com`) — ถ้า `unauthorized`
+  ให้ลบ/สร้าง `~/.android/adbkey` ใหม่แล้วรีสตาร์ท emulator; ถ้า DNS เพี้ยนให้เปิด
+  emulator ด้วย `-dns-server 8.8.8.8,8.8.4.4`
+- **Rules emulator ต้องการ JDK**: เครื่องมีแต่ JDK 17 แต่ firebase-tools 15 ต้อง JDK 21
+  → ใช้ `firebase-tools@13.29.3` (devDependency ใน `tool/rules-test`) และตั้ง
+  `JAVA_HOME` ชี้ JDK 17 ตอนรัน `emulators:start`
+
+### ⏳ งานค้าง / ข้อจำกัด
+
+- **build/run บน iOS** — เครื่องเป็น Windows ไม่มี Xcode จึงทำบนเครื่องนี้ไม่ได้

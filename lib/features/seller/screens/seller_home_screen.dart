@@ -30,7 +30,14 @@ class SellerHomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final UserModel? user = ref.watch(authUserProvider).asData?.value;
+    final AsyncValue<UserModel?> auth = ref.watch(authUserProvider);
+    final UserModel? user = auth.value;
+    if (auth.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text(AppStrings.navSellerDashboard)),
+        body: const LoadingView(),
+      );
+    }
 
     // Layer 2 role-gate
     if (user == null || (!user.isSeller && !user.isAdmin)) {
@@ -70,6 +77,11 @@ class SellerHomeScreen extends ConsumerWidget {
             tooltip: 'ดูตลาด OTOP',
             icon: const Icon(Icons.storefront_outlined),
             onPressed: () => context.push(AppRoutes.stores),
+          ),
+          IconButton(
+            tooltip: AppStrings.chat,
+            icon: const Icon(Icons.forum_outlined),
+            onPressed: () => context.push(AppRoutes.chat),
           ),
           IconButton(
             tooltip: AppStrings.logout,
@@ -328,6 +340,11 @@ class _TodayStrip extends ConsumerWidget {
       orElse: () => 0,
     );
 
+    // ขณะโหลดให้แสดง "…" แทนตัวเลข 0 เพื่อไม่ให้ดูเหมือนขายไม่ได้ — ตอนโหลด
+    // ไม่ได้ให้แตะกล่องยอดเพื่อโหลดใหม่ (แยกจาก "ขายได้วันนี้ ฿0" จริง)
+    final bool revenueLoading = orders.isLoading;
+    final bool revenueError = orders.hasError;
+
     return Container(
       width: double.infinity,
       color: AppColors.primary,
@@ -369,38 +386,47 @@ class _TodayStrip extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.md),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.primaryDark,
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: <Widget>[
-                const Text(
-                  'ขายได้วันนี้',
-                  style: TextStyle(
-                    color: AppColors.onPrimaryMuted,
-                    fontSize: 11.5,
-                    height: 1.3,
+          GestureDetector(
+            onTap: revenueError
+                ? () => ref.invalidate(storeOrdersProvider(store.id))
+                : null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.primaryDark,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
+                  const Text(
+                    'ขายได้วันนี้',
+                    style: TextStyle(
+                      color: AppColors.onPrimaryMuted,
+                      fontSize: 11.5,
+                      height: 1.3,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  Fmt.price(todayRevenue),
-                  style: const TextStyle(
-                    color: AppColors.accent,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    height: 1.1,
+                  const SizedBox(height: 2),
+                  Text(
+                    revenueLoading
+                        ? '…'
+                        : revenueError
+                            ? 'ลองใหม่'
+                            : Fmt.price(todayRevenue),
+                    style: const TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      height: 1.1,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -431,6 +457,22 @@ class _TodoQueue extends ConsumerWidget {
 
     // Nothing to rank until metrics land, so the queue stays absent rather than
     // flashing an empty "ทำอะไรต่อ" heading.
+    if (metrics.hasError) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.cardGutter,
+          0,
+          AppSpacing.cardGutter,
+          AppSpacing.sm,
+        ),
+        child: InlineErrorBanner(
+          message: 'โหลดงานที่ต้องทำไม่สำเร็จ',
+          detail: '${metrics.error}',
+          onRetry: () => ref.invalidate(sellerDashboardMetricsProvider(storeId)),
+        ),
+      );
+    }
+
     final List<_TodoItem> items = metrics.maybeWhen(
       data: _build,
       orElse: () => const <_TodoItem>[],
@@ -598,6 +640,22 @@ class _LowStockSection extends ConsumerWidget {
     final AsyncValue<List<LowStockVariant>> low = ref.watch(
       lowStockVariantsProvider(storeId),
     );
+
+    if (low.hasError) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.cardGutter,
+          0,
+          AppSpacing.cardGutter,
+          AppSpacing.sm,
+        ),
+        child: InlineErrorBanner(
+          message: 'โหลดสต็อกใกล้หมดไม่สำเร็จ',
+          detail: '${low.error}',
+          onRetry: () => ref.invalidate(lowStockVariantsProvider(storeId)),
+        ),
+      );
+    }
 
     return low.maybeWhen(
       data: (List<LowStockVariant> items) {

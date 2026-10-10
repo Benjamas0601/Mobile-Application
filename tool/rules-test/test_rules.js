@@ -238,9 +238,13 @@ async function testUsers() {
     await fresh();
     await assertSucceeds(db().doc('users/buyer1').delete());
   });
-  await it('ลบบัญชีคนอื่น (แม้เป็นแอดมิน) = ปฏิเสธ', async () => {
+  await it('แอดมินลบลูกค้า/ผู้ขายได้ แต่ลบแอดมินด้วยกันเองไม่ได้', async () => {
     await fresh();
-    await assertFails(as('admin1').firestore().doc('users/buyer1').delete());
+    await assertSucceeds(as('admin1').firestore().doc('users/buyer1').delete());
+    await fresh();
+    await env.withSecurityRulesDisabled((c) =>
+      c.firestore().doc('users/admin2').set(userData('admin2', {}, ['customer', 'admin'])));
+    await assertFails(as('admin1').firestore().doc('users/admin2').delete());
   });
 }
 
@@ -560,16 +564,67 @@ async function testMisc() {
       c.firestore().doc('reviews/r2').set({ userId: 'buyer1', productId: 'productA', rating: 5 }));
     await assertSucceeds(as('buyer1').firestore().doc('reviews/r2').delete());
   });
-  await it('ส่งข้อความในแชทได้เฉพาะคนในห้อง', async () => {
+  await it('แชท: สร้างห้องได้เมื่อตัวเองอยู่ใน participantUids เท่านั้น', async () => {
+    await fresh();
+    await assertSucceeds(as('buyer1').firestore().doc('chat_threads/t2').set({
+      participantUids: ['buyer1', 'seller1'],
+      storeId: 'storeA',
+      lastAt: TS(),
+    }));
+    await assertFails(as('buyer2').firestore().doc('chat_threads/t3').set({
+      participantUids: ['buyer1', 'seller1'],
+      storeId: 'storeA',
+      lastAt: TS(),
+    }));
+  });
+  await it('แชท: list เฉพาะคนในห้อง (array-contains ตัวเอง)', async () => {
+    await fresh();
+    await assertSucceeds(
+      as('buyer1').firestore()
+        .collection('chat_threads')
+        .where('participantUids', 'array-contains', 'buyer1')
+        .get());
+    await assertSucceeds(
+      as('seller1').firestore()
+        .collection('chat_threads')
+        .where('participantUids', 'array-contains', 'seller1')
+        .get());
+  });
+  await it('แชท: อ่านห้อง/ข้อความของคนอื่นไม่ได้ (get ต้องเป็นคนในห้อง)', async () => {
+    await fresh();
+    await assertFails(as('buyer2').firestore().doc('chat_threads/thread1').get());
+    await env.withSecurityRulesDisabled((c) =>
+      c.firestore().doc('chat_threads/thread1/messages/m1').set({
+        senderUid: 'buyer1',
+        text: 'สวัสดี',
+        participantUids: ['buyer1', 'seller1'],
+        createdAt: TS(),
+      }));
+    await assertSucceeds(
+      as('buyer1').firestore()
+        .collection('chat_threads/thread1/messages')
+        .where('participantUids', 'array-contains', 'buyer1')
+        .get());
+    await assertFails(as('buyer2').firestore().doc('chat_threads/thread1/messages/m1').get());
+  });
+  await it('ส่งข้อความในแชทได้เฉพาะคนในห้อง (ต้องพก participantUids ตรงห้อง)', async () => {
     await fresh();
     await assertSucceeds(as('buyer1').firestore().doc('chat_threads/thread1/messages/m1').set({
       senderUid: 'buyer1',
       text: 'สวัสดี',
+      participantUids: ['buyer1', 'seller1'],
       createdAt: TS(),
     }));
     await assertFails(as('buyer2').firestore().doc('chat_threads/thread1/messages/m2').set({
       senderUid: 'buyer2',
       text: 'แอบดู',
+      participantUids: ['buyer1', 'seller1'],
+      createdAt: TS(),
+    }));
+    await assertFails(as('buyer1').firestore().doc('chat_threads/thread1/messages/m3').set({
+      senderUid: 'buyer1',
+      text: 'ปลอมรายชื่อห้อง',
+      participantUids: ['buyer1', 'stranger'],
       createdAt: TS(),
     }));
   });
