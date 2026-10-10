@@ -338,7 +338,12 @@ class _Hero extends StatelessWidget {
         borderRadius: AppRadius.cardRadius,
       ),
       alignment: Alignment.center,
-      child: const Text('🇹🇭', style: TextStyle(fontSize: 40)),
+      child: Image.asset(
+        'assets/images/thai_otop_logo.png',
+        width: 88,
+        height: 88,
+        fit: BoxFit.contain,
+      ),
     );
   }
 }
