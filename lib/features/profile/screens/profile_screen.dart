@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_enums.dart' show UserRole;
 import '../../../core/constants/app_strings.dart';
+import '../../../core/routes/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -112,6 +113,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   children: <Widget>[
                     _header(context, user),
                     const SizedBox(height: AppSpacing.lg),
+                    _menu(user),
+                    const SizedBox(height: AppSpacing.lg),
                     if (_error != null) ...<Widget>[
                       Container(
                         padding: const EdgeInsets.all(AppSpacing.md),
@@ -186,6 +189,68 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  /// เมนูที่ย้ายมาจากแถบหัว Home ตามดีไซน์ใหม่ — ร้านค้า/คำสั่งซื้อ/แชท
+  /// อยู่บนแท็บโปรไฟล์ ส่วนออกจากระบบก็ย้ายมาที่นี่ด้วย
+  Widget _menu(UserModel user) {
+    return Material(
+      color: AppColors.surface,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.cardRadius,
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: Column(
+        children: <Widget>[
+          ListTile(
+            leading: const Icon(
+              Icons.receipt_long_outlined,
+              color: AppColors.primary,
+            ),
+            title: const Text(AppStrings.navOrders),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => context.push(AppRoutes.orders),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.forum_outlined, color: AppColors.primary),
+            title: const Text(AppStrings.chat),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => context.push(AppRoutes.chat),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(
+              Icons.storefront_outlined,
+              color: AppColors.primary,
+            ),
+            title: const Text(AppStrings.stores),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => context.push(AppRoutes.stores),
+          ),
+          if (user.isSeller || user.isAdmin) ...<Widget>[
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(
+                Icons.store_mall_directory_outlined,
+                color: AppColors.primary,
+              ),
+              title: const Text(AppStrings.navSellerDashboard),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => context.push(AppRoutes.sellerRoot),
+            ),
+          ],
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.logout_rounded, color: AppColors.danger),
+            title: const Text(AppStrings.logout),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => ref.read(authRepositoryProvider).signOut(),
+          ),
+        ],
       ),
     );
   }

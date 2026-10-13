@@ -183,6 +183,7 @@ void main() {
         find.widgetWithText(TextFormField, AppStrings.phone),
         '1234',
       );
+      await tester.ensureVisible(find.text(AppStrings.saveProfile));
       await tester.tap(find.text(AppStrings.saveProfile));
       await tester.pumpAndSettle();
 
@@ -202,6 +203,7 @@ void main() {
         find.widgetWithText(TextFormField, AppStrings.displayName),
         '  ใหม่ ชื่อ  ',
       );
+      await tester.ensureVisible(find.text(AppStrings.saveProfile));
       await tester.tap(find.text(AppStrings.saveProfile));
       await tester.pumpAndSettle();
 
@@ -223,6 +225,7 @@ void main() {
       setup(failMessage: 'กฎการอัปเดตไม่อนุญาต');
       await openProfile(tester);
 
+      await tester.ensureVisible(find.text(AppStrings.saveProfile));
       await tester.tap(find.text(AppStrings.saveProfile));
       await tester.pumpAndSettle();
 

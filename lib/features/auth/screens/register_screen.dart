@@ -11,8 +11,9 @@ import '../../../core/theme/app_typography.dart';
 import '../../../models/user_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../repositories/auth_repository.dart';
-import '../widgets/hero_3d.dart';
+import '../../../widgets/otop_components.dart';
 
+/// ไฟล์นี้เป็นไฟล์ที่เก็บหน้าจอสมัครสมาชิกของแอป โดยมีฟอร์มให้กรอกข้อมูลส่วนตัวและข้อมูลร้านค้า (ถ้าเลือกสมัครเป็นผู้ขาย) และปุ่มสมัครสมาชิก
 /// ประเภทบัญชีที่ฟอร์มสมัครรองรับ โดยทุกประเภทมี role customer พื้นฐาน
 /// ตรงกับที่ firestore.rules อนุญาตให้สมัครได้
 enum _RegistrationType { customer, store }
@@ -29,27 +30,26 @@ class RegisterScreen extends ConsumerStatefulWidget {
 }
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _provinceController = TextEditingController();
-  final TextEditingController _storeNameController = TextEditingController();
-  final TextEditingController _communityController = TextEditingController();
-  final TextEditingController _storeDescriptionController =
-      TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmController = TextEditingController();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>(); //เพื่อเก็บสถานะของฟอร์มและใช้ในการตรวจสอบความถูกต้องของข้อมูลที่ผู้ใช้กรอก
+  final TextEditingController _nameController = TextEditingController(); //เพื่อควบคุมและเข้าถึงค่าของฟิลด์ชื่อผู้ใช้ในฟอร์ม
+  final TextEditingController _emailController = TextEditingController(); //เพื่อควบคุมและเข้าถึงค่าของฟิลด์อีเมลในฟอร์ม
+  final TextEditingController _phoneController = TextEditingController(); //เพื่อควบคุมและเข้าถึงค่าของฟิลด์หมายเลขโทรศัพท์ในฟอร์ม
+  final TextEditingController _provinceController = TextEditingController(); //เพื่อควบคุมและเข้าถึงค่าของฟิลด์จังหวัดในฟอร์ม (สำหรับผู้ขาย)
+  final TextEditingController _storeNameController = TextEditingController(); //เพื่อควบคุมและเข้าถึงค่าของฟิลด์ชื่อร้านค้าในฟอร์ม (สำหรับผู้ขาย)
+  final TextEditingController _communityController = TextEditingController(); //เพื่อควบคุมและเข้าถึงค่าของฟิลด์ชุมชน/กลุ่มผู้ผลิตในฟอร์ม (สำหรับผู้ขาย)
+  final TextEditingController _storeDescriptionController = TextEditingController(); //เพื่อควบคุมและเข้าถึงค่าของฟิลด์รายละเอียดร้านค้าในฟอร์ม (สำหรับผู้ขาย)
+  final TextEditingController _passwordController = TextEditingController(); //เพื่อควบคุมและเข้าถึงค่าของฟิลด์รหัสผ่านในฟอร์ม
+  final TextEditingController _confirmController = TextEditingController(); //เพื่อควบคุมและเข้าถึงค่าของฟิลด์ยืนยันรหัสผ่านในฟอร์ม
 
-  _RegistrationType _registrationType = _RegistrationType.customer;
+  _RegistrationType _registrationType = _RegistrationType.customer; //เพื่อเก็บประเภทการสมัครสมาชิกที่ผู้ใช้เลือก (ลูกค้าหรือร้านค้า)
   ThaiRegion _region = ThaiRegion.central;
   bool _busy = false;
   bool _obscure = true;
   String? _error;
 
   @override
-  void dispose() {
-    _nameController.dispose();
+  void dispose() { 
+    _nameController.dispose(); 
     _emailController.dispose();
     _phoneController.dispose();
     _provinceController.dispose();
@@ -61,7 +61,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit() async { //ฟังก์ชันนี้จะถูกเรียกเมื่อผู้ใช้กดปุ่มสมัครสมาชิก
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() {
@@ -105,7 +105,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       if (!mounted) return;
       final String? redirect = widget.redirect;
-      if (redirect != null && redirect.isNotEmpty) {
+      if (redirect != null &&
+          redirect.isNotEmpty &&
+          redirect != AppRoutes.profile) {
         context.go(redirect);
       } else if (profile?.isAdmin == true) {
         context.go(AppRoutes.adminRoot);
@@ -128,21 +130,42 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.register)),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.xxl),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    const Center(child: Hero3d()),
-                    const SizedBox(height: AppSpacing.xl),
-                    SegmentedButton<_RegistrationType>(
+      backgroundColor: AppColors.background,
+      body: Column(
+        children: <Widget>[
+          // Jade hero band with the OTOP wordmark (revamped auth design).
+          const AuthHero(
+            tagline: 'เปิดประตูสู่สินค้าชุมชน\nจากทั่วประเทศไทย',
+            wordmarkSize: 34,
+            height: 196,
+          ),
+          Expanded(
+            child: SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xxl,
+                  AppSpacing.xxl,
+                  AppSpacing.xxl,
+                  AppSpacing.xxl,
+                ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 440),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          Text(
+                            'สร้างบัญชีใหม่',
+                            style: AppTextStyles.displayMedium.copyWith(
+                              fontSize: 28,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: AppSpacing.xxl),
+                          SegmentedButton<_RegistrationType>(
                       showSelectedIcon: false,
                       segments: const <ButtonSegment<_RegistrationType>>[
                         ButtonSegment<_RegistrationType>(
@@ -301,8 +324,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
         ),
       ),
-    );
-  }
+),
+      ],
+    ),
+  );
+}
 
   String get _registrationDescription => switch (_registrationType) {
     _RegistrationType.customer =>
@@ -375,7 +401,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     };
   }
 
-  static String? _validateEmail(String? value) {
+  static String? _validateEmail(String? value) { 
     final String email = (value ?? '').trim();
     if (email.isEmpty) return AppStrings.errRequired;
     if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
@@ -384,7 +410,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return null;
   }
 
-  static String? _validatePassword(String? value) {
+  static String? _validatePassword(String? value) { 
     if ((value ?? '').isEmpty) return AppStrings.errRequired;
     if (value!.length < 6) return AppStrings.errPasswordShort;
     return null;

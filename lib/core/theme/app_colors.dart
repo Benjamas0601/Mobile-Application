@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 
+//ไฟล์นี้เป็นไฟล์ที่เก็บสีหลักของแบรนด์ตามชุดดีไซน์ ใช้ผ่าน token เพื่อปรับธีมได้จากจุดเดียวและเพื่อให้ทุกหน้าของแอปใช้สีเดียวกันและสามารถเปลี่ยนธีมได้ง่าย
+
 /// Design tokens for the app.
 ///
 /// Identity: "Modern Thai + Premium + Friendly + Trustworthy"
 ///
-/// The palette is the one agreed in the HTML design set
-/// (`Thai OTOP — ดีไซน์เพิ่ม.html`), ported 1:1 to Flutter:
-///  - Indigo      = brand / primary actions / numbers
-///  - Indigo deep = pressed state of a chunky button, dark surface
-///  - Lac         = urgency, promotion, destructive, "sold out"
-///  - Turmeric    = focus ring, current step, active accent
-///  - Paper       = app background
+/// Palette: **jade / gold / clay on warm cream** (Thai OTOP revamp).
+/// Ported into the existing token names so every screen inherits the new look
+/// without being edited one by one. The new-style aliases ([jade], [gold],
+/// [clay], ...) are also exposed for fresh code, mirroring the reference
+/// design (`otop_flutter`):
+///  - jade   = brand / primary actions / numbers
+///  - jade dark = pressed surface, dark header band
+///  - gold   = promo, "you are here" step, high-value numbers
+///  - clay   = urgency, promotion, out-of-stock
+///  - cream/page = warm app background
 ///
 /// Every screen therefore reads from the same tokens, and a change here
 /// propagates app-wide instead of being re-decided per screen.
@@ -19,76 +24,93 @@ class AppColors {
   AppColors._();
 
   // --- Brand ---------------------------------------------------------------
-  /// Indigo — primary brand colour, chunky buttons, prices, headings.
-  static const Color primary = Color(0xFF22337A);
+  /// Jade — primary brand colour, chunky buttons, prices, headings.
+  static const Color primary = Color(0xFF146356);
+  static const Color jade = primary;
 
-  /// Indigo deep — the solid "shadow" under a chunky button, and the dark
+  /// Jade deep — the solid "shadow" under a chunky button, and the dark
   /// surface colour. Also the pressed/disabled edge of the button.
-  static const Color primaryDark = Color(0xFF141F52);
+  static const Color primaryDark = Color(0xFF0E4D42);
+  static const Color jadeDark = primaryDark;
 
-  /// Indigo deep as a light tint, for selected chips and soft fills.
-  static const Color primaryLight = Color(0xFFEEF1FB);
+  /// A lighter jade for hairlines and soft edges on dark jade surfaces.
+  static const Color primaryBorder = Color(0xFF2A8A77);
+  static const Color jadeLight = primaryBorder;
 
-  /// A lighter indigo used for hairline borders on dark surfaces.
-  static const Color primaryBorder = Color(0xFF5A67A8);
+  /// Jade soft tint — selected chips, soft fills, notification unread.
+  static const Color primaryLight = Color(0xFFE6F1ED);
+  static const Color jadeTint = primaryLight;
 
-  /// Turmeric — focus ring, "you are here" step, high-value numbers.
-  static const Color accent = Color(0xFFF0B429);
+  /// Gold — promo, "you are here" step, high-value numbers.
+  static const Color accent = Color(0xFFE4A11B);
+  static const Color gold = accent;
 
-  /// Turmeric as a dark amber for text that must stay readable on paper.
-  static const Color accentDark = Color(0xFF8A6A00);
-  static const Color accentLight = Color(0xFFFFF3D6);
+  /// Dark amber for text that must stay readable on gold tint / paper.
+  static const Color accentDark = Color(0xFF6B4A00);
+  static const Color warnText = accentDark;
+  static const Color accentLight = Color(0xFFFFF4D6);
+  static const Color goldTint = accentLight;
 
-  /// Lac — urgency, promotion, out-of-stock, rejected commission.
-  static const Color clay = Color(0xFFC8324A);
-  static const Color clayDark = Color(0xFFA32338);
-  static const Color clayLight = Color(0xFFFCE8EB);
+  /// Text that sits on a solid gold button.
+  static const Color onGold = Color(0xFF2B1E00);
 
-  // --- Neutrals -------------------------------------------------------------
-  /// Paper — the app background, a cool off-white.
-  static const Color background = Color(0xFFEDEFF4);
+  /// Clay — urgency, promotion, out-of-stock, rejected commission.
+  static const Color clay = Color(0xFFC1462F);
+  static const Color clayDark = Color(0xFFA53A28);
+  static const Color clayLight = Color(0xFFFBE9E4);
+
+  // --- Neutrals ------------------------------------------------------------- //ส่วนของสีที่เป็นกลางพื้นหลังและตัวอักษร
+  /// Page — the warm app background (cream).
+  static const Color background = Color(0xFFF6F2E6);
+  static const Color page = background;
+
+  /// Cream accent used for soft warm fills.
+  static const Color cream = Color(0xFFFBF6EA);
+
   static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceMuted = Color(0xFFF6F8FF);
-  static const Color border = Color(0xFFD5D9E6);
-  static const Color borderStrong = Color(0xFFB8BED6);
+  static const Color surfaceMuted = cream;
 
-  static const Color ink = Color(0xFF1A2140);
-  static const Color inkMuted = Color(0xFF5C6484);
-  static const Color inkSubtle = Color(0xFF9AA0BC);
+  static const Color border = Color(0xFFE2DAC4);
+  static const Color borderStrong = Color(0xFFD9D2BF);
+  static const Color field = borderStrong;
 
-  /// Body copy that sits one step below [ink] but is still readable.
-  static const Color inkBody = Color(0xFF3A4263);
+  static const Color ink = Color(0xFF1C2B26);
+  static const Color inkMuted = Color(0xFF4E5A54);
+  static const Color inkSoft = inkMuted;
+  static const Color inkSubtle = Color(0xFF6E7A74);
+  static const Color hint = inkSubtle;
+
+  /// Body copy that sits one step below [ink] but is still readable.  //ส่วนของตัวอักษรที่อยู่ด้านล่าง [ink] แต่ยังอ่านได้
+  static const Color inkBody = Color(0xFF3F4F48);
   static const Color onPrimary = Color(0xFFFFFFFF);
 
-  /// Muted indigo for secondary text on an indigo fill.
-  static const Color onPrimaryMuted = Color(0xFFC5CDF2);
+  /// Muted jade for secondary text on a jade fill (e.g. header subtitles).
+  static const Color onPrimaryMuted = Color(0xFFCFE5DE);
 
-  // --- Semantic ------------------------------------------------------------
+  // --- Semantic ------------------------------------------------------------ 
   static const Color success = Color(0xFF1F6B57);
   static const Color successLight = Color(0xFFE3F1EA);
 
-  /// Amber for "waiting"/"pending". Darkened from #B07A00 to #8A6A00: as pill
-  /// text on [warningLight] the lighter amber only reached 3.38:1, which is
-  /// under the 4.5:1 body-text bar. #8A6A00 gives 4.60:1 on the same fill and
-  /// still reads as turmeric rather than brown.
-  static const Color warning = Color(0xFF8A6A00);
-  static const Color warningLight = Color(0xFFFFF3D6);
-  static const Color danger = Color(0xFFC8324A);
-  static const Color dangerLight = Color(0xFFFCE8EB);
+  /// Amber for "waiting"/"pending". #6B4A00 on [warningLight] clears WCAG AA
+  /// body-text contrast (4.5:1) while still reading as gold rather than brown.
+  static const Color warning = Color(0xFF6B4A00);
+  static const Color warningLight = Color(0xFFFFF4D6);
+  static const Color danger = Color(0xFFC1462F);
+  static const Color dangerLight = Color(0xFFFBE9E4);
   static const Color info = Color(0xFF3E6B8A);
   static const Color infoLight = Color(0xFFE3EFF6);
 
-  /// Neutral chip fill, used for the "cancelled" status.
-  static const Color neutralLight = Color(0xFFF0F1F6);
+  /// Neutral chip fill, used for the "cancelled" status. //สีชิปที่เป็นกลาง ใช้สำหรับสถานะ "ยกเลิก"
+  static const Color neutralLight = Color(0xFFF0EDE3);
 
-  /// Shown behind disabled buttons and inactive icons.
-  static const Color disabled = Color(0xFFB8BED6);
-  static const Color disabledDark = Color(0xFF98A0BF);
+  /// Shown behind disabled buttons and inactive icons. //แสดงด้านหลังปุ่มที่ถูกปิดใช้งานและไอคอนที่ไม่ใช้งาน
+  static const Color disabled = Color(0xFFD9D2BF);
+  static const Color disabledDark = Color(0xFFB9B299);
 
   // --- Province accents -----------------------------------------------------
   // Used to give each Thai region its own colour on Home's region chips and
   // the seller tints, so browsing by region feels like a place, not a filter.
-  // Values match the HTML design set exactly.
+  // Values match the HTML design set exactly.  //สีที่ใช้เพื่อให้แต่ละภูมิภาคของไทยมีสีของตัวเองบนชิปภูมิภาคของหน้าแรกและสีของผู้ขาย เพื่อให้การเรียกดูตามภูมิภาครู้สึกเหมือนเป็นสถานที่ ไม่ใช่ตัวกรอง ค่าตรงกับชุดการออกแบบ HTML อย่างแม่นยำ
   static const Color regionNorth = Color(0xFF3E6B8A);
   static const Color regionNortheast = Color(0xFF8A6A3E);
   static const Color regionCentral = Color(0xFF7A4E8A);
@@ -99,25 +121,26 @@ class AppColors {
   // --- Product placeholders -------------------------------------------------
   // Woven-fabric stand-ins for product photography. The design uses texture
   // instead of photos so the layout reads the same with or without assets.
-  static const Color weaveGreen = Color(0xFF4E7A3E);
-  static const Color weaveIndigo = Color(0xFF22337A);
-  static const Color weaveLac = Color(0xFFC8324A);
+  static const Color weaveGreen = Color(0xFF2A8A77);
+  static const Color weaveIndigo = Color(0xFF146356);
+  static const Color weaveLac = Color(0xFFC1462F);
   static const Color weavePlum = Color(0xFF8A3E5E);
 
   // --- Dark theme -----------------------------------------------------------
-  /// Dark surfaces reuse the same hues rather than dropping to pure black, so
-  /// product images (shot on white) do not glare against the background.
-  static const Color darkBackground = Color(0xFF0E1430);
-  static const Color darkSurface = Color(0xFF161E44);
-  static const Color darkSurfaceMuted = Color(0xFF1E2753);
-  static const Color darkBorder = Color(0xFF2E3870);
-  static const Color darkInk = Color(0xFFEDEFF4);
-  static const Color darkInkMuted = Color(0xFFA9B3E6);
-  static const Color darkInkSubtle = Color(0xFF7B85BC);
-  static const Color darkInkBody = Color(0xFFC6CCE8);
+  /// Dark surfaces reuse the same jade hues rather than dropping to pure
+  /// black, so product images (shot on white) do not glare against the
+  /// background.
+  static const Color darkBackground = Color(0xFF0E2B25);
+  static const Color darkSurface = Color(0xFF16332C);
+  static const Color darkSurfaceMuted = Color(0xFF1F4238);
+  static const Color darkBorder = Color(0xFF2B5146);
+  static const Color darkInk = Color(0xFFEDF3F0);
+  static const Color darkInkMuted = Color(0xFFA9C4BB);
+  static const Color darkInkSubtle = Color(0xFF7B9A92);
+  static const Color darkInkBody = Color(0xFFC6D8D2);
 
   /// Build a [LinearGradient] from a list of hex ints (used for 3D hero art).
-  static LinearGradient gradient(List<int> colors, {List<double>? stops}) {
+  static LinearGradient gradient(List<int> colors, {List<double>? stops}) { 
     return LinearGradient(
       colors: colors.map((c) => Color(c)).toList(),
       stops: stops,

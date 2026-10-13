@@ -12,6 +12,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../widgets/state_views.dart';
 
+// ไฟล์นี้เป็นไฟล์ที่เก็บหน้าจอตะกร้าสินค้าของแอป โดยแสดงรายการสินค้าที่ผู้ใช้เลือก จำนวนสินค้า ราคาสินค้า ยอดรวม และปุ่มไปยังหน้าชำระเงิน
 /// The local cart. Reachable by a guest — signing in is a checkout step, not a
 /// cart step.
 /// แสดงรายการตะกร้า ยอดรวม และทางไป checkout ของร้านเดียว

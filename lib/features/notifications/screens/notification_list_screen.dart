@@ -12,6 +12,11 @@ import '../../../models/app_notification_model.dart';
 import '../../../providers/notification_provider.dart';
 import '../../../widgets/state_views.dart';
 
+//ไฟล์นี้คือหน้าจอสำหรับแสดงรายการการแจ้งเตือนทั้งหมดของผู้ใช้ โดยมีฟังก์ชันการทำงานดังนี้:
+/// - แสดงรายการการแจ้งเตือนทั้งหมดที่ผู้ใช้ได้รับ
+/// // - สามารถทำเครื่องหมายการแจ้งเตือนทั้งหมดเป็นอ่านแล้วได้ 
+/// // - สามารถทำเครื่องหมายการแจ้งเตือนแต่ละรายการเป็นอ่านแล้วได้เมื่อผู้ใช้แตะที่รายการนั้น
+/// // - สามารถเปิดหน้ารายละเอียดของการแจ้งเตือนได้เมื่อผู้ใช้แตะที่รายการนั้น 
 /// The in-app notification inbox.
 ///
 /// Read-only plus a "read" flip on tap: notifications are created by the
@@ -29,6 +34,17 @@ class NotificationListScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          tooltip: AppStrings.backToHome,
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              context.go(AppRoutes.home);
+            }
+          },
+        ),
         title: const Text(AppStrings.navNotifications),
         actions: <Widget>[
           if (unread > 0)

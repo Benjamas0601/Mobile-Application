@@ -9,6 +9,9 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../repositories/auth_repository.dart';
+import '../../../widgets/otop_components.dart';
+
+/// ไฟล์นี้เป็นไฟล์ที่เก็บหน้าจอเข้าสู่ระบบของแอป โดยมีฟอร์มให้กรอกอีเมลและรหัสผ่าน และปุ่มเข้าสู่ระบบ ปุ่มลืมรหัสผ่าน และปุ่มลงทะเบียน
 
 /// Entry screen for every role (customer / seller / admin).
 ///
@@ -68,9 +71,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (!mounted) return;
 
       // Resume the interrupted flow when there was one; otherwise sellers go
-      // to Seller Hub and buyers go to marketplace home.
+      // to Seller Hub and buyers go to marketplace home. Tapping the profile
+      // tab while signed out must NOT bounce the user back to the edit page
+      // after signing in — land on Home instead.
       final String? redirect = widget.redirect;
-      if (redirect != null && redirect.isNotEmpty) {
+      if (redirect != null &&
+          redirect.isNotEmpty &&
+          redirect != AppRoutes.profile) {
         context.go(redirect);
       } else if (user.isAdmin) {
         context.go(AppRoutes.adminRoot);
@@ -118,64 +125,56 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
-              child: ConstrainedBox(
-                // Keeps the form readable on tablets and wide Chrome windows
-                // instead of stretching a login form across 1920px.
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 440),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: <Widget>[
-                        const SizedBox(height: AppSpacing.xl),
-                        const Center(child: _Hero()),
-                        const SizedBox(height: AppSpacing.xl),
-                        _buildHeadline(),
-                        const SizedBox(height: AppSpacing.xxl),
-                        if (_error != null) ...<Widget>[
-                          _ErrorBanner(message: _error!),
-                          const SizedBox(height: AppSpacing.md),
-                        ],
-                        _buildForm(),
-                        const SizedBox(height: AppSpacing.lg),
-                        _buildDemoHint(),
-                        const SizedBox(height: AppSpacing.xl),
-                        _buildFooter(),
-                        const SizedBox(height: AppSpacing.xxl),
+      backgroundColor: AppColors.background,
+      body: Column(
+        children: <Widget>[
+          // Jade hero band with the OTOP wordmark (revamped auth design).
+          const AuthHero(tagline: AppStrings.appTagline),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xxl,
+                AppSpacing.xxl,
+                AppSpacing.xxl,
+                AppSpacing.xxl,
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  // Keeps the form readable on tablets and wide Chrome windows
+                  // instead of stretching a login form across 1920px.
+                  constraints: const BoxConstraints(maxWidth: 440),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      _buildHeadline(),
+                      const SizedBox(height: AppSpacing.xxl),
+                      if (_error != null) ...<Widget>[
+                        _ErrorBanner(message: _error!),
+                        const SizedBox(height: AppSpacing.md),
                       ],
-                    ),
+                      _buildForm(),
+                      const SizedBox(height: AppSpacing.lg),
+                      _buildDemoHint(),
+                      const SizedBox(height: AppSpacing.xl),
+                      _buildFooter(),
+                      const SizedBox(height: AppSpacing.xxl),
+                    ],
                   ),
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildHeadline() {
-    return Column(
-      children: <Widget>[
-        Text(
-          AppStrings.appName,
-          style: AppTextStyles.displayMedium,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          AppStrings.appTagline,
-          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.inkMuted),
-          textAlign: TextAlign.center,
-        ),
-      ],
+    return Text(
+      'ยินดีต้อนรับกลับ',
+      style: AppTextStyles.displayMedium.copyWith(fontSize: 28),
+      textAlign: TextAlign.center,
     );
   }
 
@@ -318,31 +317,6 @@ class _ErrorBanner extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Compact stand-in for the 3D hero, so the login screen builds even if the
-/// 3D widget is unavailable on a platform.
-class _Hero extends StatelessWidget {
-  const _Hero();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 88,
-      height: 88,
-      decoration: BoxDecoration(
-        gradient: AppColors.gradient(const <int>[0xFF146356, 0xFF2E7D6F]),
-        borderRadius: AppRadius.cardRadius,
-      ),
-      alignment: Alignment.center,
-      child: Image.asset(
-        'assets/images/thai_otop_logo.png',
-        width: 88,
-        height: 88,
-        fit: BoxFit.contain,
       ),
     );
   }

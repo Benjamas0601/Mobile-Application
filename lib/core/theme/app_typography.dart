@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 
+//ไฟลืนี้เป็นไฟล์ที่เก็บรูปแบบตัวอักษรของแอปทั้งหมด เช่น ขนาด น้ำหนัก สี ระยะบรรทัด 
+//และระยะห่างระหว่างตัวอักษร เพื่อให้ทุกหน้าของแอปใช้รูปแบบตัวอักษรเดียวกันและสามารถเปลี่ยนธีมได้ง่าย
+
 /// Type scale for the app.
 ///
 /// NOTE ON THE FONT
@@ -22,11 +25,11 @@ const String kAppFontFamily = '';
 class AppTextStyles {
   AppTextStyles._();
 
-  static const String _thai = 'Noto Sans Thai';
+  static const String _thai = 'Noto Sans Thai'; //เพื่อให้ฟอนต์ไทยเป็น Noto Sans Thai (SIL Open Font License)
 
   /// Family list handed to [TextStyle.fontFamilyFallback].
   /// Order matters: Latin first (cleaner shapes), Thai as the fallback.
-  static const List<String> _fallback = <String>[
+  static const List<String> _fallback = <String>[ 
     'Roboto',
     _thai,
     'Leelawadee UI',
@@ -51,7 +54,7 @@ class AppTextStyles {
     );
   }
 
-  // --- Display / hero ------------------------------------------------------
+  // --- Display / hero ------------------------------------------------------ 
   static final TextStyle displayLarge = _s(
     size: 34,
     weight: FontWeight.w800,

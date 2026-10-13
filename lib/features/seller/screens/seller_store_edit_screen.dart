@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; 
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../../core/constants/app_enums.dart' hide AsyncValue;
+import '../../../core/constants/app_enums.dart' hide AsyncValue; 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/services/image/image_storage_service.dart';
 import '../../../core/theme/app_colors.dart';
@@ -33,10 +33,10 @@ class SellerStoreEditScreen extends ConsumerStatefulWidget {
       _SellerStoreEditScreenState();
 }
 
-class _SellerStoreEditScreenState extends ConsumerState<SellerStoreEditScreen> {
+class _SellerStoreEditScreenState extends ConsumerState<SellerStoreEditScreen> {  
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  final TextEditingController _name = TextEditingController();
+  final TextEditingController _name = TextEditingController(); 
   final TextEditingController _description = TextEditingController();
   final TextEditingController _province = TextEditingController();
   final TextEditingController _region = TextEditingController();

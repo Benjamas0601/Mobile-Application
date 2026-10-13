@@ -10,6 +10,8 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/chat_provider.dart';
 import '../../../widgets/state_views.dart';
 
+
+//ไฟลืนี้เป็นไฟล์ที่เก็บหน้าจอคุยกับร้านของผู้ใช้ โดยแสดงฟองข้อความของผู้ใช้และร้าน แถบพิมพ์ข้อความด้านล่าง และปุ่มส่งข้อความ และสามารถเลื่อนดูข้อความล่าสุดได้
 /// One conversation. Reads the room (for the title and the unread counter) and
 /// its message stream live, and writes a new message through
 /// [sendChatMessageProvider].

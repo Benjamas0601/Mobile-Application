@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 
+
+//ไฟล์นี้เป็นไฟล์ที่เก็บภาพประกอบ 3 มิติแบบวาดเองและเคลื่อนไหวบนหน้าเข้าสู่ระบบ เพื่อให้ผู้ใช้สนใจและรู้สึกว่าแอปมีความเป็นมืออาชีพ
 /// Animated isometric hero for the login screen.
 ///
 /// WHY THIS IS DRAWN INSTEAD OF A 3D ENGINE

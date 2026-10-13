@@ -4,7 +4,7 @@
 /// practically, because the one rule these strings have to respect is honesty:
 /// nothing may imply a real money transfer or a real shipment happened.
 /// ข้อความเฉพาะขั้นตอนชำระเงินและติดตามสถานะออเดอร์
-class PaymentStrings {
+class PaymentStrings {  //เพิ่ม class PaymentStrings เพื่อเก็บข้อความที่เกี่ยวข้องกับการชำระเงินและติดตามสถานะออเดอร์
   PaymentStrings._();
 
   // --- Payment method ------------------------------------------------------

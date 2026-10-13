@@ -7,11 +7,11 @@
 /// produce orders whose total differs from the checkout the buyer approved.
 library;
 
-const double kShippingFee = 50;
+const double kShippingFee = 50; //เพื่อให้ค่าจัดส่งเป็น 50 บาท
 
-const double kFreeShippingOver = 1000;
+const double kFreeShippingOver = 1000; //เพื่อให้ค่าจัดส่งฟรีเมื่อซื้อสินค้ามากกว่า 1000 บาท
 
-double shippingFeeFor(double subtotal) =>
+double shippingFeeFor(double subtotal) => //เพื่อให้ค่าจัดส่งเป็น 0 บาทเมื่อซื้อสินค้ามากกว่า 1000 บาท
     (subtotal <= 0 || subtotal >= kFreeShippingOver) ? 0 : kShippingFee;
 
-double totalFor(double subtotal) => subtotal + shippingFeeFor(subtotal);
+double totalFor(double subtotal) => subtotal + shippingFeeFor(subtotal); //เพื่อให้ค่ารวมทั้งหมดเป็นราคาสินค้า + ค่าจัดส่ง

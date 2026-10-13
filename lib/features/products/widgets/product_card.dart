@@ -21,6 +21,8 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool hasRating = product.ratingCount > 0;
+
     return Semantics(
       button: true,
       label: '${product.name} ราคา ${Fmt.price(product.priceBaht)}',
@@ -31,32 +33,99 @@ class ProductCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: AppRadius.cardRadius,
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: AppColors.border, width: 1),
+            boxShadow: const <BoxShadow>[
+              BoxShadow(
+                color: Color(0x1A146356),
+                blurRadius: 12,
+                offset: Offset(0, 6),
+              ),
+            ],
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              Expanded(child: _image(context)),
+              Expanded(
+                child: Stack(
+                  children: <Widget>[
+                    Positioned.fill(child: _image(context)),
+                    if (hasRating)
+                      Positioned(
+                        top: AppSpacing.sm,
+                        right: AppSpacing.sm,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: AppSpacing.xs,
+                          ),
+                          decoration: const BoxDecoration(
+                            color: Color(0x60000000),
+                            borderRadius: AppRadius.pillRadius,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              const Icon(
+                                Icons.star_rounded,
+                                size: 12,
+                                color: AppColors.gold,
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                Fmt.rating(product.ratingAvg),
+                                style: AppTextStyles.labelSmall.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
               Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.lg,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
                       product.name,
-                      style: AppTextStyles.bodyMedium,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.ink,
+                        height: 1.35,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: AppSpacing.xxs),
-                    Text(
-                      product.province,
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: AppColors.inkMuted,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    const SizedBox(height: AppSpacing.xs),
+                    Row(
+                      children: <Widget>[
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 12,
+                          color: AppColors.inkMuted,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        Expanded(
+                          child: Text(
+                            product.province,
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: AppColors.inkMuted,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Row(
@@ -64,28 +133,31 @@ class ProductCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             Fmt.price(product.priceBaht),
-                            style: AppTextStyles.priceMedium,
+                            style: AppTextStyles.priceMedium.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (product.ratingCount > 0)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              const Icon(
-                                Icons.star_rounded,
-                                size: 14,
-                                color: AppColors.accent,
+                        if (product.isInStock)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                              vertical: AppSpacing.xs,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryLight,
+                              borderRadius: AppRadius.pillRadius,
+                            ),
+                            child: Text(
+                              'พร้อมส่ง',
+                              style: AppTextStyles.labelSmall.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700,
                               ),
-                              const SizedBox(width: 2),
-                              Text(
-                                Fmt.rating(product.ratingAvg),
-                                style: AppTextStyles.labelSmall.copyWith(
-                                  color: AppColors.inkMuted,
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                       ],
                     ),

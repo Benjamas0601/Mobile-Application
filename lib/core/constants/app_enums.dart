@@ -5,12 +5,15 @@
 /// in the database is a one-line change here rather than a search across
 /// the whole codebase.
 library;
+ 
+//ไฟล์นี้เป็นไฟล์ที่เก็บค่าบทบาทของผู้ใช้ ภูมิภาคของไทย สถานะสินค้า สถานะคำสั่งซื้อ สถานะการชำระเงิน วิธีการชำระเงิน 
+//ประเภทข้อความ ประเภทการแจ้งเตือน และรูปแบบผลลัพธ์ที่ใช้ร่วมกันในแอป เพื่อให้ทุกหน้าของแอปใช้ค่าที่เหมือนกันและสามารถเปลี่ยนธีมได้ง่าย
 
 /// Who the account acts as. A single account may hold several roles -
 /// that is intentional and matches how real OTOP sellers often also promote
 /// their own products.
 /// ค่าบทบาทที่เก็บในฐานข้อมูลและป้ายภาษาไทยที่แสดงใน UI
-/// บทบาท `affiliate` ถูกลบออกไปแล้ว (6 ต.ค. 2569) — สมัครสดได้แค่
+/// — สมัครสดได้แค่
 /// customer/seller ส่วน admin สร้างผ่าน Firestore โดยตรงเท่านั้น
 /// (ตรงกับ hasOnly ใน `firestore.rules` users.create / users.update)
 enum UserRole {
@@ -41,7 +44,7 @@ enum UserRole {
 enum ThaiRegion {
   north('north', 'ภาคเหนือ', 'เชียงใหม่ แม่ฮ่องสอน เชียงราย'),
   northeast('northeast', 'ภาคอีสาน', 'นครราชสีมา อุดรธานี บุรีรัมย์'),
-  central('central', 'ภาคกลาง', 'อยุธยา สุราษฎร์ธานี นครปฐม'),
+  central('central', 'ภาคกลาง', 'อยุธยา  นครปฐม'),
   east('east', 'ภาคตะวันออก', 'ระยอง จันทบุรี ตราด'),
   west('west', 'ภาคตะวันตก', 'กาญจนบุรี ราชบุรี เพชรบุรี'),
   south('south', 'ภาคใต้', 'สงขลา สุราษฎร์ธานี นครศรีธรรมราช');

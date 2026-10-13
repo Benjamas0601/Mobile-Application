@@ -8,6 +8,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../models/order_model.dart';
+/// ไฟล์นี้เป็นไฟล์ที่เก็บหน้าจอแสดงความคืบหน้าออเดอร์ของผู้ใช้ โดยแสดงสถานะออเดอร์ตามลำดับและวันที่จัดส่ง (ถ้ามี) และสามารถดูรายละเอียดออเดอร์ได้
 
 /// The six delivery states as a vertical track.
 ///

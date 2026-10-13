@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+//ไฟล์นี้เป็นไฟล์ที่เก็บระยะห่างและมิติที่ใช้ซ้ำ เพื่อคุมจังหวะ layout ให้สม่ำเสมอ
+
 /// Spacing, radius and elevation tokens.
 ///
 /// Rule for this project: never write a raw number into a `padding` or
@@ -43,11 +45,11 @@ class AppRadius {
   static const double chunky = 14;
 
   /// Product cards, sheets, chat bubbles.
-  static const BorderRadius cardRadius = BorderRadius.all(Radius.circular(20));
+  static const BorderRadius cardRadius = BorderRadius.all(Radius.circular(20)); //เพื่อให้ card มีความโค้งมน
   static const BorderRadius sheetRadius = BorderRadius.vertical(
     top: Radius.circular(xl),
   );
-  static const BorderRadius pillRadius = BorderRadius.all(
+  static const BorderRadius pillRadius = BorderRadius.all( //เพื่อให้ปุ่มมีความโค้งมน
     Radius.circular(pill),
   );
 }
@@ -71,14 +73,14 @@ class AppSizes {
 
   /// Height of the design's signature chunky button. Taller than the minimum
   /// tap target because it carries the hard drop-shadow edge underneath.
-  static const double chunkyButtonHeight = 52;
+  static const double chunkyButtonHeight = 52; //เพื่อให้ปุ่มมีความสูงมากขึ้น
 
   /// Height of the square-ish "pill" chips used for filters and inline
   /// actions (e.g. "จัดการ" on an order card).
-  static const double chipHeight = 48;
+  static const double chipHeight = 48; //เพื่อให้ chip มีความสูงมากขึ้น
 
   /// Height of the inline stepper buttons that adjust variant stock.
-  static const double stepperButton = 42;
+  static const double stepperButton = 42; 
 
   /// Hard drop-shadow thickness under a chunky button.
   static const double chunkyShadow = 5;

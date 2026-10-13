@@ -1,10 +1,13 @@
-import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder; //เพื่อให้ transition ของ iOS เป็นแบบ Cupertino
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show SystemUiOverlayStyle;
+import 'package:flutter/services.dart' show SystemUiOverlayStyle; //เพื่อให้ status bar ของ iOS เป็นสีขาวเมื่ออยู่ใน dark mode
 
 import 'app_colors.dart';
 import 'app_spacing.dart';
 import 'app_typography.dart';
+
+//ไฟลืนี้เป็นไฟล์ที่เก็บธีมของแอปทั้งหมด เช่น สี ระยะห่าง และรูปแบบตัวอักษร เพื่อให้ทุกหน้าของแอปใช้ธีมเดียวกันและสามารถเปลี่ยนธีมได้ง่าย
+
 
 /// Assembles the Material [ThemeData] from the design tokens.
 ///
@@ -15,17 +18,17 @@ import 'app_typography.dart';
 class AppTheme {
   AppTheme._();
 
-  static const String fontFamilyFallbackNote =
+  static const String fontFamilyFallbackNote = 
       'Thai text uses the platform Thai font. See AppTextStyles.';
 
-  static ThemeData get light => _build(Brightness.light);
+  static ThemeData get light => _build(Brightness.light); //เพื่อให้ theme ของแอปเป็นแบบ light mode
 
-  static ThemeData get dark => _build(Brightness.dark);
+  static ThemeData get dark => _build(Brightness.dark); //เพื่อให้ theme ของแอปเป็นแบบ dark mode
 
-  static ThemeData _build(Brightness brightness) {
+  static ThemeData _build(Brightness brightness) { 
     final bool isDark = brightness == Brightness.dark;
 
-    final ColorScheme scheme = ColorScheme(
+    final ColorScheme scheme = ColorScheme( 
       brightness: brightness,
       primary: AppColors.primary,
       onPrimary: AppColors.onPrimary,
@@ -34,7 +37,7 @@ class AppTheme {
           : AppColors.primaryLight,
       onPrimaryContainer: isDark ? AppColors.darkInk : AppColors.primaryDark,
       secondary: AppColors.accent,
-      onSecondary: isDark ? AppColors.primaryDark : AppColors.ink,
+      onSecondary: isDark ? AppColors.onGold : AppColors.ink,
       secondaryContainer: AppColors.accentLight,
       onSecondaryContainer: AppColors.accentDark,
       tertiary: AppColors.clay,
@@ -61,8 +64,12 @@ class AppTheme {
     // hard 4-5px "shadow" edge that collapses when pressed. It is expressed as
     // one reusable widget (AppChunkyButton) rather than a theme style, because
     // the shadow has to animate with the press state.
+    // The pill shape is the design's signature control family (buttons, text
+    // fields and chips share one round idiom, matching the jade/gold revamp).
+    // The chunky button (AppChunkyButton) keeps its hard drop-shadow edge.
+    final StadiumBorder pill = const StadiumBorder();
     final OutlineInputBorder inputBorder = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(AppRadius.chunky),
+      borderRadius: BorderRadius.circular(AppRadius.pill),
       borderSide: BorderSide(color: scheme.outlineVariant, width: 1.5),
     );
 
@@ -105,9 +112,7 @@ class AppTheme {
           minimumSize: const Size(0, AppSizes.minTapTarget),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
           textStyle: text.labelLarge,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.chunky),
-          ),
+          shape: pill,
         ),
       ),
 
@@ -118,9 +123,7 @@ class AppTheme {
           textStyle: text.labelLarge,
           side: BorderSide(color: scheme.primary, width: 1.5),
           foregroundColor: scheme.primary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.chunky),
-          ),
+          shape: pill,
         ),
       ),
 
@@ -130,6 +133,14 @@ class AppTheme {
           textStyle: text.labelLarge,
           foregroundColor: scheme.primary,
         ),
+      ),
+
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith(
+          (Set<WidgetState> states) =>
+              states.contains(WidgetState.selected) ? AppColors.jade : null,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       ),
 
       inputDecorationTheme: InputDecorationTheme(
@@ -171,9 +182,7 @@ class AppTheme {
           horizontal: AppSpacing.md,
           vertical: AppSpacing.sm,
         ),
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(AppRadius.chunky)),
-        ),
+        shape: const StadiumBorder(),
       ),
 
       navigationBarTheme: NavigationBarThemeData(

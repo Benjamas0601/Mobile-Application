@@ -18,6 +18,7 @@ import '../../../providers/catalog_provider.dart';
 import '../../../providers/chat_provider.dart';
 import '../../../widgets/state_views.dart';
 
+
 /// Product detail — the screen that has to sell the "story", so the four
 /// story blocks get as much space as the price does.
 /// หน้ารายละเอียดสินค้า รวมเรื่องราวร้าน ตัวเลือกสินค้า และเพิ่มลงตะกร้า
@@ -43,7 +44,11 @@ class ProductDetailScreen extends ConsumerWidget {
         user != null && store != null && store.ownerUid == user.uid;
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         title: const Text(AppStrings.productStory),
         actions: <Widget>[
           if (canEdit)
@@ -84,12 +89,23 @@ class ProductDetailScreen extends ConsumerWidget {
       padding: const EdgeInsets.only(bottom: AppSpacing.xxxl),
       children: <Widget>[
         _gallery(product),
-        Padding(
+        Container(
+          margin: const EdgeInsets.only(top: AppSpacing.gutter),
           padding: const EdgeInsets.all(AppSpacing.gutter),
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(product.name, style: AppTextStyles.headlineSmall),
+              Text(
+                product.name,
+                style: AppTextStyles.headlineSmall.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.ink,
+                ),
+              ),
               const SizedBox(height: AppSpacing.sm),
               _metaRow(product),
               const SizedBox(height: AppSpacing.md),
@@ -98,7 +114,9 @@ class ProductDetailScreen extends ConsumerWidget {
                 children: <Widget>[
                   Text(
                     Fmt.price(product.priceBaht),
-                    style: AppTextStyles.priceLarge,
+                    style: AppTextStyles.priceLarge.copyWith(
+                      color: AppColors.primary,
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   if (product.soldCount > 0)
@@ -114,7 +132,22 @@ class ProductDetailScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.lg),
-              Text(product.description, style: AppTextStyles.bodyMedium),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceMuted,
+                  borderRadius: AppRadius.cardRadius,
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Text(
+                  product.description,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.inkMuted,
+                    height: 1.6,
+                  ),
+                ),
+              ),
               if (variantsState.hasError)
                 Padding(
                   padding: const EdgeInsets.only(top: AppSpacing.lg),
@@ -153,7 +186,9 @@ class ProductDetailScreen extends ConsumerWidget {
                 )
               else if (storeState.value != null)
                 _store(context, ref, storeState.value!),
-              const Divider(height: AppSpacing.huge * 2),
+              const SizedBox(height: AppSpacing.xl),
+              const Divider(height: 1),
+              const SizedBox(height: AppSpacing.xl),
               if (product.story.isEmpty)
                 const EmptyView(
                   icon: Icons.auto_stories_outlined,
@@ -432,23 +467,44 @@ class ProductDetailScreen extends ConsumerWidget {
   }
 
   Widget _block(String title, String body, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceMuted,
+        borderRadius: AppRadius.cardRadius,
+        border: Border.all(color: AppColors.border),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Icon(icon, size: 18, color: AppColors.accent),
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight,
+              borderRadius: AppRadius.pillRadius,
+            ),
+            child: Icon(icon, size: 18, color: AppColors.primary),
+          ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(title, style: AppTextStyles.labelMedium),
-                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  title,
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: AppColors.ink,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   body,
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: AppColors.inkMuted,
+                    height: 1.6,
                   ),
                 ),
               ],
@@ -463,15 +519,41 @@ class ProductDetailScreen extends ConsumerWidget {
     // Out of stock disables the button rather than failing on tap.
     final bool inStock = product.stockTotal > 0;
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.gutter),
-        child: FilledButton.icon(
-          // Works for guests too: the cart is local, and signing in is only
-          // required later, at checkout.
-          onPressed: inStock ? () => _addToCart(context, ref, product) : null,
-          icon: const Icon(Icons.add_shopping_cart_rounded),
-          label: Text(inStock ? AppStrings.addToCart : AppStrings.outOfStock),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.border)),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x1A146356),
+            blurRadius: 12,
+            offset: Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.gutter),
+          child: FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              shape: RoundedRectangleBorder(
+                borderRadius: AppRadius.cardRadius,
+              ),
+            ),
+            // Works for guests too: the cart is local, and signing in is only
+            // required later, at checkout.
+            onPressed: inStock ? () => _addToCart(context, ref, product) : null,
+            icon: const Icon(Icons.add_shopping_cart_rounded),
+            label: Text(
+              inStock ? AppStrings.addToCart : AppStrings.outOfStock,
+              style: AppTextStyles.labelLarge.copyWith(
+                color: AppColors.onPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
         ),
       ),
     );

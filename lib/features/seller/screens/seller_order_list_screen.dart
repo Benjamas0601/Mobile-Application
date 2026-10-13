@@ -33,7 +33,7 @@ class SellerOrderListScreen extends ConsumerStatefulWidget {
       _SellerOrderListScreenState();
 }
 
-class _SellerOrderListScreenState extends ConsumerState<SellerOrderListScreen> {
+class _SellerOrderListScreenState extends ConsumerState<SellerOrderListScreen> { 
   /// The single status the inbox is filtered by, or null for all of them.
   ///
   /// The filter is client-side on purpose: the rules prove `storeId` ownership

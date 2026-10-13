@@ -11,6 +11,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/chat_provider.dart';
 import '../../../widgets/state_views.dart';
 
+/// ไฟล์นี้เป็นไฟล์ที่เก็บหน้าจอรายการห้องแชทของผู้ใช้ โดยแสดงชื่อร้าน ตัวอย่างข้อความ เวลา และป้ายยังไม่อ่าน และสามารถกดเข้าไปดูห้องแชทได้
 /// The conversation inbox for both roles.
 ///
 /// The same Firestore query serves the buyer and the seller:
