@@ -16,20 +16,29 @@ import 'order_provider.dart';
 final Provider<SellerCatalogRepository> sellerCatalogRepositoryProvider =
     Provider<SellerCatalogRepository>((Ref ref) => SellerCatalogRepository());
 
-/// The signed-in seller's single store (1 Seller = 1 Store).
-final FutureProvider<StoreModel?> myStoreProvider = FutureProvider<StoreModel?>(
+/// The signed-in seller's single store (1 Seller = 1 Store), streamed live
+/// so a profile edit made on another device shows up here without a manual
+/// refresh.
+final StreamProvider<StoreModel?> myStoreProvider = StreamProvider<StoreModel?>(
   (Ref ref) {
     final String? uid = ref.watch(authUserProvider).asData?.value?.uid;
-    if (uid == null) return Future.value(null);
-    return ref.watch(sellerCatalogRepositoryProvider).getMyStore();
+    if (uid == null) return Stream<StoreModel?>.value(null);
+    return ref.watch(sellerCatalogRepositoryProvider).watchMyStore();
   },
 );
 
-/// Backward compatibility: returns the seller's single store in a list.
-final FutureProvider<List<StoreModel>> myStoresProvider =
-    FutureProvider<List<StoreModel>>((Ref ref) async {
-      final StoreModel? store = await ref.watch(myStoreProvider.future);
-      return store == null ? const <StoreModel>[] : <StoreModel>[store];
+/// Backward compatibility: returns the seller's single store in a list,
+/// re-emitting whenever [myStoreProvider] (and thus Firestore) updates.
+final StreamProvider<List<StoreModel>> myStoresProvider =
+    StreamProvider<List<StoreModel>>((Ref ref) {
+      return ref
+          .watch(sellerCatalogRepositoryProvider)
+          .watchMyStore()
+          .map(
+            (StoreModel? store) => store == null
+                ? const <StoreModel>[]
+                : <StoreModel>[store],
+          );
     });
 
 /// Metrics summary for the Seller Dashboard.
@@ -123,12 +132,16 @@ final sellerDashboardMetricsProvider = Provider.autoDispose
       );
     });
 
-/// Every product of one store, drafts included, newest first.
-final myProductsProvider = FutureProvider.autoDispose
-    .family<List<ProductModel>, String>(
-      (Ref ref, String storeId) =>
-          ref.watch(sellerCatalogRepositoryProvider).listMyProducts(storeId),
-    );
+/// Every product of one store, drafts included, newest first — streamed live
+/// so edits made elsewhere (or by the seller's own form, without relying on
+/// the post-save `invalidate`) appear on the dashboard and lists immediately.
+final myProductsProvider =
+    StreamProvider.autoDispose.family<List<ProductModel>, String>((
+      Ref ref,
+      String storeId,
+    ) {
+      return ref.watch(sellerCatalogRepositoryProvider).watchMyProducts(storeId);
+    });
 
 /// A product variant that has almost run out, paired with its product.
 ///
@@ -154,58 +167,63 @@ class LowStockVariant {
       variantName == null ? product.name : '${product.name} ($variantName)';
 }
 
-/// Everything that needs restocking, worst first.
+/// Everything that needs restocking, worst first — re-emitted live as the
+/// seller's product list changes (edits, deletes, draft status flips), so the
+/// dashboard warning tracks Firestore without a manual pull-to-refresh.
 ///
 /// A product counts as low when its own `stockTotal` is low OR any of its
 /// variants is. `stockTotal` is recomputed from the variants on every save, so
 /// the two agree for a freshly written product; the per-variant check is what
 /// catches a multi-colour product where one colour sold out and the rest did
 /// not — the case the dashboard exists to surface.
-final lowStockVariantsProvider = FutureProvider.autoDispose
-    .family<List<LowStockVariant>, String>((Ref ref, String storeId) async {
+final lowStockVariantsProvider = StreamProvider.autoDispose
+    .family<List<LowStockVariant>, String>((Ref ref, String storeId) {
       final SellerCatalogRepository repository = ref.watch(
         sellerCatalogRepositoryProvider,
       );
-      final List<ProductModel> products = await repository.listMyProducts(
-        storeId,
-      );
+      // Watches the same collection query as [myProductsProvider] (seller
+      // repo `watchMyProducts`), then recomputes per emission so the warning
+      // stays live without subscribing to the product provider separately.
+      return repository.watchMyProducts(storeId).asyncMap(
+        (List<ProductModel> products) async {
+          final List<LowStockVariant> low = <LowStockVariant>[];
+          for (final ProductModel product in products) {
+            // A draft is the seller's own work in progress; warning about it is
+            // noise, and a product with no variants falls back to stockTotal.
+            if (product.status == ProductStatus.draft) continue;
 
-      final List<LowStockVariant> low = <LowStockVariant>[];
-      for (final ProductModel product in products) {
-        // A draft is the seller's own work in progress; warning about it is
-        // noise, and a product with no variants falls back to stockTotal.
-        if (product.status == ProductStatus.draft) continue;
+            final List<ProductVariantModel> variants = await repository
+                .listVariants(product.id);
 
-        final List<ProductVariantModel> variants = await repository
-            .listVariants(product.id);
+            if (variants.isEmpty) {
+              if (product.stockTotal <= lowStockThreshold) {
+                low.add(
+                  LowStockVariant(product: product, stock: product.stockTotal),
+                );
+              }
+              continue;
+            }
 
-        if (variants.isEmpty) {
-          if (product.stockTotal <= lowStockThreshold) {
-            low.add(
-              LowStockVariant(product: product, stock: product.stockTotal),
-            );
+            for (final ProductVariantModel variant in variants) {
+              if (variant.stock > lowStockThreshold) continue;
+              low.add(
+                LowStockVariant(
+                  product: product,
+                  stock: variant.stock,
+                  variantName: variant.name.trim().isEmpty
+                      ? null
+                      : variant.name.trim(),
+                ),
+              );
+            }
           }
-          continue;
-        }
 
-        for (final ProductVariantModel variant in variants) {
-          if (variant.stock > lowStockThreshold) continue;
-          low.add(
-            LowStockVariant(
-              product: product,
-              stock: variant.stock,
-              variantName: variant.name.trim().isEmpty
-                  ? null
-                  : variant.name.trim(),
-            ),
+          low.sort(
+            (LowStockVariant a, LowStockVariant b) => a.stock.compareTo(b.stock),
           );
-        }
-      }
-
-      low.sort(
-        (LowStockVariant a, LowStockVariant b) => a.stock.compareTo(b.stock),
+          return low;
+        },
       );
-      return low;
     });
 
 /// At or below this many units a variant is flagged as running out.

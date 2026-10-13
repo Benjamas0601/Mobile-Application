@@ -119,6 +119,101 @@ class CatalogRepository {
         .toList(growable: false);
   }
 
+  /// Real-time categories: re-emits whenever a document in the collection
+  /// changes, so an admin's edit shows up on the home tab without a refresh.
+  /// The `active` filter is applied in Dart for the same reason as
+  /// [listCategories] (missing-field-safe, no composite index).
+  Stream<List<CategoryModel>> watchCategories() {
+    return _db
+        .collection(_categories)
+        .orderBy('sortOrder')
+        .limit(_maxLimit)
+        .snapshots()
+        .map(
+          (QuerySnapshot<Map<String, dynamic>> snapshot) => snapshot.docs
+              .map(
+                (QueryDocumentSnapshot<Map<String, dynamic>> d) =>
+                    CategoryModel.fromFirestore(d.id, d.data()),
+              )
+              .where((CategoryModel c) => c.active)
+              .toList(growable: false),
+        );
+  }
+
+  /// Real-time product list for the home grid and category pages — same
+  /// filtering (visible only, name search) as [listProducts], applied to every
+  /// snapshot so new/edited products appear live.
+  Stream<List<ProductModel>> watchProducts({
+    String? categoryId,
+    ThaiRegion? region,
+    String? search,
+    int limit = 30,
+  }) {
+    Query<Map<String, dynamic>> query = _db.collection(_products);
+
+    if (categoryId != null) {
+      query = query.where('categoryId', isEqualTo: categoryId);
+    }
+    if (region != null) {
+      query = query.where('region', isEqualTo: region.value);
+    }
+
+    final Query<Map<String, dynamic>> ordered = query
+        .orderBy('createdAt', descending: true)
+        .limit(limit.clamp(1, _maxLimit));
+
+    return ordered.snapshots().map(
+      (QuerySnapshot<Map<String, dynamic>> snapshot) {
+        List<ProductModel> products = snapshot.docs
+            .map(
+              (QueryDocumentSnapshot<Map<String, dynamic>> d) =>
+                  ProductModel.fromFirestore(d.id, d.data()),
+            )
+            .toList();
+
+        products = products.where((ProductModel p) => p.isVisible).toList();
+
+        final String term = (search ?? '').trim().toLowerCase();
+        if (term.isNotEmpty) {
+          products = products
+              .where((ProductModel p) => p.name.toLowerCase().contains(term))
+              .toList();
+        }
+
+        return products;
+      },
+    );
+  }
+
+  /// Real-time single product.
+  Stream<ProductModel?> watchProduct(String productId) {
+    return _db
+        .collection(_products)
+        .doc(productId)
+        .snapshots()
+        .map(
+          (DocumentSnapshot<Map<String, dynamic>> doc) => doc.exists
+              ? ProductModel.fromFirestore(doc.id, doc.data()!)
+              : null,
+        );
+  }
+
+  /// Real-time variants for one product.
+  Stream<List<ProductVariantModel>> watchVariants(String productId) {
+    return _db
+        .collection(_variants)
+        .where('productId', isEqualTo: productId)
+        .snapshots()
+        .map(
+          (QuerySnapshot<Map<String, dynamic>> snapshot) => snapshot.docs
+              .map(
+                (QueryDocumentSnapshot<Map<String, dynamic>> d) =>
+                    ProductVariantModel.fromFirestore(d.id, d.data()),
+              )
+              .toList(growable: false),
+        );
+  }
+
   Future<StoreModel?> getStore(String storeId) async {
     final DocumentSnapshot<Map<String, dynamic>> doc = await _db
         .collection(_stores)
@@ -126,6 +221,35 @@ class CatalogRepository {
         .get();
     if (!doc.exists) return null;
     return StoreModel.fromFirestore(doc.id, doc.data()!);
+  }
+
+  /// Real-time single store.
+  Stream<StoreModel?> watchStore(String storeId) {
+    return _db
+        .collection(_stores)
+        .doc(storeId)
+        .snapshots()
+        .map(
+          (DocumentSnapshot<Map<String, dynamic>> doc) => doc.exists
+              ? StoreModel.fromFirestore(doc.id, doc.data()!)
+              : null,
+        );
+  }
+
+  /// Real-time store list.
+  Stream<List<StoreModel>> watchStores({int limit = 30}) {
+    return _db
+        .collection(_stores)
+        .limit(limit)
+        .snapshots()
+        .map(
+          (QuerySnapshot<Map<String, dynamic>> snapshot) => snapshot.docs
+              .map(
+                (QueryDocumentSnapshot<Map<String, dynamic>> d) =>
+                    StoreModel.fromFirestore(d.id, d.data()),
+              )
+              .toList(growable: false),
+        );
   }
 
   /// Variants for one product. `stockTotal` on the product is the sum of

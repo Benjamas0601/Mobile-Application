@@ -106,6 +106,54 @@ class SellerCatalogRepository {
         .toList(growable: false);
   }
 
+  /// Real-time version of [getMyStore]: re-emits when the seller's store
+  /// document changes (name, logo, region), so screens that render the profile
+  /// update themselves instead of showing a cached copy.
+  Stream<StoreModel?> watchMyStore() {
+    return _firestore
+        .collection(_stores)
+        .where('ownerUid', isEqualTo: _uid)
+        .limit(1)
+        .snapshots()
+        .map(
+          (QuerySnapshot<Map<String, dynamic>> snapshot) => snapshot.docs
+              .isEmpty
+              ? null
+              : StoreModel.fromFirestore(
+                  snapshot.docs.first.id,
+                  snapshot.docs.first.data(),
+                ),
+        );
+  }
+
+  /// Real-time version of [listMyProducts] — same sort, same "drafts
+  /// included" contract, but re-emits as the seller edits products so the
+  /// dashboard and list screens track Firestore without manual refreshes.
+  Stream<List<ProductModel>> watchMyProducts(String storeId) {
+    return _firestore
+        .collection(_products)
+        .where('storeId', isEqualTo: storeId)
+        .limit(200)
+        .snapshots()
+        .map((QuerySnapshot<Map<String, dynamic>> snapshot) {
+          final List<ProductModel> products = snapshot.docs
+              .map(
+                (QueryDocumentSnapshot<Map<String, dynamic>> d) =>
+                    ProductModel.fromFirestore(d.id, d.data()),
+              )
+              .toList();
+          products.sort((ProductModel a, ProductModel b) {
+            final DateTime? aTime = a.createdAt;
+            final DateTime? bTime = b.createdAt;
+            final int byTime = (bTime?.millisecondsSinceEpoch ?? 0).compareTo(
+              aTime?.millisecondsSinceEpoch ?? 0,
+            );
+            return byTime != 0 ? byTime : a.id.compareTo(b.id);
+          });
+          return products;
+        });
+  }
+
   /// Creates a product (status may still be `draft`) and its variant rows.
   ///
   /// The write is deliberately TWO steps even though a single batch would be

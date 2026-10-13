@@ -15,10 +15,13 @@ const Set<String> kHomeHiddenCategoryIds = <String>{'handicraft', 'food'};
 final Provider<CatalogRepository> catalogRepositoryProvider =
     Provider<CatalogRepository>((Ref ref) => CatalogRepository());
 
-/// Active categories, ordered by `sortOrder`.
-final categoriesProvider = FutureProvider<List<CategoryModel>>(
-  (Ref ref) => ref.watch(catalogRepositoryProvider).listCategories(),
-);
+/// Active categories, ordered by `sortOrder`, streamed live from Firestore —
+/// an admin adding/hiding a category appears on the home tab without a
+/// refresh (`.snapshots()` lifecycle, same as the coupon tab).
+final StreamProvider<List<CategoryModel>> categoriesProvider =
+    StreamProvider<List<CategoryModel>>((Ref ref) {
+      return ref.watch(catalogRepositoryProvider).watchCategories();
+    });
 
 /// The current browse filter.
 class ProductFilter {
@@ -72,38 +75,38 @@ final productFilterProvider =
       ProductFilterNotifier.new,
     );
 
-/// The product list for the current filter. `autoDispose` so leaving the
-/// catalogue frees the subscription instead of holding a live listener.
-final productsProvider = FutureProvider.autoDispose<List<ProductModel>>((
-  Ref ref,
-) {
-  final ProductFilter filter = ref.watch(productFilterProvider);
-  return ref
-      .watch(catalogRepositoryProvider)
-      .listProducts(
-        categoryId: filter.categoryId,
-        region: filter.region,
-        search: filter.search,
-      );
-});
+/// The product list for the current filter, streamed live. `autoDispose` so
+/// leaving the catalogue frees the subscription instead of holding a live
+/// listener.
+final StreamProvider<List<ProductModel>> productsProvider =
+    StreamProvider.autoDispose<List<ProductModel>>((Ref ref) {
+      final ProductFilter filter = ref.watch(productFilterProvider);
+      return ref
+          .watch(catalogRepositoryProvider)
+          .watchProducts(
+            categoryId: filter.categoryId,
+            region: filter.region,
+            search: filter.search,
+          );
+    });
 
-final productProvider = FutureProvider.autoDispose
+final productProvider = StreamProvider.autoDispose
     .family<ProductModel?, String>(
       (Ref ref, String productId) =>
-          ref.watch(catalogRepositoryProvider).getProduct(productId),
+          ref.watch(catalogRepositoryProvider).watchProduct(productId),
     );
 
-final productVariantsProvider = FutureProvider.autoDispose
+final productVariantsProvider = StreamProvider.autoDispose
     .family<List<ProductVariantModel>, String>(
       (Ref ref, String productId) =>
-          ref.watch(catalogRepositoryProvider).listVariants(productId),
+          ref.watch(catalogRepositoryProvider).watchVariants(productId),
     );
 
-final storeProvider = FutureProvider.autoDispose.family<StoreModel?, String>(
+final storeProvider = StreamProvider.autoDispose.family<StoreModel?, String>(
   (Ref ref, String storeId) =>
-      ref.watch(catalogRepositoryProvider).getStore(storeId),
+      ref.watch(catalogRepositoryProvider).watchStore(storeId),
 );
 
-final storesProvider = FutureProvider<List<StoreModel>>(
-  (Ref ref) => ref.watch(catalogRepositoryProvider).listStores(),
+final storesProvider = StreamProvider<List<StoreModel>>(
+  (Ref ref) => ref.watch(catalogRepositoryProvider).watchStores(),
 );

@@ -10,6 +10,7 @@ import 'package:thai_otop_marketplace/core/utils/formatters.dart';
 import 'package:thai_otop_marketplace/features/seller/screens/seller_home_screen.dart';
 import 'package:thai_otop_marketplace/features/seller/screens/seller_order_list_screen.dart';
 import 'package:thai_otop_marketplace/features/seller/screens/seller_store_edit_screen.dart';
+import 'package:thai_otop_marketplace/models/coupon_model.dart';
 import 'package:thai_otop_marketplace/models/order_model.dart';
 import 'package:thai_otop_marketplace/models/product_draft.dart';
 import 'package:thai_otop_marketplace/models/product_model.dart';
@@ -121,6 +122,7 @@ class _FakeOrderRepository implements OrderRepository {
     required PaymentMethod method,
     String? slipUrl,
     String? note,
+    CouponModel? coupon,
   }) async => 'new-order-id';
 }
 
@@ -139,6 +141,14 @@ class _FakeSellerCatalogRepository implements SellerCatalogRepository {
   @override
   Future<StoreModel?> getMyStore() async =>
       stores.isEmpty ? null : stores.first;
+
+  @override
+  Stream<StoreModel?> watchMyStore() =>
+      Stream<StoreModel?>.value(stores.isEmpty ? null : stores.first);
+
+  @override
+  Stream<List<ProductModel>> watchMyProducts(String storeId) =>
+      Stream<List<ProductModel>>.value(const <ProductModel>[]);
 
   @override
   Future<List<StoreModel>> listMyStores() async => stores;

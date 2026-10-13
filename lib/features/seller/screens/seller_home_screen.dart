@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -17,6 +18,7 @@ import '../../../providers/order_provider.dart';
 import '../../../providers/notification_provider.dart';
 import '../../../providers/seller_catalog_provider.dart';
 import '../../../widgets/design_system.dart';
+import '../../../widgets/otop_components.dart';
 import '../../../widgets/state_views.dart';
 
 /// The seller console's front door, laid out as the HTML design's dashboard:
@@ -60,6 +62,22 @@ class SellerHomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        systemOverlayStyle: SystemUiOverlayStyle.light,
+        backgroundColor: AppColors.jade,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        flexibleSpace: ClipRRect(
+          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+          child: Stack(
+            children: <Widget>[
+              const Positioned.fill(
+                child: CustomPaint(painter: DiamondPatternPainter()),
+              ),
+              const SizedBox.expand(),
+            ],
+          ),
+        ),
         titleSpacing: AppSpacing.gutter,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,12 +85,12 @@ class SellerHomeScreen extends ConsumerWidget {
           children: <Widget>[
             Text(
               AppStrings.navSellerDashboard,
-              style: AppTextStyles.headlineSmall,
+              style: AppTextStyles.headlineSmall.copyWith(color: Colors.white),
             ),
             Text(
               'สวัสดี ${user.shortName}',
               style: AppTextStyles.labelSmall.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: AppColors.onPrimaryMuted,
               ),
             ),
           ],

@@ -4,11 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:thai_otop_marketplace/core/constants/app_enums.dart';
 import 'package:thai_otop_marketplace/core/constants/app_strings.dart';
 import 'package:thai_otop_marketplace/features/home/screens/home_screen.dart';
+import 'package:thai_otop_marketplace/models/app_notification_model.dart';
 import 'package:thai_otop_marketplace/models/category_model.dart';
 import 'package:thai_otop_marketplace/models/product_model.dart';
 import 'package:thai_otop_marketplace/models/user_model.dart';
 import 'package:thai_otop_marketplace/providers/auth_provider.dart';
 import 'package:thai_otop_marketplace/providers/catalog_provider.dart';
+import 'package:thai_otop_marketplace/providers/notification_provider.dart';
 
 final ProductModel _product = ProductModel(
   id: 'p-herb',
@@ -37,10 +39,21 @@ const CategoryModel _category = CategoryModel(
 ProviderContainer _container() => ProviderContainer(
   overrides: [
     categoriesProvider.overrideWith(
-      (Ref ref) async => <CategoryModel>[_category],
+      (Ref ref) => Stream<List<CategoryModel>>.value(<CategoryModel>[_category]),
     ),
-    productsProvider.overrideWith((Ref ref) async => <ProductModel>[_product]),
-    authUserProvider.overrideWith((Ref ref) => Stream<UserModel?>.value(null)),
+    productsProvider.overrideWith(
+      (Ref ref) => Stream<List<ProductModel>>.value(<ProductModel>[_product]),
+    ),
+    authUserProvider.overrideWith(
+      (Ref ref) => Stream<UserModel?>.value(null),
+    ),
+    // Home watches the notification badge unconditionally now (header bell),
+    // so the real Firestore-backed stream must stay out of unit tests.
+    myNotificationsProvider.overrideWith(
+      (Ref ref) => Stream<List<AppNotificationModel>>.value(
+        const <AppNotificationModel>[],
+      ),
+    ),
   ],
 );
 
@@ -54,6 +67,11 @@ void main() {
 
     Future<void> pumpHome(WidgetTester tester) async {
       addTearDown(container.dispose);
+      // The new home is tall (jade header + promo + bottom nav), so give the
+      // test window a phone-like size — slivers below the fold are otherwise
+      // not laid out and their texts are invisible to the finder.
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
@@ -125,35 +143,42 @@ void main() {
       final ProviderContainer container = ProviderContainer(
         overrides: [
           categoriesProvider.overrideWith(
-            (Ref ref) async => const <CategoryModel>[
-              CategoryModel(
-                id: 'c1',
-                name: 'ผ้าทอไทย',
-                slug: 'textile',
-                icon: '🧶',
-                sortOrder: 1,
-              ),
-              CategoryModel(
-                id: 'handicraft',
-                name: 'หัตถกรรม',
-                slug: 'handicraft',
-                icon: '🎨',
-                sortOrder: 2,
-              ),
-              CategoryModel(
-                id: 'food',
-                name: 'อาหารและขนมไทย',
-                slug: 'food',
-                icon: '🍜',
-                sortOrder: 3,
-              ),
-            ],
+            (Ref ref) => Stream<List<CategoryModel>>.value(
+              const <CategoryModel>[
+                CategoryModel(
+                  id: 'c1',
+                  name: 'ผ้าทอไทย',
+                  slug: 'textile',
+                  icon: '🧶',
+                  sortOrder: 1,
+                ),
+                CategoryModel(
+                  id: 'handicraft',
+                  name: 'หัตถกรรม',
+                  slug: 'handicraft',
+                  icon: '🎨',
+                  sortOrder: 2,
+                ),
+                CategoryModel(
+                  id: 'food',
+                  name: 'อาหารและขนมไทย',
+                  slug: 'food',
+                  icon: '🍜',
+                  sortOrder: 3,
+                ),
+              ],
+            ),
           ),
           productsProvider.overrideWith(
-            (Ref ref) async => <ProductModel>[_product],
+            (Ref ref) => Stream<List<ProductModel>>.value(<ProductModel>[_product]),
           ),
           authUserProvider.overrideWith(
             (Ref ref) => Stream<UserModel?>.value(null),
+          ),
+          myNotificationsProvider.overrideWith(
+            (Ref ref) => Stream<List<AppNotificationModel>>.value(
+              const <AppNotificationModel>[],
+            ),
           ),
         ],
       );

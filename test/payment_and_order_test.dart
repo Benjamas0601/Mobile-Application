@@ -16,6 +16,7 @@ import 'package:thai_otop_marketplace/core/services/image/image_storage_service.
 import 'package:thai_otop_marketplace/features/cart/screens/payment_screen.dart';
 import 'package:thai_otop_marketplace/features/orders/screens/order_detail_screen.dart';
 import 'package:thai_otop_marketplace/features/orders/screens/order_tracking_screen.dart';
+import 'package:thai_otop_marketplace/models/coupon_model.dart';
 import 'package:thai_otop_marketplace/models/order_model.dart';
 import 'package:thai_otop_marketplace/models/product_model.dart';
 import 'package:thai_otop_marketplace/models/store_model.dart';
@@ -23,6 +24,7 @@ import 'package:thai_otop_marketplace/models/user_model.dart';
 import 'package:thai_otop_marketplace/providers/auth_provider.dart';
 import 'package:thai_otop_marketplace/providers/cart_provider.dart';
 import 'package:thai_otop_marketplace/providers/catalog_provider.dart';
+import 'package:thai_otop_marketplace/providers/coupon_provider.dart';
 import 'package:thai_otop_marketplace/providers/image_storage_provider.dart';
 import 'package:thai_otop_marketplace/providers/order_provider.dart';
 import 'package:thai_otop_marketplace/repositories/order_repository.dart';
@@ -97,6 +99,7 @@ class _FakeOrderRepository implements OrderRepository {
   final List<String> advanced = <String>[];
   final List<String> storeQueries = <String>[];
   Object? failWith;
+  CouponModel? lastCoupon;
 
   @override
   Future<String> createOrder({
@@ -108,10 +111,12 @@ class _FakeOrderRepository implements OrderRepository {
     required PaymentMethod method,
     String? slipUrl,
     String? note,
+    CouponModel? coupon,
   }) async {
     if (failWith != null) throw failWith!;
     created.add('$storeId|$shippingAddress|${method.value}');
     submittedSlips.add(slipUrl ?? '');
+    lastCoupon = coupon;
     return 'new-order-id';
   }
 
@@ -199,7 +204,9 @@ ProviderContainer _container(
       orderRepositoryProvider.overrideWithValue(repo),
       paymentSlipPickerProvider.overrideWithValue(_FakePaymentSlipPicker()),
       imageStorageServiceProvider.overrideWithValue(_FakePaymentSlipStorage()),
-      storeProvider.overrideWith((Ref ref, String id) async => _store),
+      storeProvider.overrideWith(
+        (Ref ref, String id) => Stream<StoreModel?>.value(_store),
+      ),
       if (cloudinaryConfigured != null)
         cloudinaryConfiguredProvider.overrideWithValue(cloudinaryConfigured),
     ],
@@ -542,6 +549,36 @@ void main() {
 
       expect(id, isNull);
       expect(repo.created, isEmpty);
+    });
+
+    testWidgets('an applied coupon is handed to the order write', (
+      WidgetTester tester,
+    ) async {
+      final _FakeOrderRepository repo = _FakeOrderRepository();
+      final ProviderContainer container = _container(repo)
+        ..read(cartProvider.notifier).add(_product);
+      container
+          .read(checkoutDraftProvider.notifier)
+          .start(storeId: 's1', shippingAddress: 'เชียงใหม่ 50100');
+      container.read(appliedCouponProvider.notifier).apply(
+        CouponModel(
+          id: 'c1',
+          code: 'SAVE10',
+          type: CouponType.percentage,
+          value: 10,
+          startsAt: DateTime(2020, 1, 1),
+          expiresAt: DateTime(2100, 1, 1),
+        ),
+      );
+
+      await _pumpPayment(tester, container);
+      await tester.tap(find.text(PaymentMethod.cashOnDelivery.label));
+      await tester.pumpAndSettle();
+      await _scrollTo(tester, find.byType(FilledButton));
+      await tester.tap(find.byType(FilledButton));
+      await tester.pumpAndSettle();
+
+      expect(repo.lastCoupon?.code, 'SAVE10');
     });
   });
 

@@ -108,6 +108,15 @@ class _FakeSellerCatalogRepository implements SellerCatalogRepository {
       stores.isEmpty ? null : stores.first;
 
   @override
+  Stream<StoreModel?> watchMyStore() =>
+      Stream<StoreModel?>.value(stores.isEmpty ? null : stores.first);
+
+  @override
+  Stream<List<ProductModel>> watchMyProducts(String storeId) async* {
+    yield products.where((ProductModel p) => p.storeId == storeId).toList();
+  }
+
+  @override
   Future<List<StoreModel>> listMyStores() async => stores;
 
   @override
@@ -186,9 +195,13 @@ ProviderContainer _editContainer(
         (Ref ref) => Stream<UserModel?>.value(user),
       ),
       sellerCatalogRepositoryProvider.overrideWithValue(repo),
-      storeProvider.overrideWith((Ref ref, String id) async => _store),
+      storeProvider.overrideWith(
+        (Ref ref, String id) => Stream<StoreModel?>.value(_store),
+      ),
       categoriesProvider.overrideWith(
-        (Ref ref) async => const <CategoryModel>[_category],
+        (Ref ref) => Stream<List<CategoryModel>>.value(
+          const <CategoryModel>[_category],
+        ),
       ),
     ],
   );
@@ -671,15 +684,22 @@ void main() {
             (Ref ref) => Stream<UserModel?>.value(_seller),
           ),
           sellerCatalogRepositoryProvider.overrideWithValue(repo),
-          storeProvider.overrideWith((Ref ref, String id) async => _store),
-          categoriesProvider.overrideWith(
-            (Ref ref) async => const <CategoryModel>[_category],
+          storeProvider.overrideWith(
+          (Ref ref, String id) => Stream<StoreModel?>.value(_store),
+        ),
+        categoriesProvider.overrideWith(
+          (Ref ref) => Stream<List<CategoryModel>>.value(
+            const <CategoryModel>[_category],
           ),
-          productProvider.overrideWith((Ref ref, String id) async => _product),
-          productVariantsProvider.overrideWith(
-            (Ref ref, String id) async =>
-                repo.variantsByProduct[id] ?? const <ProductVariantModel>[],
+        ),
+        productProvider.overrideWith(
+          (Ref ref, String id) => Stream<ProductModel?>.value(_product),
+        ),
+        productVariantsProvider.overrideWith(
+          (Ref ref, String id) => Stream<List<ProductVariantModel>>.value(
+            repo.variantsByProduct[id] ?? const <ProductVariantModel>[],
           ),
+        ),
         ],
       );
       addTearDown(container.dispose);
@@ -715,15 +735,22 @@ void main() {
               (Ref ref) => Stream<UserModel?>.value(_seller),
             ),
             sellerCatalogRepositoryProvider.overrideWithValue(repo),
-            storeProvider.overrideWith((Ref ref, String id) async => _store),
+            storeProvider.overrideWith(
+              (Ref ref, String id) => Stream<StoreModel?>.value(_store),
+            ),
             categoriesProvider.overrideWith(
-              (Ref ref) async => const <CategoryModel>[_category],
+              (Ref ref) => Stream<List<CategoryModel>>.value(
+                const <CategoryModel>[_category],
+              ),
             ),
             productProvider.overrideWith(
-              (Ref ref, String id) async => _product,
+              (Ref ref, String id) => Stream<ProductModel?>.value(_product),
             ),
             productVariantsProvider.overrideWith(
-              (Ref ref, String id) async => const <ProductVariantModel>[],
+              (Ref ref, String id) =>
+                  Stream<List<ProductVariantModel>>.value(
+                    const <ProductVariantModel>[],
+                  ),
             ),
           ],
         );
