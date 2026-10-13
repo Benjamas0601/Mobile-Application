@@ -476,6 +476,17 @@ async function testOrders() {
     await fresh();
     await assertFails(as('seller1').firestore().doc('orders/order2').update({ total: 1 }));
   });
+  await it('ผู้ขายเปลี่ยนสถานะพร้อมตัดสต็อก (stockDeductedAt) ได้', async () => {
+    await fresh();
+    await assertSucceeds(as('seller1').firestore().doc('orders/order2').update({
+      status: 'paid',
+      stockDeductedAt: TS(),
+    }));
+  });
+  await it('stockDeductedAt ใส่ปลอมโดยลูกค้า = ปฏิเสธ', async () => {
+    await fresh();
+    await assertFails(as('buyer1').firestore().doc('orders/order1').update({ stockDeductedAt: TS() }));
+  });
   await it('ลบออเดอร์ไม่ได้เลย (เก็บ audit trail)', async () => {
     await fresh();
     await assertFails(as('buyer1').firestore().doc('orders/order1').delete());
@@ -678,6 +689,6 @@ async function testMisc() {
     await env.cleanup();
   }
   const total = passed + failed;
-  console.log(`\nผลลัพธ์: ${passed}/${total} ผ่าน (เดิมที่เคยยืนยันไว้ 47/47 — ตัวเลขนี้เป็นของตอนนี้)\n`);
+  console.log(`\nผลลัพธ์: ${passed}/${total} ผ่าน\n`);
   process.exit(failed === 0 ? 0 : 1);
 })();

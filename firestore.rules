@@ -330,7 +330,7 @@ service cloud.firestore {
           && resource.data.status == 'pending_payment'
           && changesOnlyTo(['shippingAddress', 'couponCode', 'note']))
         || (isOrderSeller(orderId)
-          && changesOnlyTo(['status', 'shippedAt', 'trackingNumber']))
+          && changesOnlyTo(['status', 'shippedAt', 'trackingNumber', 'stockDeductedAt']))
         || isAdmin()
       );
 
@@ -476,8 +476,6 @@ service cloud.firestore {
     // ================================================================ //
     match /notifications/{notificationId} {
       allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
-
-      // ระบบสร้างจาก Cloud Function
       allow create: if isAdmin();
 
       // ผู้ใช้กดอ่านแล้วเท่านั้น

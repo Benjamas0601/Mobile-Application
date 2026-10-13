@@ -27,6 +27,7 @@ class OrderRepository {
 
   static const String _orders = 'orders';
   static const String _payments = 'payments';
+  static const String _products = 'products';
 
   CollectionReference<Map<String, dynamic>> get _ordersCol =>
       _firestore.collection(_orders);
@@ -193,6 +194,12 @@ class OrderRepository {
 
   /// Moves an order to [next], refusing a step the state machine disallows.
   ///
+  /// Runs as a transaction so the order status and the product stock it touches
+  /// change together: the seller confirming an order (`pendingPayment` -> `paid`)
+  /// deducts each item's quantity, and cancelling that same confirmed order puts
+  /// the units back. A half-applied step would either oversell or lose stock, so
+  /// both writes share one transaction.
+  ///
   /// The guard is duplicated in `firestore.rules`; this copy exists so the
   /// caller gets a sentence it can show, instead of a raw permission error.
   ///
@@ -204,43 +211,118 @@ class OrderRepository {
     OrderStatus next, {
     String? trackingNumber,
   }) async {
-    final DocumentSnapshot<Map<String, dynamic>> snap = await _ordersCol
-        .doc(orderId)
-        .get();
-    final Map<String, dynamic>? data = snap.data();
-    if (data == null) {
-      throw const OrderWriteException('ไม่พบคำสั่งซื้อนี้');
-    }
-
-    final OrderStatus current = OrderStatus.fromValue(
-      data['status'] as String?,
+    final DocumentReference<Map<String, dynamic>> orderRef = _ordersCol.doc(
+      orderId,
     );
-    if (!current.allowedNext.contains(next)) {
-      throw OrderWriteException(
-        'เปลี่ยนสถานะจาก "${current.label}" ไป "${next.label}" ไม่ได้',
-      );
-    }
-
-    // `shippedAt` is written alongside the status so the timeline has a real
-    // date; the rules explicitly allow both fields to change together.
     final String? tracking = trackingNumber?.trim();
-    final Map<String, dynamic> update = <String, dynamic>{
-      'status': next.value,
-      if (next == OrderStatus.shipped) ...<String, dynamic>{
-        'shippedAt': FieldValue.serverTimestamp(),
-        if (tracking != null && tracking.isNotEmpty) 'trackingNumber': tracking,
-      },
-    };
+
+    OrderStatus? movedFrom;
+    await _firestore.runTransaction((Transaction tx) async {
+      final DocumentSnapshot<Map<String, dynamic>> snap = await tx.get(orderRef);
+      final Map<String, dynamic>? data = snap.data();
+      if (data == null) {
+        throw const OrderWriteException('ไม่พบคำสั่งซื้อนี้');
+      }
+
+      final OrderStatus current = OrderStatus.fromValue(
+        data['status'] as String?,
+      );
+      if (!current.allowedNext.contains(next)) {
+        throw OrderWriteException(
+          'เปลี่ยนสถานะจาก "${current.label}" ไป "${next.label}" ไม่ได้',
+        );
+      }
+
+      // `shippedAt` is written alongside the status so the timeline has a real
+      // date; the rules explicitly allow both fields to change together.
+      final Map<String, dynamic> update = <String, dynamic>{
+        'status': next.value,
+        if (next == OrderStatus.shipped) ...<String, dynamic>{
+          'shippedAt': FieldValue.serverTimestamp(),
+          if (tracking != null && tracking.isNotEmpty)
+            'trackingNumber': tracking,
+        },
+      };
+
+      // Deduct stock the moment the seller confirms (paid), and restore it if
+      // that confirmed order is later cancelled. `stockDeductedAt` makes both
+      // one-shot: it is only set on a real deduction, so a plain cancel of an
+      // unpaid order never invents stock that was never taken.
+      final bool deducting =
+          next == OrderStatus.paid && current == OrderStatus.pendingPayment;
+      final bool restoring =
+          next == OrderStatus.cancelled && data['stockDeductedAt'] != null;
+
+      if (deducting || restoring) {
+        await _applyStockDelta(
+          tx,
+          data['items'],
+          deduct: deducting,
+        );
+        if (deducting) {
+          update['stockDeductedAt'] = FieldValue.serverTimestamp();
+        }
+      }
+
+      tx.update(orderRef, update);
+      movedFrom = current;
+    });
 
     // Paying moves the payment record too, so the seller sees the money state
-    // without opening a second collection.
+    // without opening a second collection. Kept outside the transaction because
+    // it looks the payment up by query, which a transaction cannot run.
     if (next == OrderStatus.paid &&
-        OrderStatus.fromValue(data['status'] as String?) ==
-            OrderStatus.pendingPayment) {
+        movedFrom == OrderStatus.pendingPayment) {
       await _markPaymentVerified(orderId);
     }
+  }
 
-    await _ordersCol.doc(orderId).update(update);
+  /// Applies [deduct] to every product on the order inside [tx].
+  ///
+  /// Stock is clamped at zero so a race between two buyers can never drive a
+  /// product negative, and `soldCount` moves in the same direction. A product
+  /// the seller has since deleted is skipped rather than failing the whole step.
+  Future<void> _applyStockDelta(
+    Transaction tx,
+    Object? rawItems, {
+    required bool deduct,
+  }) async {
+    if (rawItems is! List) return;
+    for (final Object? raw in rawItems) {
+      if (raw is! Map) continue;
+      final String productId = (raw['productId'] as String?) ?? '';
+      if (productId.isEmpty) continue;
+      final int quantity = _asInt(raw['quantity'], 1);
+      if (quantity <= 0) continue;
+
+      final DocumentReference<Map<String, dynamic>> ref = _firestore
+          .collection(_products)
+          .doc(productId);
+      final DocumentSnapshot<Map<String, dynamic>> snap = await tx.get(ref);
+      if (!snap.exists) continue;
+
+      final Map<String, dynamic> product = snap.data() ?? const {};
+      final int stock = _asInt(product['stockTotal'], 0);
+      final int sold = _asInt(product['soldCount'], 0);
+      final int nextStock = deduct
+          ? (stock - quantity < 0 ? 0 : stock - quantity)
+          : stock + quantity;
+      final int nextSold = deduct
+          ? sold + quantity
+          : (sold - quantity < 0 ? 0 : sold - quantity);
+
+      tx.update(ref, <String, dynamic>{
+        'stockTotal': nextStock,
+        'soldCount': nextSold,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+  }
+
+  static int _asInt(Object? value, int fallback) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return fallback;
   }
 
   Future<void> _markPaymentVerified(String orderId) async {
