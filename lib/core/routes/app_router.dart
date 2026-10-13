@@ -11,6 +11,7 @@ import '../../features/cart/screens/payment_screen.dart';
 import '../../features/chat/screens/chat_list_screen.dart';
 import '../../features/chat/screens/chat_thread_screen.dart';
 import '../../features/home/screens/home_screen.dart';
+import '../../features/notifications/screens/notification_list_screen.dart';
 import '../../features/orders/screens/order_detail_screen.dart';
 import '../../features/orders/screens/order_list_screen.dart';
 import '../../features/orders/screens/order_tracking_screen.dart';
@@ -40,6 +41,9 @@ class AppRoutes {
   static const String checkout = '/checkout';
   static const String payment = '/checkout/payment';
   static const String profile = '/profile';
+
+  /// หน้ากล่องแจ้งเตือนในแอป ต้องเข้าสู่ระบบก่อน
+  static const String notifications = '/notifications';
   static const String adminRoot = '/admin';
 
   /// หน้ารายการห้องสนทนาของผู้ซื้อและผู้ขาย
@@ -94,6 +98,7 @@ String? authRedirect({
     AppRoutes.ordersHistory,
     AppRoutes.profile,
     AppRoutes.chat,
+    AppRoutes.notifications,
   };
   final bool isOrderRoute = location.startsWith('/order/');
   final bool isChatRoute =
@@ -254,6 +259,12 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
         path: AppRoutes.profile,
         builder: (BuildContext context, GoRouterState state) =>
             const ProfileScreen(),
+      ),
+      // กล่องแจ้งเตือนในแอป — ต้องล็อกอิน (กันไว้ใน accountRequired ด้านบน)
+      GoRoute(
+        path: AppRoutes.notifications,
+        builder: (BuildContext context, GoRouterState state) =>
+            const NotificationListScreen(),
       ),
       // พื้นที่ผู้ขายต้องเข้าสู่ระบบตาม redirect ด้านบน และตรวจบทบาทซ้ำในหน้า
       // เนื่องจากข้อมูลบทบาทจัดเก็บใน Firestore ไม่ได้อยู่ใน path ของเส้นทาง

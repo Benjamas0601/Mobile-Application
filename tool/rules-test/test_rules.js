@@ -658,6 +658,85 @@ async function testMisc() {
     await assertFails(as('buyer2').firestore().doc('notifications/n1').get());
     await assertSucceeds(as('buyer1').firestore().doc('notifications/n1').update({ read: true, readAt: TS() }));
   });
+  await it('แจ้งเตือน: คู่ค้าในออเดอร์แจ้งให้กันได้ (ผู้ซื้อ→ผู้ขาย / ผู้ขาย→ผู้ซื้อ)', async () => {
+    await fresh();
+    // ผู้ซื้อ (order1) แจ้งเจ้าของร้าน
+    await assertSucceeds(as('buyer1').firestore().doc('notifications/nOrderA').set({
+      userId: 'seller1',
+      type: 'order_status',
+      title: 'มีคำสั่งซื้อใหม่',
+      body: 'ออเดอร์ #order1',
+      orderId: 'order1',
+      read: false,
+      createdAt: TS(),
+    }));
+    // ผู้ขายแจ้งผู้ซื้อ
+    await assertSucceeds(as('seller1').firestore().doc('notifications/nOrderB').set({
+      userId: 'buyer1',
+      type: 'order_status',
+      title: 'สถานะออเดอร์: ชำระแล้ว',
+      body: 'ออเดอร์ #order1',
+      orderId: 'order1',
+      read: false,
+      createdAt: TS(),
+    }));
+  });
+  await it('แจ้งเตือน: คนนอกที่ไม่ใช่คู่ออเดอร์สร้างแจ้งเตือนให้ไม่ได้', async () => {
+    await fresh();
+    // seller2 ไม่ใช่เจ้าของ storeA (order2)
+    await assertFails(as('seller2').firestore().doc('notifications/nHackA').set({
+      userId: 'buyer1',
+      type: 'order_status',
+      title: 'หลอก',
+      body: 'fake',
+      orderId: 'order2',
+      read: false,
+      createdAt: TS(),
+    }));
+    // buyer2 ไม่ใช่คู่ของ order1
+    await assertFails(as('buyer2').firestore().doc('notifications/nHackB').set({
+      userId: 'buyer1',
+      type: 'order_status',
+      title: 'หลอก',
+      body: 'fake',
+      orderId: 'order1',
+      read: false,
+      createdAt: TS(),
+    }));
+  });
+  await it('แจ้งเตือน: คนในห้องแชทแจ้งอีกฝั่งได้ / คนนอกห้องไม่ได้', async () => {
+    await fresh();
+    await assertSucceeds(as('buyer1').firestore().doc('notifications/nMsgA').set({
+      userId: 'seller1',
+      type: 'new_message',
+      title: 'ข้อความใหม่',
+      body: 'สวัสดี',
+      threadId: 'thread1',
+      read: false,
+      createdAt: TS(),
+    }));
+    await assertFails(as('buyer2').firestore().doc('notifications/nMsgB').set({
+      userId: 'seller1',
+      type: 'new_message',
+      title: 'ข้อความใหม่',
+      body: 'แอบดู',
+      threadId: 'thread1',
+      read: false,
+      createdAt: TS(),
+    }));
+  });
+  await it('แจ้งเตือน: ส่งให้ตัวเองผ่านห้องแชท = ปฏิเสธ', async () => {
+    await fresh();
+    await assertFails(as('buyer1').firestore().doc('notifications/nSelf').set({
+      userId: 'buyer1',
+      type: 'new_message',
+      title: 'ตัวเอง',
+      body: 'x',
+      threadId: 'thread1',
+      read: false,
+      createdAt: TS(),
+    }));
+  });
   await it('path อื่น ๆ นอกเหนือ = ปฏิเสธทุกคน (deny by default)', async () => {
     await fresh();
     await assertFails(as('admin1').firestore().doc('secret/flag').set({ value: 1 }));

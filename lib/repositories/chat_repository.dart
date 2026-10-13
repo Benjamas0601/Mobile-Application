@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../core/constants/app_enums.dart';
 import '../models/chat_message_model.dart';
 import '../models/chat_thread_model.dart';
+import 'notification_repository.dart';
 
 /// Reads and writes conversations, shaped by `firestore.rules`:
 ///
@@ -189,6 +191,24 @@ class ChatRepository {
       },
     );
     await batch.commit();
+
+    // แจ้งอีกฝั่งในห้องแบบ best-effort — พลาดก็ไม่ทำให้ข้อความหาย
+    final List<String> others = room
+        .where((String u) => u != myUid)
+        .toList(growable: false);
+    if (others.isNotEmpty) {
+      try {
+        await NotificationRepository(firestore: _firestore, auth: _auth).create(
+          userId: others.first,
+          type: NotificationType.newMessage,
+          title: 'ข้อความใหม่จาก ${_auth.currentUser?.displayName ?? 'ผู้ใช้'}',
+          body: trimmed.length > 60 ? '${trimmed.substring(0, 60)}…' : trimmed,
+          threadId: threadId,
+        );
+      } catch (_) {
+        // best-effort
+      }
+    }
   }
 
   /// เคลียร์ตัวนับยังไม่อ่านของฝั่งผู้เรียก — เรียกตอนเปิดห้อง

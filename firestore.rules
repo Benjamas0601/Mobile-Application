@@ -90,6 +90,32 @@ service cloud.firestore {
       return isOrderBuyer(orderId) || isOrderSeller(orderId) || isAdmin();
     }
 
+    // แจ้งเตือนจากคู่สินค้า: ผู้เขียนเป็นคู่ในออเดอร์ และปลายทางเป็นอีกฝ่าย
+    // (ผู้ซื้อแจ้งเจ้าของร้าน / ผู้ขายแจ้งผู้ซื้อ) — ใช้ตอน notifications create
+    function orderCounterpartyAllows(orderId) {
+      return orderExists(orderId)
+        && isOrderParty(orderId)
+        && (
+          (isOrderBuyer(orderId)
+            && storeExists(orderDoc(orderId).storeId)
+            && request.resource.data.userId
+                 == storeDoc(orderDoc(orderId).storeId).ownerUid)
+          || (isOrderSeller(orderId)
+            && request.resource.data.userId == orderDoc(orderId).buyerUid)
+        );
+    }
+
+    // แจ้งเตือนจากคู่แชท: ผู้เขียนอยู่ในห้อง และปลายทางเป็นอีกสมาชิกในห้อง
+    function threadCounterpartyAllows(threadId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/chat_threads/$(threadId))
+        && request.auth.uid
+             in get(/databases/$(database)/documents/chat_threads/$(threadId)).data.participantUids
+        && request.resource.data.userId
+             in get(/databases/$(database)/documents/chat_threads/$(threadId)).data.participantUids
+        && request.resource.data.userId != request.auth.uid;
+    }
+
     // เปลี่ยนเฉพาะ field ที่อนุญาต และต้องมีการเปลี่ยนแปลงจริงอย่างน้อยหนึ่ง field
     function changesOnlyTo(list) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(list);
@@ -476,7 +502,33 @@ service cloud.firestore {
     // ================================================================ //
     match /notifications/{notificationId} {
       allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create: if isAdmin();
+
+      // แอดมิน/ระบบ (Cloud Function) สร้างได้เสมอ
+      // ผู้ใช้สร้างได้เฉพาะ "แจ้งคู่ค้า" (อีกฝั่งของออเดอร์ หรืออีกฝั่งในห้องแชท)
+      // — userId คือผู้รับ ตัว writer เป็นฝั่งที่แจ้ง
+      allow create: if isAdmin()
+        || (isSignedIn()
+          && request.resource.data.userId is string
+          && request.resource.data.userId.size() > 0
+          && request.resource.data.type is string
+          && request.resource.data.title is string
+          && request.resource.data.title.size() > 0
+          && request.resource.data.body is string
+          && request.resource.data.read == false
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.keys().hasOnly([
+               'userId', 'type', 'title', 'body',
+               'orderId', 'threadId', 'read', 'createdAt',
+             ])
+          && ('orderId' in request.resource.data
+               || 'threadId' in request.resource.data)
+          // ตรวจ `in` ก่อนแบบ ternary เสมอ: ใน rules การดึง `data.orderId`
+          // เมื่อไม่มีคีย์จะกลายเป็น error (ไม่ใช่ false) และ deny ทั้งคำสั่ง
+          && ('orderId' in request.resource.data
+               ? (request.resource.data.orderId is string
+                  && orderCounterpartyAllows(request.resource.data.orderId))
+               : (request.resource.data.threadId is string
+                  && threadCounterpartyAllows(request.resource.data.threadId))));
 
       // ผู้ใช้กดอ่านแล้วเท่านั้น
       allow update: if isSignedIn()

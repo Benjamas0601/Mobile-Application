@@ -14,6 +14,7 @@ import '../../../models/store_model.dart';
 import '../../../models/user_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/order_provider.dart';
+import '../../../providers/notification_provider.dart';
 import '../../../providers/seller_catalog_provider.dart';
 import '../../../widgets/design_system.dart';
 import '../../../widgets/state_views.dart';
@@ -87,6 +88,42 @@ class SellerHomeScreen extends ConsumerWidget {
             tooltip: AppStrings.chat,
             icon: const Icon(Icons.forum_outlined),
             onPressed: () => context.push(AppRoutes.chat),
+          ),
+          // กล่องแจ้งเตือนในแอป พร้อมตัวนับที่ยังไม่ได้อ่าน
+          Stack(
+            clipBehavior: Clip.none,
+            children: <Widget>[
+              IconButton(
+                tooltip: AppStrings.navNotifications,
+                icon: const Icon(Icons.notifications_outlined),
+                onPressed: () => context.push(AppRoutes.notifications),
+              ),
+              if (ref.watch(unreadNotificationCountProvider) > 0)
+                Positioned(
+                  right: 4,
+                  top: 4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 1,
+                    ),
+                    constraints: const BoxConstraints(minWidth: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.danger,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      ref.watch(unreadNotificationCountProvider) > 9
+                          ? '9+'
+                          : '${ref.watch(unreadNotificationCountProvider)}',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
           // แก้ไขข้อมูลส่วนตัวเช่นกัน — ผู้ขายก็เป็นผู้ใช้คนหนึ่ง
           IconButton(

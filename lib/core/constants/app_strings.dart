@@ -44,12 +44,19 @@ class AppStrings {
   static const String emptySearchHint =
       'ตรวจสอบคำค้น หรือลองค้นหาด้วยชื่อจังหวัดแทน';
 
+  // --- Notifications ---------------------------------------------------------
+  static const String notificationsEmpty = 'ยังไม่มีการแจ้งเตือน';
+  static const String notificationsEmptyHint =
+      'เมื่อมีออเดอร์หรือข้อความใหม่ ระบบจะแจ้งให้ทราบที่นี่';
+  static const String markAllRead = 'อ่านทั้งหมด';
+
   // --- Navigation (customer) ----------------------------------------------
   static const String navHome = 'หน้าแรก';
   static const String navExplore = 'สำรวจ';
   static const String navOrders = 'คำสั่งซื้อ';
   static const String navCart = 'ตะกร้า';
   static const String navProfile = 'โปรไฟล์';
+  static const String navNotifications = 'การแจ้งเตือน';
   static const String backToHome = 'กลับหน้าแรก';
 
   // --- Navigation (seller) -------------------------------------------------
@@ -160,8 +167,7 @@ class AppStrings {
   static const String uploadSlip = 'แนบหลักฐานการโอน';
   static const String orderNumber = 'เลขที่คำสั่งซื้อ';
   static const String mvpPaymentNotice =
-      'ระบบชำระเงินในเวอร์ชันนี้เป็น MVP Flow (ยังไม่เชื่อม Payment Gateway จริง) '
-      'ทุกขั้นตอนถูกบันทึกลงฐานข้อมูลจริง และออกแบบให้ต่อ Gateway ได้ภายหลัง';
+      'ระบบชำระเงินในเวอร์ชันนี้เป็น MVP Flow (ยังไม่เชื่อม Payment Gateway จริง) ';
 
   // --- Guest checkout gate -------------------------------------------------
   // The app is browse-first, so these strings only appear at the one step that

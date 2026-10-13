@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../core/constants/app_enums.dart';
 import '../core/utils/shipping.dart' as shipping;
 import '../models/order_model.dart';
+import 'notification_repository.dart';
 
 /// Reads and writes the buyer's own orders.
 ///
@@ -126,6 +127,8 @@ class OrderRepository {
     }
 
     await batch.commit();
+    // แจ้งเจ้าของร้านแบบ best-effort — แจ้งเตือนพลาดก็ต้องไม่ทำให้ออเดอร์พัง
+    await _notifyStoreOwner(ref.id, storeId, storeName, subtotal + shippingFee);
     return ref.id;
   }
 
@@ -275,7 +278,81 @@ class OrderRepository {
         movedFrom == OrderStatus.pendingPayment) {
       await _markPaymentVerified(orderId);
     }
+    // ผู้ซื้อควรได้เห็นสถานะที่สำคัญ — best-effort เช่นกัน
+    await _notifyOrderParty(orderId, next, tracking);
   }
+
+  /// แจ้งเจ้าของร้านว่ามีออเดอร์ใหม่เข้ามา (ผู้ส่งคือผู้ซื้อ ซึ่งเป็นคู่ค้า
+  /// ตาม rules — `orderCounterpartyAllows` ใน firestore.rules)
+  Future<void> _notifyStoreOwner(
+    String orderId,
+    String storeId,
+    String storeName,
+    double total,
+  ) async {
+    try {
+      final DocumentSnapshot<Map<String, dynamic>> store = await _firestore
+          .collection('stores')
+          .doc(storeId)
+          .get();
+      final String ownerUid = (store.data()?['ownerUid'] as String?) ?? '';
+      // ข้ามถ้าไม่มีเจ้าของ หรือสั่งจากร้านตัวเอง
+      if (ownerUid.isEmpty || ownerUid == _uid) return;
+      await _notifications().create(
+        userId: ownerUid,
+        type: NotificationType.orderStatus,
+        title: 'มีคำสั่งซื้อใหม่',
+        body: '$storeName · ออเดอร์ #$orderId · '
+            '${total.toStringAsFixed(0)} บาท',
+        orderId: orderId,
+      );
+    } catch (_) {
+      // best-effort: อย่าให้การแจ้งเตือนทำให้การสั่งซื้อล้มเหลว
+    }
+  }
+
+  /// แจ้งผู้ซื้อเมื่อสถานะออเดอร์เปลี่ยนไปจุดที่เขาควรรู้ (ผู้ส่งคือผู้ขาย)
+  Future<void> _notifyOrderParty(
+    String orderId,
+    OrderStatus next,
+    String? tracking,
+  ) async {
+    // เปลี่ยนผ่านภายใน (awaitingShipment) ไม่ต้องรบกวนผู้ซื้อ
+    if (next != OrderStatus.paid &&
+        next != OrderStatus.shipped &&
+        next != OrderStatus.completed &&
+        next != OrderStatus.cancelled) {
+      return;
+    }
+    try {
+      final DocumentSnapshot<Map<String, dynamic>> order = await _firestore
+          .collection(_orders)
+          .doc(orderId)
+          .get();
+      final String buyerUid = (order.data()?['buyerUid'] as String?) ?? '';
+      if (buyerUid.isEmpty || buyerUid == _uid) return;
+      final String base = 'ออเดอร์ #$orderId';
+      final String? trimmedTracking = tracking?.trim();
+      await _notifications().create(
+        userId: buyerUid,
+        type: NotificationType.orderStatus,
+        title: 'สถานะออเดอร์: ${next.label}',
+        body: next == OrderStatus.shipped &&
+                trimmedTracking != null &&
+                trimmedTracking.isNotEmpty
+            ? '$base · เลขพัสดุ $trimmedTracking'
+            : base,
+        orderId: orderId,
+      );
+    } catch (_) {
+      // best-effort
+    }
+  }
+
+  /// สร้าง NotificationRepository ที่ชี้ไปที่ firestore/auth ชุดเดียวกับคลาสนี้
+  /// เพื่อให้ hook การแจ้งเตือนไม่ต้องเดา instance
+  NotificationRepository _notifications() =>
+      NotificationRepository(firestore: _firestore, auth: _auth);
 
   /// Applies [deduct] to every product on the order inside [tx].
   ///

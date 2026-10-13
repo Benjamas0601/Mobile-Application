@@ -16,10 +16,13 @@ import 'package:thai_otop_marketplace/models/product_model.dart';
 import 'package:thai_otop_marketplace/models/store_model.dart';
 import 'package:thai_otop_marketplace/models/store_profile_draft.dart';
 import 'package:thai_otop_marketplace/models/user_model.dart';
+import 'package:thai_otop_marketplace/models/app_notification_model.dart';
 import 'package:thai_otop_marketplace/providers/auth_provider.dart';
 import 'package:thai_otop_marketplace/providers/image_storage_provider.dart';
+import 'package:thai_otop_marketplace/providers/notification_provider.dart';
 import 'package:thai_otop_marketplace/providers/order_provider.dart';
 import 'package:thai_otop_marketplace/providers/seller_catalog_provider.dart';
+import 'package:thai_otop_marketplace/repositories/notification_repository.dart';
 import 'package:thai_otop_marketplace/repositories/order_repository.dart';
 import 'package:thai_otop_marketplace/repositories/seller_catalog_repository.dart';
 
@@ -177,6 +180,30 @@ class _FakeSellerCatalogRepository implements SellerCatalogRepository {
   Future<void> deleteProduct(String productId) async {}
 }
 
+/// Notifications with a clean, empty stream so the hub's badge never touches
+/// (or retries against) a real Firestore.
+class _FakeNotificationRepository implements NotificationRepository {
+  @override
+  Stream<List<AppNotificationModel>> watchMine() =>
+      Stream<List<AppNotificationModel>>.value(const <AppNotificationModel>[]);
+
+  @override
+  Future<void> markRead(String notificationId) async {}
+
+  @override
+  Future<void> markAllRead(Iterable<String> ids) async {}
+
+  @override
+  Future<void> create({
+    required String userId,
+    required NotificationType type,
+    required String title,
+    required String body,
+    String? orderId,
+    String? threadId,
+  }) async {}
+}
+
 ProviderContainer _container(
   _FakeSellerCatalogRepository catalog,
   _FakeOrderRepository orders, {
@@ -190,6 +217,9 @@ ProviderContainer _container(
       ),
       sellerCatalogRepositoryProvider.overrideWithValue(catalog),
       orderRepositoryProvider.overrideWithValue(orders),
+      notificationRepositoryProvider.overrideWithValue(
+        _FakeNotificationRepository(),
+      ),
       if (cloudinaryConfigured != null)
         cloudinaryConfiguredProvider.overrideWithValue(cloudinaryConfigured),
     ],

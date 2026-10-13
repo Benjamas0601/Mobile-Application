@@ -17,8 +17,10 @@ import '../../../models/product_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../providers/catalog_provider.dart';
+import '../../../providers/notification_provider.dart';
 import '../../../widgets/state_views.dart';
 import '../../products/widgets/product_card.dart';
+/// ไฟล์นี้เป็นไฟล์ที่เก็บหน้าจอเลือกดูสินค้าแบบ public พร้อมหมวด ภูมิภาค และค้นหา
 
 /// Home tab: greeting, category filter row, and the product grid.
 ///
@@ -95,6 +97,10 @@ class HomeScreen extends ConsumerWidget {
               tooltip: AppStrings.navOrders,
               icon: const Icon(Icons.receipt_long_outlined),
               onPressed: () => context.push(AppRoutes.orders),
+            ),
+            _notificationButton(
+              context,
+              ref.watch(unreadNotificationCountProvider),
             ),
             // กล่องข้อความผู้ซื้อ: route แชทบังคับล็อกอิน ไอคอนนี้จึงมีความหมาย
             // หลังล็อกอินแล้ว วางถัดจากปุ่มออเดอร์
@@ -237,6 +243,37 @@ class HomeScreen extends ConsumerWidget {
   }
 
   /// Cart entry point with a live item count.
+  Widget _notificationButton(BuildContext context, int unread) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        IconButton(
+          tooltip: AppStrings.navNotifications,
+          icon: const Icon(Icons.notifications_outlined),
+          onPressed: () => context.push(AppRoutes.notifications),
+        ),
+        if (unread > 0)
+          Positioned(
+            right: 4,
+            top: 4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              constraints: const BoxConstraints(minWidth: 16),
+              decoration: BoxDecoration(
+                color: AppColors.danger,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                unread > 9 ? '9+' : '$unread',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.labelSmall.copyWith(color: Colors.white),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _cartButton(BuildContext context, int count) {
     return Stack(
       clipBehavior: Clip.none,
