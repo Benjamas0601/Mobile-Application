@@ -69,6 +69,8 @@ class OrderModel {
     required this.subtotal,
     required this.shippingFee,
     required this.total,
+    this.discount = 0,
+    this.couponCode,
     required this.status,
     required this.paymentMethod,
     required this.paymentStatus,
@@ -95,8 +97,17 @@ class OrderModel {
   final String? trackingNumber;
   final DateTime? shippedAt;
   final List<OrderItem> items;
+
+  /// Sum of the snapshotted line totals before shipping and discount.
   final double subtotal;
   final double shippingFee;
+
+  /// Baht taken off by the coupon (0 when none was applied).
+  final double discount;
+
+  /// The code that produced [discount], shown in order history.
+  final String? couponCode;
+
   final double total;
   final OrderStatus status;
   final PaymentMethod paymentMethod;
@@ -176,6 +187,8 @@ class OrderModel {
           .toList(growable: false),
       subtotal: r.decimal('subtotal'),
       shippingFee: r.decimal('shippingFee'),
+      discount: r.decimal('discount'),
+      couponCode: r.stringOrNull('couponCode'),
       total: r.decimal('total'),
       status: OrderStatus.fromValue(r.string('status')),
       paymentMethod: PaymentMethod.fromValue(r.string('paymentMethod')),

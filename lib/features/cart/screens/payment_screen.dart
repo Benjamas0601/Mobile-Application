@@ -16,15 +16,20 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../models/store_model.dart';
 
+import '../../../models/coupon_model.dart';
 import '../../../models/user_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/cart_provider.dart';
 import '../../../providers/catalog_provider.dart';
+import '../../../providers/coupon_provider.dart';
 import '../../../providers/image_storage_provider.dart';
 import '../../../providers/order_provider.dart';
-import '../../../repositories/order_repository.dart' show OrderWriteException;
+import '../../../repositories/order_repository.dart' show OrderWriteException; // การนำเข้า OrderWriteException จาก order_repository.dart เพื่อใช้ในการจัดการข้อผิดพลาดที่เกิดขึ้นเมื่อมีปัญหาในการสร้างคำสั่งซื้อ
 import '../../../widgets/state_views.dart';
 
+
+
+/// ไฟล์นี้เป็นไฟล์ที่เก็บหน้าจอชำระเงินของแอป โดยมีฟอร์มให้กรอกที่อยู่จัดส่งและปุ่มไปยังหน้าชำระเงิน
 /// Step two of checkout: how to pay.
 ///
 /// Separate from the address form on purpose. Confirming an address is a
@@ -165,7 +170,10 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
       0.0,
       (double sum, CartLine l) => sum + l.lineTotal,
     );
-    final double total = getCartTotal(subtotal);
+    final CouponModel? applied = ref.watch(appliedCouponProvider);
+    final double discount =
+        applied?.discountFor(subtotal: subtotal, storeId: widget.storeId) ?? 0;
+    final double total = getCartTotal(subtotal) - discount;
     final int totalSatang = (total * 100).round();
     final bool destinationReady = _destinationReady(totalSatang);
     final bool canConfirm =
@@ -177,7 +185,7 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.gutter),
         children: <Widget>[
-          _orderSummaryCard(subtotal, total),
+          _orderSummaryCard(subtotal, discount, total, couponCode: applied?.code),
           const SizedBox(height: AppSpacing.lg),
           Text(AppStrings.paymentMethod, style: AppTextStyles.labelMedium),
           const SizedBox(height: AppSpacing.sm),
@@ -300,7 +308,13 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
     }
   }
 
-  Widget _orderSummaryCard(double subtotal, double total) {
+  Widget _orderSummaryCard(
+    double subtotal,
+    double discount,
+    double total, {
+    String? couponCode,
+  }) {
+    final double shippingFee = getShippingFee(subtotal);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -359,13 +373,31 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
                   ),
                 ),
                 Text(
-                  total - subtotal == 0
-                      ? AppStrings.freeShipping
-                      : Fmt.price(total - subtotal),
+                  shippingFee == 0 ? AppStrings.freeShipping : Fmt.price(shippingFee),
                   style: AppTextStyles.bodySmall,
                 ),
               ],
             ),
+            if (couponCode != null && discount > 0) ...<Widget>[
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  Text(
+                    AppStrings.couponDiscountLabel,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.success,
+                    ),
+                  ),
+                  Text(
+                    '$couponCode · -${Fmt.price(discount)}',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.success,
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: AppSpacing.xs),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -400,6 +432,7 @@ class _PaymentFormState extends ConsumerState<_PaymentForm> {
             shippingAddress: widget.shippingAddress,
             method: _method,
             slipUrl: _slipUrl,
+            coupon: ref.read(appliedCouponProvider),
           );
     } on OrderWriteException catch (e) {
       // A full sentence about the write, not a crash: the repository already

@@ -1,9 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/app_enums.dart';
+import '../models/coupon_model.dart';
 import '../models/order_model.dart';
 import '../repositories/order_repository.dart';
 import 'cart_provider.dart';
+import 'coupon_provider.dart';
 
 /// Injected once and overridden in tests with a fake, so screens can be driven
 /// without a live Firestore.
@@ -80,6 +82,7 @@ class PlaceOrderController extends Notifier<bool> {
     required PaymentMethod method,
     String? slipUrl,
     String? note,
+    CouponModel? coupon,
   }) async {
     // The screen-facing guard, so an invalid draft produces a clean message
     // instead of an exception. The repository re-checks the same invariants
@@ -102,9 +105,11 @@ class PlaceOrderController extends Notifier<bool> {
         method: method,
         slipUrl: slipUrl,
         note: note,
+        coupon: coupon,
       );
       ref.read(cartProvider.notifier).clear();
       ref.read(checkoutDraftProvider.notifier).clear();
+      ref.read(appliedCouponProvider.notifier).clear();
       ref.invalidate(myOrdersProvider);
       return id;
     } finally {

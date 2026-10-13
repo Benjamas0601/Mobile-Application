@@ -17,6 +17,7 @@ import '../../../widgets/state_views.dart';
 import '../../orders/widgets/order_status_timeline.dart';
 import 'order_list_screen.dart' show StatusChip;
 
+
 /// One order: what was bought, where it is, and the demo seller control.
 ///
 /// Subscribed to the order document rather than reading it once, so a status
@@ -136,6 +137,14 @@ class _Detail extends ConsumerWidget {
                       ? AppStrings.freeShipping
                       : Fmt.price(order.shippingFee),
                 ),
+                if (order.discount > 0) ...<Widget>[
+                  _totalRow(
+                    order.couponCode == null
+                        ? AppStrings.couponDiscountLabel
+                        : '${AppStrings.couponDiscountLabel} (${order.couponCode})',
+                    '-${Fmt.price(order.discount)}',
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.xs),
                 _totalRow(
                   AppStrings.total,

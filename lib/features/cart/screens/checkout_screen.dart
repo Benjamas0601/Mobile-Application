@@ -9,11 +9,14 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../models/coupon_model.dart';
 import '../../../models/user_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/cart_provider.dart';
+import '../../../providers/coupon_provider.dart';
 import '../../../widgets/state_views.dart';
 
+/// ไฟล์นี้เป็นไฟล์ที่เก็บหน้าจอชำระเงินของแอป โดยมีฟอร์มให้กรอกที่อยู่จัดส่งและปุ่มไปยังหน้าชำระเงิน
 /// Checkout, with the authentication gate.
 ///
 /// This is the boundary the whole "browse as guest" flow is built around: the
@@ -133,16 +136,20 @@ class _CheckoutForm extends ConsumerStatefulWidget {
   final UserModel user;
 
   @override
-  ConsumerState<_CheckoutForm> createState() => _CheckoutFormState();
+  ConsumerState<_CheckoutForm> createState() => _CheckoutFormState(); 
 }
 
 class _CheckoutFormState extends ConsumerState<_CheckoutForm> {
   final TextEditingController _address = TextEditingController();
   String? _addressError;
+  final TextEditingController _couponField = TextEditingController();
+  bool _couponBusy = false;
+  String? _couponError;
 
   @override
   void dispose() {
     _address.dispose();
+    _couponField.dispose();
     super.dispose();
   }
 
@@ -152,7 +159,13 @@ class _CheckoutFormState extends ConsumerState<_CheckoutForm> {
       0.0,
       (double s, CartLine l) => s + l.lineTotal,
     );
-    final double total = getCartTotal(subtotal);
+    final String? storeId = ref.watch(cartProvider).isEmpty
+        ? null
+        : ref.watch(cartProvider).first.storeId;
+    final CouponModel? applied = ref.watch(appliedCouponProvider);
+    final double discount =
+        applied?.discountFor(subtotal: subtotal, storeId: storeId) ?? 0;
+    final double total = getCartTotal(subtotal) - discount;
 
     return Scaffold(
       appBar: AppBar(title: const Text(AppStrings.checkout)),
@@ -179,6 +192,8 @@ class _CheckoutFormState extends ConsumerState<_CheckoutForm> {
               errorText: _addressError,
             ),
           ),
+          const SizedBox(height: AppSpacing.lg),
+          _couponSection(subtotal: subtotal, storeId: storeId, applied: applied),
           const SizedBox(height: AppSpacing.lg),
           Card(
             child: Padding(
@@ -217,6 +232,26 @@ class _CheckoutFormState extends ConsumerState<_CheckoutForm> {
                       ),
                     ],
                   ),
+                  if (discount > 0) ...<Widget>[
+                    const SizedBox(height: AppSpacing.xs),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        Text(
+                          AppStrings.couponDiscountLabel,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.success,
+                          ),
+                        ),
+                        Text(
+                          '-${Fmt.price(discount)}',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.success,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.xs),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -245,6 +280,156 @@ class _CheckoutFormState extends ConsumerState<_CheckoutForm> {
         ],
       ),
     );
+  }
+
+  /// The code box: an input while nothing is applied, otherwise a removable
+  /// summary of what the basket now saves.
+  Widget _couponSection({
+    required double subtotal,
+    required String? storeId,
+    required CouponModel? applied,
+  }) {
+    final CouponModel? coupon = applied;
+    final double discount =
+        coupon?.discountFor(subtotal: subtotal, storeId: storeId) ?? 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(AppStrings.couponTitle, style: AppTextStyles.labelMedium),
+        const SizedBox(height: AppSpacing.sm),
+        if (coupon == null)
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: TextField(
+                  controller: _couponField,
+                  textCapitalization: TextCapitalization.characters,
+                  onChanged: (_) {
+                    if (_couponError != null) {
+                      setState(() => _couponError = null);
+                    }
+                  },
+                  decoration: InputDecoration(
+                    hintText: AppStrings.couponHint,
+                    border: const OutlineInputBorder(),
+                    errorText: _couponError,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              FilledButton.tonal(
+                onPressed: _couponBusy ? null : _applyCoupon,
+                child: _couponBusy
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text(AppStrings.couponApply),
+              ),
+            ],
+          )
+        else
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.successLight,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: Row(
+              children: <Widget>[
+                const Icon(
+                  Icons.local_offer_outlined,
+                  size: 18,
+                  color: AppColors.success,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    AppStrings.couponApplied.replaceAll(
+                      '{code}',
+                      coupon.code,
+                    ),
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.success,
+                    ),
+                  ),
+                ),
+                if (discount > 0)
+                  Text(
+                    '-${Fmt.price(discount)}',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.success,
+                    ),
+                  ),
+                IconButton(
+                  tooltip: AppStrings.couponRemove,
+                  onPressed: () {
+                    ref.read(appliedCouponProvider.notifier).clear();
+                  },
+                  icon: const Icon(Icons.close_rounded, size: 18),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _applyCoupon() async {
+    final String raw = _couponField.text.trim();
+    if (raw.isEmpty) {
+      setState(() => _couponError = AppStrings.couponHint);
+      return;
+    }
+    setState(() {
+      _couponBusy = true;
+      _couponError = null;
+    });
+    try {
+      final CouponModel? coupon = await ref
+          .read(couponRepositoryProvider)
+          .findByCode(raw);
+      if (!mounted) return;
+      if (coupon == null) {
+        setState(() {
+          _couponBusy = false;
+          _couponError = AppStrings.couponNotFound;
+        });
+        return;
+      }
+      final String? storeId = widget.lines.isEmpty
+          ? null
+          : widget.lines.first.storeId;
+      final double subtotal = widget.lines.fold(
+        0.0,
+        (double s, CartLine l) => s + l.lineTotal,
+      );
+      final String? reason = couponValidationError(
+        coupon,
+        storeId: storeId,
+        subtotal: subtotal,
+      );
+      if (reason != null) {
+        setState(() {
+          _couponBusy = false;
+          _couponError = reason;
+        });
+        return;
+      }
+      ref.read(appliedCouponProvider.notifier).apply(coupon);
+      _couponField.clear();
+      setState(() => _couponBusy = false);
+    } on Object {
+      if (!mounted) return;
+      setState(() {
+        _couponBusy = false;
+        _couponError = AppStrings.couponCheckFailed;
+      });
+    }
   }
 
   Widget _buyerCard() {

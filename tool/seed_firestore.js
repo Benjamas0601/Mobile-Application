@@ -578,6 +578,40 @@ async function ensureAuthUser(token, user) {
     });
   }
 
+  // คูปองตัวอย่าง: ใช้สาธิตส่วนลดตอนสั่งซื้อ (เข้าผ่านรหัสที่ checkout)
+  // สร้างเป็นเอกสารแยก admin เท่านั้น — ตรงกับ coupons ใน firestore.rules
+  console.log('\n2.7) demo coupons');
+  const coupons = [
+    {
+      id: 'coupon-save10',
+      code: 'SAVE10',
+      type: 'percentage',
+      value: 10,
+      minSpend: 0,
+      maxDiscount: 100,
+      startsAt: daysAgo(30),
+      expiresAt: new Date(Date.now() + 60 * DAY),
+      usageLimit: 100,
+      usedCount: 0,
+      active: true,
+    },
+    {
+      id: 'coupon-free50',
+      code: 'FREE50',
+      type: 'fixed',
+      value: 50,
+      minSpend: 300,
+      expiresAt: new Date(Date.now() + 60 * DAY),
+      usageLimit: 50,
+      usedCount: 0,
+      active: true,
+    },
+  ];
+  for (const c of coupons) {
+    const { id, ...fields } = c;
+    add('coupons', id, fields);
+  }
+
   console.log('3) batchWrite ' + writes.length + ' documents');
   const res = await api(docsBase + ':batchWrite', token, {
     method: 'POST',
@@ -607,6 +641,7 @@ async function ensureAuthUser(token, user) {
   console.log('  orders              ' + ordersCount);
   console.log('  payments            ' + paymentsCount);
   console.log('  chat_message        ' + chatMessages.length);
+  console.log('  coupons             ' + coupons.length);
   console.log('\ndemo accounts (password: ' + DEMO_PASSWORD + ')');
   for (const u of USERS) {
     console.log('  ' + u.roles.join('+').padEnd(16) + u.email);

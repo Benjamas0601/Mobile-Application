@@ -50,6 +50,20 @@ class AppStrings {
       'เมื่อมีออเดอร์หรือข้อความใหม่ ระบบจะแจ้งให้ทราบที่นี่';
   static const String markAllRead = 'อ่านทั้งหมด';
 
+  // --- Coupon ----------------------------------------------------------------
+  static const String couponTitle = 'รหัสส่วนลด';
+  static const String couponHint = 'กรอกรหัสคูปอง เช่น SAVE10';
+  static const String couponApply = 'ใช้';
+  static const String couponNotFound = 'ไม่พบรหัสคูปองนี้';
+  static const String couponCheckFailed = 'ตรวจสอบคูปองไม่สำเร็จ กรุณาลองใหม่';
+  static const String couponNotYetStart = 'คูปองยังไม่เริ่มใช้';
+  static const String couponExpired = 'คูปองหมดอายุแล้ว';
+  static const String couponDisabled = 'คูปองถูกปิดใช้งานแล้ว';
+  static const String couponUsageExhausted = 'คูปองใช้ครบตามจำนวนแล้ว';
+  static const String couponWrongStore = 'คูปองนี้ใช้ได้เฉพาะร้านที่กำหนด';
+  static const String couponRemove = 'ลบคูปอง';
+  static const String couponDiscountLabel = 'ส่วนลดคูปอง';
+
   // --- Navigation (customer) ----------------------------------------------
   static const String navHome = 'หน้าแรก';
   static const String navExplore = 'สำรวจ';

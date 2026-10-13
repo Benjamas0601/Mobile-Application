@@ -346,6 +346,12 @@ service cloud.firestore {
         && request.resource.data.status == 'pending_payment'
         && request.resource.data.total is number
         && request.resource.data.total >= 0
+        && request.resource.data.discount is number
+        && request.resource.data.discount >= 0
+        && request.resource.data.discount <= request.resource.data.total
+        && (!('couponCode' in request.resource.data)
+             || request.resource.data.couponCode is string
+                && request.resource.data.couponCode.size() > 0)
         && request.resource.data.createdAt == request.time;
 
       // ลูกค้า: แก้ได้เฉพาะก่อนชำระเงิน และห้ามแตะเงิน/เจ้าของ/สถานะ

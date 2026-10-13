@@ -410,6 +410,53 @@ async function testOrders() {
       storeId: 'storeA',
       status: 'pending_payment',
       total: 100,
+      discount: 0,
+      createdAt: TS(),
+    }));
+  });
+  await it('ลูกค้าสร้างออเดอร์พร้อมส่วนลดคูปอง (discount + couponCode) ได้', async () => {
+    await fresh();
+    await assertSucceeds(as('buyer1').firestore().doc('orders/orderCoup').set({
+      buyerUid: 'buyer1',
+      storeId: 'storeA',
+      status: 'pending_payment',
+      total: 40,
+      discount: 10,
+      couponCode: 'SAVE10',
+      createdAt: TS(),
+    }));
+  });
+  await it('ส่วนลดติดลบ = ปฏิเสธ', async () => {
+    await fresh();
+    await assertFails(as('buyer1').firestore().doc('orders/orderNew').set({
+      buyerUid: 'buyer1',
+      storeId: 'storeA',
+      status: 'pending_payment',
+      total: 100,
+      discount: -5,
+      createdAt: TS(),
+    }));
+  });
+  await it('ส่วนลดมากกว่ายอดรวม = ปฏิเสธ', async () => {
+    await fresh();
+    await assertFails(as('buyer1').firestore().doc('orders/orderNew').set({
+      buyerUid: 'buyer1',
+      storeId: 'storeA',
+      status: 'pending_payment',
+      total: 50,
+      discount: 60,
+      createdAt: TS(),
+    }));
+  });
+  await it('couponCode ที่ไม่ใช่ข้อความ = ปฏิเสธ', async () => {
+    await fresh();
+    await assertFails(as('buyer1').firestore().doc('orders/orderNew').set({
+      buyerUid: 'buyer1',
+      storeId: 'storeA',
+      status: 'pending_payment',
+      total: 100,
+      discount: 0,
+      couponCode: 12345,
       createdAt: TS(),
     }));
   });

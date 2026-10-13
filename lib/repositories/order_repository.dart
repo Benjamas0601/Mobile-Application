@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../core/constants/app_enums.dart';
 import '../core/utils/shipping.dart' as shipping;
+import '../models/coupon_model.dart';
 import '../models/order_model.dart';
 import 'notification_repository.dart';
 
@@ -62,6 +63,7 @@ class OrderRepository {
     required PaymentMethod method,
     String? slipUrl,
     String? note,
+    CouponModel? coupon,
   }) async {
     if (items.isEmpty) {
       throw const OrderWriteException('ตะกร้าว่างอยู่');
@@ -85,6 +87,10 @@ class OrderRepository {
       (double sum, OrderItem i) => sum + i.lineTotal,
     );
     final double shippingFee = shippingFeeFor(subtotal);
+    final double discount = coupon?.discountFor(
+        subtotal: subtotal, storeId: storeId) ??
+    0;
+    final double total = subtotal - discount + shippingFee;
 
     final PaymentStatus paymentStatus = method == PaymentMethod.cashOnDelivery
         ? PaymentStatus.unpaid
@@ -100,7 +106,10 @@ class OrderRepository {
       ],
       'subtotal': subtotal,
       'shippingFee': shippingFee,
-      'total': subtotal + shippingFee,
+      'discount': discount,
+      if (coupon != null && discount > 0)
+        'couponCode': coupon.code.toUpperCase(),
+      'total': total,
       'status': OrderStatus.pendingPayment.value,
       'paymentMethod': method.value,
       'paymentStatus': paymentStatus.value,
@@ -119,7 +128,7 @@ class OrderRepository {
         'orderId': ref.id,
         'buyerUid': _uid,
         'method': method.value,
-        'amount': subtotal + shippingFee,
+        'amount': total,
         'status': paymentStatus.value,
         'slipUrl': submittedSlip,
         'createdAt': FieldValue.serverTimestamp(),
