@@ -6,6 +6,7 @@ import '../models/product_model.dart';
 import '../models/store_model.dart';
 import '../models/store_profile_draft.dart';
 
+//ไฟล์นี้เป็นตัวจัดการสินค้าและร้านของผู้ขาย โดยให้ Firestore Rules ตรวจสิทธิ์ซ้ำ
 /// Reads and writes the seller's own catalogue.
 ///
 /// The customer-facing [CatalogRepository] is deliberately read-only; a seller

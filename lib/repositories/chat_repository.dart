@@ -6,6 +6,7 @@ import '../models/chat_message_model.dart';
 import '../models/chat_thread_model.dart';
 import 'notification_repository.dart';
 
+//ไฟล์นี้เป็นตัวจัดการข้อมูลแชทของผู้ใช้ โดยใช้ Firebase Firestore และ Firebase Auth เป็น backend
 /// Reads and writes conversations, shaped by `firestore.rules`:
 ///
 ///  * a thread may only be created with the creator inside `participantUids`

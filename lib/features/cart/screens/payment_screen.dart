@@ -574,9 +574,9 @@ class _TransferInstructions extends ConsumerWidget {
       );
     }
 
-    final bool canUpload = ref.watch(cloudinaryConfiguredProvider);
-    final String? qrPayload = method == PaymentMethod.promptPay
-        ? buildPromptPayPayload(promptPayId, amountSatang)
+    final bool canUpload = ref.watch(cloudinaryConfiguredProvider); 
+    final String? qrPayload = method == PaymentMethod.promptPay  
+        ? buildPromptPayPayload(promptPayId, amountSatang) //จะสร้าง payload ของ QR PromptPay โดยใช้ promptPayId และ amountSatang
         : null;
 
     return Card(
@@ -725,7 +725,7 @@ class _PaymentSetupHint extends StatelessWidget {
   );
 }
 
-String? buildPromptPayPayload(String promptPayId, int amountSatang) {
+String? buildPromptPayPayload(String promptPayId, int amountSatang) { //จะสร้าง payload ของ QR PromptPay โดยใช้ promptPayId และ amountSatang
   final String id = promptPayId.trim();
   if (id.isEmpty) return null;
   final String digits = id.replaceAll(RegExp(r'\D'), '');

@@ -49,7 +49,7 @@ class OtopHeroHeader extends StatelessWidget {
     );
   }
 }
-
+ //ไฟล์นี้ประกอบด้วย Widget สำหรับแสดงสถานะต่าง ๆ ของหน้าจอที่ทำงานแบบ Async (เช่น การโหลดข้อมูลจากเครือข่าย) โดยมี Widget สำหรับสถานะการโหลด, สถานะว่าง, สถานะผิดพลาด และสถานะข้อมูลสำเร็จ
 /// Light diamond lattice used behind jade headers (and splash).
 class DiamondPatternPainter extends CustomPainter {
   const DiamondPatternPainter({
@@ -182,7 +182,7 @@ class _OtopPainter extends CustomPainter {
       Paint()..color = const Color.fromRGBO(0, 0, 0, 0.2),
     );
 
-    // clay crate (bottom-left)
+    // clay crate (bottom-left) 
     poly([40, 120, 80, 140, 80, 184, 40, 164], const Color(0xFFA53A28));
     poly([
       80,
@@ -196,7 +196,7 @@ class _OtopPainter extends CustomPainter {
     ], onClay ? const Color(0xFF8F2E1E) : const Color(0xFFC1462F));
     line(40, 142, 80, 162, const Color(0xFF8A2C1C), 2);
 
-    // cream crate (stacked)
+    // cream crate (stacked) //คือกล่องไม้สีครีมที่วางซ้อนกัน
     poly([80, 64, 120, 84, 80, 104, 40, 84], const Color(0xFFFBF3DC));
     poly([40, 84, 80, 104, 80, 140, 40, 120], const Color(0xFFE3D4AC));
     poly([80, 104, 120, 84, 120, 120, 80, 140], const Color(0xFFF0E3BE));

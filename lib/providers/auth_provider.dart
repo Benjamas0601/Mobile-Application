@@ -20,20 +20,20 @@ final Provider<AuthRepository> authRepositoryProvider =
 /// ปล่อย event *ก่อน* ที่เอกสาร `users/{uid}` จะถูกเขียนเสร็จ — ถ้าไม่อ่านซ้ำ
 /// provider จะค้างค่า null จนกว่าจะมี auth event ใหม่ และ greeting บนหน้า
 /// home จะไม่แสดงชื่อผู้ใช้
-final StreamProvider<UserModel?> authUserProvider = StreamProvider<UserModel?>((
+final StreamProvider<UserModel?> authUserProvider = StreamProvider<UserModel?>(( //จัดการสถานะผู้ใช้ที่ล็อกอินอยู่และโปรไฟล์ของผู้ใช้จาก Firebase Auth และ Firestore
   Ref ref,
 ) async* {
-  final AuthRepository repository = ref.watch(authRepositoryProvider);
+  final AuthRepository repository = ref.watch(authRepositoryProvider); 
   await for (final User? user in repository.authStateChanges()) {
     if (user == null) {
       yield null;
     } else {
-      yield await repository.loadUser(user.uid);
+      yield await repository.loadUser(user.uid); //โหลดโปรไฟล์ผู้ใช้จาก Firestore โดยใช้ uid ของผู้ใช้ที่ล็อกอินอยู่
     }
   }
 });
 
-/// Shorthand for screens that only need the sign-in/out actions.
-final Provider<AuthRepository> authActionsProvider = Provider<AuthRepository>(
+/// Shorthand for screens that only need the sign-in/out actions. 
+final Provider<AuthRepository> authActionsProvider = Provider<AuthRepository>( 
   (Ref ref) => ref.watch(authRepositoryProvider),
 );

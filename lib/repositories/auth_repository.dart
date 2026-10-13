@@ -5,6 +5,7 @@ import '../core/constants/app_enums.dart';
 import '../core/constants/app_strings.dart';
 import '../models/user_model.dart';
 
+//ไฟล์นี้เป็นตัวจัดการการยืนยันตัวตนของผู้ใช้ (Auth) โดยใช้ Firebase Auth และ Firestore เป็น backend
 /// Thrown by [AuthRepository] with a message already written for the user.
 ///
 /// Firebase errors are English SDK codes (`invalid-email`, `wrong-password`),

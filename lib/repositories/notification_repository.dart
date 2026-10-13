@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../core/constants/app_enums.dart';
 import '../models/app_notification_model.dart';
 
+//ไฟล์นี้เป็นตัวจัดการข้อมูลการแจ้งเตือนของผู้ใช้ โดยใช้ Firebase Firestore และ Firebase Auth เป็น backend
 /// Reads, writes and acknowledges the signed-in user's notifications.
 ///
 /// The writes here mirror `firestore.rules`:

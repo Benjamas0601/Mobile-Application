@@ -10,6 +10,12 @@ import '../repositories/seller_catalog_repository.dart';
 import 'auth_provider.dart';
 import 'order_provider.dart';
 
+
+//ดึงข้อมูลร้านค้าของผู้ขายที่ล็อกอินอยู่ (1 ผู้ขาย = 1 ร้าน) แบบสตรีมสด
+//ไฟล์นี้เป็นตัวจัดการ state ของร้านค้าผู้ขายและสินค้าของร้านนั้น ๆ โดยใช้ Riverpod เป็นตัวจัดการ state
+//ข้อมูลร้านค้าผู้ขายและสินค้าของร้านนั้น ๆ จะถูกดึงจาก Firestore ผ่าน SellerCatalogRepository
+//ส่งไปยังหน้าจอที่ต้องการแสดงข้อมูลร้านค้าผู้ขายและสินค้าของร้านนั้น ๆ
+
 /// Injected once and overridden in tests with a fake, so the seller screens
 /// can be driven without a live Firestore.
 /// จุดฉีด repository ฝั่งผู้ขาย; tests override จุดนี้เพื่อไม่ต่อ Firestore จริง
@@ -21,7 +27,7 @@ final Provider<SellerCatalogRepository> sellerCatalogRepositoryProvider =
 /// refresh.
 final StreamProvider<StoreModel?> myStoreProvider = StreamProvider<StoreModel?>(
   (Ref ref) {
-    final String? uid = ref.watch(authUserProvider).asData?.value?.uid;
+    final String? uid = ref.watch(authUserProvider).asData?.value?.uid; //ดึง uid ของผู้ใช้ที่ล็อกอินอยู่จาก authUserProvider
     if (uid == null) return Stream<StoreModel?>.value(null);
     return ref.watch(sellerCatalogRepositoryProvider).watchMyStore();
   },

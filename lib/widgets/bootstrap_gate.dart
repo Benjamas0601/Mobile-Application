@@ -6,6 +6,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_typography.dart';
 
+//คือ Widget ที่ใช้ในการห่อหุ้มแอปพลิเคชันและบล็อกการทำงานของแอปเมื่อ Firebase ไม่สามารถเริ่มต้นได้
 /// Wraps the app and blocks it when Firebase could not start.
 ///
 /// Why this exists: the brief says "ห้ามปล่อยหน้าขาวหรือ Crash". Without this

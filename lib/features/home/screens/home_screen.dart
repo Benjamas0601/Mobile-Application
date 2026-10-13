@@ -38,56 +38,72 @@ class HomeScreen extends ConsumerWidget {
     final user = ref.watch(authUserProvider).asData?.value;
     final int unread = ref.watch(unreadNotificationCountProvider);
     final int cartCount = ref.watch(cartCountProvider);
+    final double statusBarHeight = MediaQuery.paddingOf(context).top;
 
     // The jade header (avatar + address + bell + search) replaces the old
     // AppBar icon row. Cart, favourites, coupons and profile live in the
     // bottom navigation bar; orders/chat/stores live in the profile tab.
+    //
+    // The header is the FIRST SLIVER of the scroll view, so the whole page
+    // (header included) scrolls together.
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Column(
+      body: Stack(
         children: <Widget>[
-          OtopHomeHeader(
-            unreadCount: unread,
-            onNotifications: () => context.push(AppRoutes.notifications),
-            onSearchChanged: (String value) =>
-                ref.read(productFilterProvider.notifier).setSearch(value),
-            showLogin: user == null,
-            onLogin: () => context.push(AppRoutes.login),
-            showLogout: user != null,
-            onLogout: () => ref.read(authRepositoryProvider).signOut(),
-            bottom: Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: _PromoBanner(
-                onAction: () => context.push(AppRoutes.stores),
-              ),
-            ),
-          ),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(categoriesProvider);
-                ref.invalidate(productsProvider);
-              },
-              child: CustomScrollView(
-                slivers: <Widget>[
-                  SliverToBoxAdapter(
-                    child: _categories(categories, ref, filter),
-                  ),
-                  SliverToBoxAdapter(child: _regionFilter(ref, filter)),
-                  SliverToBoxAdapter(
-                    child: _sectionHeader(
-                      filter.search == null
-                          ? AppStrings.navExplore
-                          : AppStrings.searchResults,
+          RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(categoriesProvider);
+              ref.invalidate(productsProvider);
+            },
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: <Widget>[
+                SliverToBoxAdapter(
+                  child: OtopHomeHeader(
+                    unreadCount: unread,
+                    onNotifications: () =>
+                        context.push(AppRoutes.notifications),
+                    onSearchChanged: (String value) => ref
+                        .read(productFilterProvider.notifier)
+                        .setSearch(value),
+                    showLogin: user == null,
+                    onLogin: () => context.push(AppRoutes.login),
+                    showLogout: user != null,
+                    onLogout: () => ref.read(authRepositoryProvider).signOut(),
+                    bottom: Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: _PromoBanner(
+                        onAction: () => context.push(AppRoutes.stores),
+                      ),
                     ),
                   ),
-                  ..._products(context, ref, products),
-                  const SliverToBoxAdapter(
-                    child: SizedBox(height: AppSpacing.xxxl),
+                ),
+                SliverToBoxAdapter(
+                  child: _categories(categories, ref, filter),
+                ),
+                SliverToBoxAdapter(child: _regionFilter(ref, filter)),
+                SliverToBoxAdapter(
+                  child: _sectionHeader(
+                    filter.search == null
+                        ? AppStrings.navExplore
+                        : AppStrings.searchResults,
                   ),
-                ],
-              ),
+                ),
+                ..._products(context, ref, products),
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppSpacing.xxxl),
+                ),
+              ],
             ),
+          ),
+          // Keeps the status-bar area jade while content scrolls underneath;
+          // otherwise the header's white status-bar icons land on white content.
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: statusBarHeight,
+            child: const ColoredBox(color: AppColors.primary),
           ),
         ],
       ),
@@ -122,16 +138,14 @@ class HomeScreen extends ConsumerWidget {
 
   // --- Categories -----------------------------------------------------------
 
-  // Replace the existing `_categories` method inside HomeScreen with this one.
-// Still needs `_CategoryItem` and `_categoryIcon` from home_category_snippets.dart.
-
+  /// Round icon categories. The list is a horizontal SingleChildScrollView +
+  /// Row (not a fixed-height ListView), so the section is exactly as tall as
+  /// its content and no dead space is left under one-line labels.
   Widget _categories(
     AsyncValue<List<CategoryModel>> categories,
     WidgetRef ref,
     ProductFilter filter,
   ) {
-    const double listHeight = 112;
-
     final List<CategoryModel> items =
         (categories.asData?.value ?? const <CategoryModel>[])
             .where((CategoryModel c) => !kHomeHiddenCategoryIds.contains(c.id))
@@ -173,7 +187,7 @@ class HomeScreen extends ConsumerWidget {
           ),
           if (firstLoad)
             const SizedBox(
-              height: listHeight,
+              height: 100,
               child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
             )
           else if (categories.hasError && !categories.hasValue)
@@ -195,33 +209,30 @@ class HomeScreen extends ConsumerWidget {
               ),
             )
           else
-            SizedBox(
-              height: listHeight,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.gutter,
-                ),
-                itemCount: items.length + 1,
-                separatorBuilder: (BuildContext context, int _) =>
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.gutter,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  _CategoryItem(
+                    label: 'ทั้งหมด',
+                    icon: Icons.grid_view_rounded,
+                    selected: filter.categoryId == null,
+                    onTap: () => _selectCategory(ref, null),
+                  ),
+                  for (final CategoryModel category in items) ...<Widget>[
                     const SizedBox(width: AppSpacing.md),
-                itemBuilder: (BuildContext context, int index) {
-                  if (index == 0) {
-                    return _CategoryItem(
-                      label: 'ทั้งหมด',
-                      icon: Icons.grid_view_rounded,
-                      selected: filter.categoryId == null,
-                      onTap: () => _selectCategory(ref, null),
-                    );
-                  }
-                  final CategoryModel category = items[index - 1];
-                  return _CategoryItem(
-                    label: category.name,
-                    icon: _categoryIcon(category),
-                    selected: filter.categoryId == category.id,
-                    onTap: () => _selectCategory(ref, category.id),
-                  );
-                },
+                    _CategoryItem(
+                      label: category.name,
+                      icon: _categoryIcon(category),
+                      selected: filter.categoryId == category.id,
+                      onTap: () => _selectCategory(ref, category.id),
+                    ),
+                  ],
+                ],
               ),
             ),
         ],
@@ -273,32 +284,20 @@ class HomeScreen extends ConsumerWidget {
   ///
   /// A guest can browse by province without an account, so this sits on Home
   /// rather than behind a profile screen.
- // Replace the existing `_regionFilter` method inside HomeScreen with this one.
-// Still needs `_RegionChip` from region_chip_snippet.dart.
-
   Widget _regionFilter(WidgetRef ref, ProductFilter filter) {
     return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.xl),
+      padding: const EdgeInsets.only(top: AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          // Same 48px header row as the "หมวดหมู่" section, so both sections
-          // have identical spacing between title and content.
-          SizedBox(
-            height: AppSizes.minTapTarget,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.gutter,
-                ),
-                child: Text(
-                  'เลือกซื้อตามภูมิภาค',
-                  style: AppTextStyles.headlineSmall,
-                ),
-              ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+            child: Text(
+              'เลือกซื้อตามภูมิภาค',
+              style: AppTextStyles.headlineSmall,
             ),
           ),
+          const SizedBox(height: AppSpacing.sm),
           SizedBox(
             height: AppSizes.minTapTarget,
             child: ListView.separated(
@@ -326,8 +325,8 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  /// Cart and notification entry points moved out of the header — cart lives
-  /// in [OtopBottomNav], notifications in the header bell ([OtopHomeHeader]).
+  // Cart and notification entry points moved out of the header — cart lives
+  // in [OtopBottomNav], notifications in the header bell ([OtopHomeHeader]).
 
   Widget _sectionHeader(String title) {
     return Padding(

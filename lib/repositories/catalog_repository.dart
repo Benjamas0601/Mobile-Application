@@ -5,6 +5,7 @@ import '../models/category_model.dart';
 import '../models/product_model.dart';
 import '../models/store_model.dart';
 
+//ไฟล์นี้เป็นตัวจัดการข้อมูลแคตตาล็อกสาธารณะ (categories, stores, products, variants) โดยใช้ Firebase Firestore เป็น backend
 /// Read-only access to the public catalogue: categories, stores, products and
 /// variants.
 ///

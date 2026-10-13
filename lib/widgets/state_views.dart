@@ -6,6 +6,7 @@ import '../core/theme/app_spacing.dart';
 import '../core/theme/app_typography.dart';
 import 'design_system.dart';
 
+//ไฟล์นี้ประกอบด้วย Widget สำหรับแสดงสถานะต่าง ๆ ของหน้าจอที่ทำงานแบบ Async (เช่น การโหลดข้อมูลจากเครือข่าย) โดยมี Widget สำหรับสถานะการโหลด, สถานะว่าง, สถานะผิดพลาด และสถานะข้อมูลสำเร็จ
 /// The four states every async screen must render, per the brief.
 ///
 /// A screen that only handles the success case looks broken the first time

@@ -7,6 +7,7 @@ import '../models/coupon_model.dart';
 import '../models/order_model.dart';
 import 'notification_repository.dart';
 
+//ไฟล์นี้เป็นตัวจัดการข้อมูลออเดอร์ของผู้ซื้อ โดยใช้ Firebase Firestore และ Firebase Auth เป็น backend
 /// Reads and writes the buyer's own orders.
 ///
 /// Every write here is shaped by `firestore.rules`:
