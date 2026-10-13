@@ -6,6 +6,7 @@ import 'package:thai_otop_marketplace/core/constants/app_enums.dart';
 import 'package:thai_otop_marketplace/core/constants/app_strings.dart';
 import 'package:thai_otop_marketplace/core/routes/app_router.dart';
 import 'package:thai_otop_marketplace/features/cart/screens/checkout_screen.dart';
+import 'package:thai_otop_marketplace/features/coupons/screens/coupon_list_screen.dart';
 import 'package:thai_otop_marketplace/models/coupon_model.dart';
 import 'package:thai_otop_marketplace/models/product_model.dart';
 import 'package:thai_otop_marketplace/models/user_model.dart';
@@ -77,6 +78,23 @@ class _FakeCouponRepository implements CouponRepository {
     final String key = code.trim().toUpperCase();
     return byCode[key];
   }
+
+  @override
+  Stream<List<CouponModel>> watchAll() async* {
+    yield byCode.values.toList();
+  }
+
+  @override
+  Future<void> create(Map<String, dynamic> data) async {}
+
+  @override
+  Future<void> update(String id, Map<String, dynamic> data) async {}
+
+  @override
+  Future<void> setActive(String id, bool active) async {}
+
+  @override
+  Future<void> delete(String id) async {}
 }
 
 Future<void> _pumpCheckout(
@@ -277,6 +295,73 @@ void main() {
       // Back to the un-discounted checkout.
       expect(find.text('ใช้คูปอง SAVE10 แล้ว'), findsNothing);
       expect(find.text('฿530'), findsOneWidget);
+    });
+  });
+
+  group('buyer coupon list screen', () {
+    testWidgets('shows only usable coupons from the live repository', (
+      WidgetTester tester,
+    ) async {
+      final _FakeCouponRepository repo = _FakeCouponRepository(
+        <String, CouponModel>{
+          'SAVE10': _coupon(),
+          'EXPIRED': _coupon(
+            code: 'EXPIRED',
+            expiresAt: DateTime(2020, 1, 1),
+            startsAt: DateTime(2019, 1, 1),
+          ),
+          'OFF': _coupon(code: 'OFF', active: false),
+          'LATER': _coupon(code: 'LATER', startsAt: DateTime(2100, 1, 1)),
+          'USEDUP': _coupon(code: 'USEDUP', usageLimit: 2, usedCount: 2),
+        },
+      );
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          couponRepositoryProvider.overrideWithValue(repo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: CouponListScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('SAVE10'), findsOneWidget);
+      expect(find.text('EXPIRED'), findsNothing);
+      expect(find.text('OFF'), findsNothing);
+      expect(find.text('LATER'), findsNothing);
+      expect(find.text('USEDUP'), findsNothing);
+    });
+
+    testWidgets('shows an empty state when nothing is usable', (
+      WidgetTester tester,
+    ) async {
+      final _FakeCouponRepository repo = _FakeCouponRepository(
+        <String, CouponModel>{
+          'OFF': _coupon(code: 'OFF', active: false),
+        },
+      );
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          couponRepositoryProvider.overrideWithValue(repo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: CouponListScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('SAVE10'), findsNothing);
+      expect(find.text('ยังไม่มีคูปอง'), findsOneWidget);
     });
   });
 }

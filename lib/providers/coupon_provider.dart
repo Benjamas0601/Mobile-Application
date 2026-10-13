@@ -10,6 +10,12 @@ import '../repositories/coupon_repository.dart';
 final Provider<CouponRepository> couponRepositoryProvider =
     Provider<CouponRepository>((Ref ref) => CouponRepository());
 
+/// Live list of every coupon for the admin จัดการคูปอง tab.
+final StreamProvider<List<CouponModel>> adminCouponsProvider =
+    StreamProvider<List<CouponModel>>((Ref ref) {
+      return ref.watch(couponRepositoryProvider).watchAll();
+    });
+
 /// The coupon the buyer accepted on the checkout step, carried to the payment
 /// step (same pattern as [checkoutDraftProvider]). Cleared once the order is
 /// written so a stale coupon cannot discount a later, unrelated basket.

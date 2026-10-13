@@ -2,12 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/coupon_model.dart';
 
-/// Reads discount codes for the checkout.
+/// Reads and administers discount codes.
 ///
-/// Coupons are administered by an admin, so this repository only performs the
-/// by-code lookup the checkout needs; `firestore.rules` already limits writes
-/// to admins.
-/// ค้นหาคูปองตามรหัสที่ผู้ซื้อกรอกตอนชำระเงิน
+/// The buyer-facing lookup lives here alongside the admin CRUD surface the
+/// จัดการคูปอง screen uses; `firestore.rules` limits writes to admins, so the
+/// repository never has to double-check the caller's role.
+/// ค้นหาและจัดการคูปองในระบบ
 class CouponRepository {
   CouponRepository({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;
@@ -33,5 +33,43 @@ class CouponRepository {
     if (result.docs.isEmpty) return null;
     final DocumentSnapshot<Map<String, dynamic>> doc = result.docs.first;
     return CouponModel.fromFirestore(doc.id, doc.data() ?? const {});
+  }
+
+  /// Live list of every coupon for the admin screen, newest first.
+  Stream<List<CouponModel>> watchAll() {
+    return _firestore
+        .collection(_coupons)
+        .orderBy('code')
+        .snapshots()
+        .map(
+          (QuerySnapshot<Map<String, dynamic>> snapshot) => snapshot.docs
+              .map(
+                (QueryDocumentSnapshot<Map<String, dynamic>> doc) =>
+                    CouponModel.fromFirestore(doc.id, doc.data()),
+              )
+              .toList(),
+        );
+  }
+
+  /// Creates a coupon with a server-generated id.
+  Future<void> create(Map<String, dynamic> data) async {
+    await _firestore.collection(_coupons).add(data);
+  }
+
+  /// Replaces every coupon field from the editor, keeping the id stable.
+  Future<void> update(String id, Map<String, dynamic> data) async {
+    await _firestore.collection(_coupons).doc(id).set(data);
+  }
+
+  /// Flips the discount on/off without losing the coupon's history.
+  Future<void> setActive(String id, bool active) async {
+    await _firestore.collection(_coupons).doc(id).update(<String, dynamic>{
+      'active': active,
+    });
+  }
+
+  /// Deletes the coupon for good.
+  Future<void> delete(String id) async {
+    await _firestore.collection(_coupons).doc(id).delete();
   }
 }

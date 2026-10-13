@@ -98,6 +98,23 @@ class CouponModel {
     return value < 0 ? null : value;
   }
 
+  /// The document map written back for admin coupon management. Dates become
+  /// Firestore `Timestamp`s so the checkout's window checks and ordering work.
+  Map<String, dynamic> toFirestore() =>
+      (FirestoreWriter()
+            ..put('code', code)
+            ..put('type', type.value)
+            ..put('value', value)
+            ..put('minSpend', minSpend)
+            ..put('maxDiscount', maxDiscount)
+            ..put('storeId', storeId)
+            ..putDate('startsAt', startsAt)
+            ..putDate('expiresAt', expiresAt)
+            ..put('usageLimit', usageLimit)
+            ..put('usedCount', usedCount)
+            ..put('active', active))
+          .build;
+
   /// Whether the coupon can be used for a basket of [subtotal] at [storeId].
   ///
   /// The date window and the usage counter can only be judged on the client in

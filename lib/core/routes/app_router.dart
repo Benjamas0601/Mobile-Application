@@ -10,6 +10,7 @@ import '../../features/cart/screens/checkout_screen.dart';
 import '../../features/cart/screens/payment_screen.dart';
 import '../../features/chat/screens/chat_list_screen.dart';
 import '../../features/chat/screens/chat_thread_screen.dart';
+import '../../features/coupons/screens/coupon_list_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/notifications/screens/notification_list_screen.dart';
 import '../../features/orders/screens/order_detail_screen.dart';
@@ -41,6 +42,9 @@ class AppRoutes {
   static const String checkout = '/checkout';
   static const String payment = '/checkout/payment';
   static const String profile = '/profile';
+
+  /// หน้ารายการคูปองของผู้ซื้อ — เข้าถึงได้โดยไม่ต้องล็อกอิน
+  static const String coupons = '/coupons';
 
   /// หน้ากล่องแจ้งเตือนในแอป ต้องเข้าสู่ระบบก่อน
   static const String notifications = '/notifications';
@@ -265,6 +269,14 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
         path: AppRoutes.notifications,
         builder: (BuildContext context, GoRouterState state) =>
             const NotificationListScreen(),
+      ),
+      // รายการคูปองสำหรับผู้ซื้อ — ไม่ต้องล็อกอิน ด้วยข้อมูลโปรโมชัน
+      // เป็นข้อมูลสาธารณะ (read ให้ทุกคน) ส่วนขั้นตอนใช้คูปองจริงยังต้อง
+      // ล็อกอินเพราะอยู่บนหน้า checkout อยู่แล้ว
+      GoRoute(
+        path: AppRoutes.coupons,
+        builder: (BuildContext context, GoRouterState state) =>
+            const CouponListScreen(),
       ),
       // พื้นที่ผู้ขายต้องเข้าสู่ระบบตาม redirect ด้านบน และตรวจบทบาทซ้ำในหน้า
       // เนื่องจากข้อมูลบทบาทจัดเก็บใน Firestore ไม่ได้อยู่ใน path ของเส้นทาง

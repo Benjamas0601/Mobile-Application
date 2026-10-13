@@ -8,17 +8,19 @@ import '../../../core/routes/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../models/coupon_model.dart';
 import '../../../models/store_model.dart';
 import '../../../models/user_model.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/coupon_provider.dart';
 import '../../../widgets/state_views.dart';
-import '../providers/admin_provider.dart';
+import '../providers/admin_provider.dart'; 
 
 /// หน้าจอผู้ดูแลสำหรับตรวจและจัดการข้อมูลหลักตามสิทธิ์ admin
 class AdminHomeScreen extends ConsumerWidget {
   const AdminHomeScreen({super.key});
 
-  @override
+  @override 
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<UserModel?> auth = ref.watch(authUserProvider);
     final UserModel? user = auth.value;
@@ -40,7 +42,7 @@ class AdminHomeScreen extends ConsumerWidget {
     }
 
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           titleSpacing: AppSpacing.gutter,
@@ -73,10 +75,13 @@ class AdminHomeScreen extends ConsumerWidget {
             tabs: <Widget>[
               Tab(icon: Icon(Icons.store_outlined), text: 'ร้านค้า'),
               Tab(icon: Icon(Icons.people_outline_rounded), text: 'ผู้ใช้'),
+              Tab(icon: Icon(Icons.local_offer_outlined), text: 'คูปอง'),
             ],
           ),
         ),
-        body: const TabBarView(children: <Widget>[_StoresTab(), _UsersTab()]),
+        body: TabBarView(
+          children: <Widget>[_StoresTab(), _UsersTab(), _CouponsTab()],
+        ),
       ),
     );
   }
@@ -272,7 +277,7 @@ class _StoresTabState extends ConsumerState<_StoresTab> {
     if (edit == true) await _editStore(store);
   }
 
-  Future<void> _editStore(StoreModel store) async {
+  Future<void> _editStore(StoreModel store) async { 
     final bool? saved = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => _StoreEditor(store: store),
@@ -350,7 +355,7 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
     super.dispose();
   }
 
-  @override
+  @override //เพื่อให้หน้าผู้ใช้สามารถค้นหาและจัดการผู้ใช้ได้อย่างสะดวก โดยมีการแสดงผลลัพธ์ที่เหมาะสมตามสถานะการโหลดและข้อผิดพลาด
   Widget build(BuildContext context) {
     return ref
         .watch(adminUsersProvider)
@@ -600,6 +605,600 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
       if (mounted) setState(() => _deletingId = null);
     }
   }
+}
+
+class _CouponsTab extends ConsumerStatefulWidget {
+  const _CouponsTab();
+
+  @override
+  ConsumerState<_CouponsTab> createState() => _CouponsTabState();
+}
+
+class _CouponsTabState extends ConsumerState<_CouponsTab> {
+  final TextEditingController _searchController = TextEditingController();
+  String _search = '';
+  String? _deletingId;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ref
+        .watch(adminCouponsProvider)
+        .when(
+          loading: () => const LoadingView(),
+          error: (Object error, StackTrace stack) => ErrorView(
+            message: '$error',
+            onRetry: () => ref.invalidate(adminCouponsProvider),
+          ),
+          data: (List<CouponModel> coupons) {
+            final List<CouponModel> visible = coupons
+                .where(
+                  (CouponModel coupon) =>
+                      coupon.code.toLowerCase().contains(_search.toLowerCase()),
+                )
+                .toList();
+
+            return Column(
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: _SearchBox(
+                        controller: _searchController,
+                        onChanged: (String value) =>
+                            setState(() => _search = value),
+                        hint: 'ค้นหารหัสคูปอง',
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        right: AppSpacing.gutter,
+                        top: AppSpacing.md,
+                      ),
+                      child: IconButton.filled(
+                        tooltip: 'สร้างคูปองใหม่',
+                        icon: const Icon(Icons.add_rounded),
+                        onPressed: _createCoupon,
+                      ),
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(adminCouponsProvider);
+                    },
+                    child: visible.isEmpty
+                        ? ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: <Widget>[
+                              SizedBox(
+                                height: 300,
+                                child: EmptyView(
+                                  icon: Icons.local_offer_outlined,
+                                  title: _search.isEmpty
+                                      ? 'ยังไม่มีคูปอง'
+                                      : 'ไม่พบคูปองที่ค้นหา',
+                                  body: _search.isEmpty
+                                      ? 'คูปองที่สร้างจะแสดงในหน้านี้'
+                                      : 'ลองค้นหาด้วยรหัสคูปองอีกครั้ง',
+                                ),
+                              ),
+                            ],
+                          )
+                        : ListView.separated(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.only(
+                              left: AppSpacing.gutter,
+                              right: AppSpacing.gutter,
+                              bottom: AppSpacing.xxl,
+                            ),
+                            itemCount: visible.length,
+                            separatorBuilder:
+                                (BuildContext context, int index) =>
+                                    const Divider(height: 1),
+                            itemBuilder: (BuildContext context, int index) {
+                              final CouponModel coupon = visible[index];
+                              return ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: CircleAvatar(
+                                  backgroundColor: coupon.active
+                                      ? AppColors.gold
+                                      : AppColors.clayLight,
+                                  foregroundColor: coupon.active
+                                      ? AppColors.ink
+                                      : AppColors.clayDark,
+                                  child: const Icon(
+                                    Icons.local_offer_outlined,
+                                  ),
+                                ),
+                                title: Row(
+                                  children: <Widget>[
+                                    Flexible(
+                                      child: Text(
+                                        coupon.code,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (!coupon.active)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          left: AppSpacing.sm,
+                                        ),
+                                        child: _StatusChip(label: 'ปิดใช้งาน'),
+                                      ),
+                                  ],
+                                ),
+                                subtitle: Text(
+                                  _couponSummary(coupon),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    Switch(
+                                      value: coupon.active,
+                                      onChanged: _deletingId == coupon.id
+                                          ? null
+                                          : (bool value) =>
+                                                _toggleCoupon(coupon),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'แก้ไขคูปอง',
+                                      icon: const Icon(Icons.edit_outlined),
+                                      onPressed: () => _editCoupon(coupon),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'ลบคูปอง',
+                                      icon: _deletingId == coupon.id
+                                          ? const SizedBox.square(
+                                              dimension: 20,
+                                              child:
+                                                  CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Icon(
+                                              Icons.delete_outline_rounded,
+                                              color: AppColors.danger,
+                                            ),
+                                      onPressed: _deletingId == coupon.id
+                                          ? null
+                                          : () => _deleteCoupon(coupon),
+                                    ),
+                                  ],
+                                ),
+                                onTap: () => _editCoupon(coupon),
+                              );
+                            },
+                          ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+  }
+
+  Future<void> _createCoupon() async {
+    final bool? saved = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => const _CouponEditor(),
+    );
+    if (saved == true && mounted) {
+      ref.invalidate(adminCouponsProvider);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('สร้างคูปองแล้ว')));
+    }
+  }
+
+  Future<void> _editCoupon(CouponModel coupon) async {
+    final bool? saved = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => _CouponEditor(coupon: coupon),
+    );
+    if (saved == true && mounted) {
+      ref.invalidate(adminCouponsProvider);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('บันทึกคูปองแล้ว')));
+    }
+  }
+
+  Future<void> _toggleCoupon(CouponModel coupon) async {
+    try {
+      await ref
+          .read(couponRepositoryProvider)
+          .setActive(coupon.id, !coupon.active);
+      ref.invalidate(adminCouponsProvider);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('เปลี่ยนสถานะไม่สำเร็จ: $error')));
+    }
+  }
+
+  Future<void> _deleteCoupon(CouponModel coupon) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('ลบคูปอง'),
+        content: Text(
+          'จะลบคูปอง "${coupon.code}" อย่างถาวร\n\n'
+          'คูปองที่อยู่ระหว่างการชำระเงินของลูกค้าอาจใช้ต่อไม่ได้ '
+          'การกระทำนี้ย้อนกลับไม่ได้ ยืนยันที่จะลบหรือไม่?',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ยกเลิก'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('ลบ'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _deletingId = coupon.id);
+    try {
+      await ref.read(couponRepositoryProvider).delete(coupon.id);
+      ref.invalidate(adminCouponsProvider);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ลบคูปองไม่สำเร็จ: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _deletingId = null);
+    }
+  }
+}
+
+String _couponSummary(CouponModel coupon) {
+  final String discount = switch (coupon.type) {
+    CouponType.percentage => '${coupon.value.toStringAsFixed(0)}%',
+    CouponType.fixed => '${coupon.value.toStringAsFixed(0)} บาท',
+  };
+  final String spend = coupon.minSpend > 0
+      ? 'ขั้นต่ำ ${coupon.minSpend.toStringAsFixed(0)} บาท'
+      : 'ไม่จำกัดขั้นต่ำ';
+  final String usage = coupon.usageLimit == null
+      ? 'ใช้แล้ว ${coupon.usedCount} ครั้ง'
+      : 'ใช้แล้ว ${coupon.usedCount}/${coupon.usageLimit} ครั้ง';
+  return '$discount · $spend · $usage';
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.clayLight,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.labelSmall.copyWith(color: AppColors.clayDark),
+      ),
+    );
+  }
+}
+
+class _CouponEditor extends ConsumerStatefulWidget {
+  const _CouponEditor({this.coupon});
+
+  final CouponModel? coupon;
+
+  @override
+  ConsumerState<_CouponEditor> createState() => _CouponEditorState();
+}
+
+class _CouponEditorState extends ConsumerState<_CouponEditor> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  late final TextEditingController _code = TextEditingController(
+    text: widget.coupon?.code ?? '',
+  );
+  late final TextEditingController _value = TextEditingController(
+    text: widget.coupon?.value.toStringAsFixed(0) ?? '',
+  );
+  late final TextEditingController _minSpend = TextEditingController(
+    text: (widget.coupon?.minSpend ?? 0) > 0
+        ? widget.coupon!.minSpend.toStringAsFixed(0)
+        : '',
+  );
+  late final TextEditingController _maxDiscount = TextEditingController(
+    text: widget.coupon?.maxDiscount?.toStringAsFixed(0) ?? '',
+  );
+  late final TextEditingController _usageLimit = TextEditingController(
+    text: widget.coupon?.usageLimit?.toString() ?? '',
+  );
+  late CouponType _type = widget.coupon?.type ?? CouponType.percentage;
+  late DateTime? _startsAt = widget.coupon?.startsAt;
+  late DateTime? _expiresAt = widget.coupon?.expiresAt;
+  late bool _active = widget.coupon?.active ?? true;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _code.dispose();
+    _value.dispose();
+    _minSpend.dispose();
+    _maxDiscount.dispose();
+    _usageLimit.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.coupon == null ? 'สร้างคูปอง' : 'แก้ไขคูปอง'),
+      content: SizedBox(
+        width: 440,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                TextFormField(
+                  controller: _code,
+                  decoration: const InputDecoration(
+                    labelText: 'รหัสคูปอง',
+                    hintText: 'เช่น SAVE20',
+                    helperText: 'กรอกด้วยตัวอักษรภาษาอังกฤษตัวใหญ่',
+                  ),
+                  textCapitalization: TextCapitalization.characters,
+                  validator: (String? value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'กรุณากรอกรหัสคูปอง';
+                    }
+                    return null;
+                  },
+                ),
+                DropdownButtonFormField<CouponType>(
+                  initialValue: _type,
+                  decoration: const InputDecoration(labelText: 'ประเภทส่วนลด'),
+                  items: <DropdownMenuItem<CouponType>>[
+                    DropdownMenuItem<CouponType>(
+                      value: CouponType.percentage,
+                      child: const Text('ลดตามสัดส่วน (%)'),
+                    ),
+                    DropdownMenuItem<CouponType>(
+                      value: CouponType.fixed,
+                      child: const Text('ลดแบบเหมาจ่าย (บาท)'),
+                    ),
+                  ],
+                  onChanged: (CouponType? value) {
+                    if (value != null) setState(() => _type = value);
+                  },
+                ),
+                TextFormField(
+                  controller: _value,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: _type == CouponType.percentage
+                        ? 'จำนวนส่วนลด (%)'
+                        : 'จำนวนส่วนลด (บาท)',
+                  ),
+                  validator: (String? value) {
+                    final double? parsed = double.tryParse(value ?? '');
+                    if (parsed == null || parsed <= 0) {
+                      return 'กรุณากรอกตัวเลขที่มากกว่า 0';
+                    }
+                    return null;
+                  },
+                ),
+                TextFormField(
+                  controller: _minSpend,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'ยอดขั้นต่ำ (บาท)',
+                    helperText: 'เว้นว่าง = ไม่จำกัด',
+                  ),
+                  validator: (String? value) {
+                    if (value == null || value.trim().isEmpty) return null;
+                    final double? parsed = double.tryParse(value);
+                    if (parsed == null || parsed < 0) {
+                      return 'กรุณากรอกตัวเลขที่ถูกต้อง';
+                    }
+                    return null;
+                  },
+                ),
+                TextFormField(
+                  controller: _maxDiscount,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'ส่วนลดสูงสุด (บาท)',
+                    helperText: 'เฉพาะประเภทเปอร์เซ็นต์ · เว้นว่าง = ไม่จำกัด',
+                  ),
+                  validator: (String? value) {
+                    if (value == null || value.trim().isEmpty) return null;
+                    final double? parsed = double.tryParse(value);
+                    if (parsed == null || parsed < 0) {
+                      return 'กรุณากรอกตัวเลขที่ถูกต้อง';
+                    }
+                    return null;
+                  },
+                ),
+                TextFormField(
+                  controller: _usageLimit,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'จำนวนครั้งที่ใช้ได้',
+                    helperText: 'เว้นว่าง = ใช้ได้ไม่จำกัด',
+                  ),
+                  validator: (String? value) {
+                    if (value == null || value.trim().isEmpty) return null;
+                    final int? parsed = int.tryParse(value);
+                    if (parsed == null || parsed < 1) {
+                      return 'กรุณากรอกจำนวนเต็มที่มากกว่า 0';
+                    }
+                    return null;
+                  },
+                ),
+                _DateField(
+                  label: 'วันเริ่มต้นใช้',
+                  value: _startsAt,
+                  onChanged: (DateTime? value) =>
+                      setState(() => _startsAt = value),
+                ),
+                _DateField(
+                  label: 'วันหมดอายุ',
+                  value: _expiresAt,
+                  onChanged: (DateTime? value) =>
+                      setState(() => _expiresAt = value),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('เปิดใช้งานคูปอง'),
+                  subtitle: const Text('ปิดแล้วจะใช้รหัสนี้ไม่ได้'),
+                  value: _active,
+                  onChanged: (bool value) => setState(() => _active = value),
+                ),
+                if (_error != null) _DialogError(_error!),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.pop(context),
+          child: const Text('ยกเลิก'),
+        ),
+        FilledButton(
+          onPressed: _saving ? null : _save,
+          child: _saving
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('บันทึก'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _save() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      final CouponModel draft = CouponModel(
+        id: widget.coupon?.id ?? '',
+        code: _code.text.trim().toUpperCase(),
+        type: _type,
+        value: double.parse(_value.text),
+        minSpend: _minSpend.text.trim().isEmpty
+            ? 0
+            : double.parse(_minSpend.text),
+        maxDiscount: _maxDiscount.text.trim().isEmpty
+            ? null
+            : double.parse(_maxDiscount.text),
+        startsAt: _startsAt,
+        expiresAt: _expiresAt,
+        usageLimit: _usageLimit.text.trim().isEmpty
+            ? null
+            : int.parse(_usageLimit.text),
+        usedCount: widget.coupon?.usedCount ?? 0,
+        active: _active,
+      );
+      if (widget.coupon == null) {
+        await ref.read(couponRepositoryProvider).create(draft.toFirestore());
+      } else {
+        await ref
+            .read(couponRepositoryProvider)
+            .update(widget.coupon!.id, draft.toFirestore());
+      }
+      if (mounted) Navigator.pop(context, true);
+    } catch (error) {
+      if (mounted) setState(() => _error = '$error');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+}
+
+class _DateField extends StatelessWidget {
+  const _DateField({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final DateTime? value;
+  final ValueChanged<DateTime?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: 'เลือกวันที่ (เว้นว่างได้)',
+          suffixIcon: IconButton(
+            tooltip: 'ล้างวันที่',
+            icon: const Icon(Icons.cleaning_services_outlined),
+            onPressed:
+                value == null ? null : () => onChanged(null),
+          ),
+        ),
+        child: InkWell(
+          onTap: () async {
+            final DateTime? picked = await showDatePicker(
+              context: context,
+              initialDate: value ?? DateTime.now(),
+              firstDate: DateTime(2020),
+              lastDate: DateTime(2035),
+              helpText: 'เลือก$label',
+            );
+            if (picked != null) onChanged(picked);
+          },
+          child: Text(
+            value == null
+                ? 'ยังไม่กำหนด'
+                : _formatDate(value!),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _formatDate(DateTime date) {
+  final String year = (date.year + 543).toString();
+  final String month = date.month.toString().padLeft(2, '0');
+  final String day = date.day.toString().padLeft(2, '0');
+  return '$day/$month/$year';
 }
 
 class _StoreEditor extends ConsumerStatefulWidget {
