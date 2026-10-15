@@ -61,6 +61,7 @@ class HomeScreen extends ConsumerWidget {
                 SliverToBoxAdapter(
                   child: OtopHomeHeader(
                     unreadCount: unread,
+                    userName: user?.shortName,
                     onNotifications: () =>
                         context.push(AppRoutes.notifications),
                     onSearchChanged: (String value) => ref
@@ -115,18 +116,14 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  /// แท็บล่าง: ตะกร้า/โปรไฟล์เปิดหน้าได้เลย ส่วนถูกใจยังเป็นถนนว่าง
-  /// ส่วนคูปองเปิดหน้า [CouponListScreen] ให้ผู้ซื้อดูโปรโมชัน
+  /// แท็บล่าง: ตะกร้า/คูปอง/โปรไฟล์เปิดหน้าได้เลย ส่วนถูกใจเปิดหน้า
+  /// [FavoritesScreen] สำหรับสินค้าที่ผู้ใช้บันทึกไว้
   void _onBottomNav(BuildContext context, WidgetRef ref, int index) {
     switch (index) {
       case 0:
         break;
       case 1:
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            const SnackBar(content: Text('แท็บถูกใจ — เร็ว ๆ นี้ เดี๋ยวมาเพิ่มจ้ะ')),
-          );
+        context.push(AppRoutes.favorites);
       case 2:
         context.push(AppRoutes.cart);
       case 3:

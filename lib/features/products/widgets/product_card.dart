@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/app_colors.dart';
@@ -7,20 +8,21 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../models/product_model.dart';
+import '../../favorites/widgets/favorite_button.dart';
 
 /// 2D card for the product grid.
 ///
 /// The brief limits 3D art to the login hero, so a card stays a flat image
 /// plus text — that also keeps the grid cheap to scroll on low-end phones.
 /// การ์ดสินค้าในกริด; แสดงสถานะหมดสต็อกและราคาให้เห็นก่อนเปิดรายละเอียด
-class ProductCard extends StatelessWidget {
+class ProductCard extends ConsumerWidget {
   const ProductCard({super.key, required this.product, this.onTap});
 
   final ProductModel product;
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final bool hasRating = product.ratingCount > 0;
 
     return Semantics(
@@ -50,6 +52,15 @@ class ProductCard extends StatelessWidget {
                 child: Stack(
                   children: <Widget>[
                     Positioned.fill(child: _image(context)),
+                    Positioned(
+                      top: AppSpacing.sm,
+                      left: AppSpacing.sm,
+                      child: FavoriteButton(
+                        productId: product.id,
+                        onCard: true,
+                        size: 18,
+                      ),
+                    ),
                     if (hasRating)
                       Positioned(
                         top: AppSpacing.sm,

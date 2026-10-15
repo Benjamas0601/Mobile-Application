@@ -11,8 +11,8 @@ import 'package:thai_otop_marketplace/repositories/chat_repository.dart';
 /// Firestore จำลองที่บันทึกว่าแชทสั่งให้ทำอะไร — ใช้ท่า fake-repository
 /// เดียวกับเทสต์ของผู้ขายและออเดอร์
 class _FakeChatRepository implements ChatRepository {
-  final List<({String threadId, String text})> sent =
-      <({String threadId, String text})>[];
+  final List<({String threadId, String text, String? imageUrl})> sent =
+      <({String threadId, String text, String? imageUrl})>[];
   final List<String> markedRead = <String>[];
 
   /// เมื่อตั้งค่า `sendMessage` จะรอจนกว่าจะปลด — เทสต์ busy-guard จะยิง send
@@ -37,10 +37,11 @@ class _FakeChatRepository implements ChatRepository {
   Future<void> sendMessage({
     required String threadId,
     required String text,
+    String? imageUrl,
   }) async {
     if (failWith != null) throw failWith!;
     await holdSend?.future;
-    sent.add((threadId: threadId, text: text));
+    sent.add((threadId: threadId, text: text, imageUrl: imageUrl));
   }
 
   @override
@@ -131,6 +132,39 @@ void main() {
       );
       expect(message.type, MessageType.text);
     });
+
+    test('an image message parses its url and optional caption', () {
+      final ChatMessageModel message = ChatMessageModel.fromFirestore(
+        'm2',
+        <String, dynamic>{
+          'senderUid': 'u1',
+          'type': 'image',
+          'text': 'ดูรุ่นนี้ได้ไหม',
+          'imageUrl': 'https://res.cloudinary.com/demo/image/upload/v1/x.jpg',
+        },
+      );
+
+      expect(message.type, MessageType.image);
+      expect(message.typeLabel, 'รูปภาพ');
+      expect(
+        message.imageUrl,
+        'https://res.cloudinary.com/demo/image/upload/v1/x.jpg',
+      );
+      expect(message.text, 'ดูรุ่นนี้ได้ไหม');
+    });
+
+    test('an image with no caption keeps an empty text', () {
+      final ChatMessageModel message = ChatMessageModel.fromFirestore(
+        'm3',
+        <String, dynamic>{
+          'senderUid': 'u1',
+          'type': 'image',
+          'imageUrl': 'https://res.cloudinary.com/demo/image/upload/v1/y.jpg',
+        },
+      );
+      expect(message.type, MessageType.image);
+      expect(message.text, isEmpty);
+    });
   });
 
   group('SendChatMessageController', () {
@@ -192,6 +226,33 @@ void main() {
         isFalse,
       );
       expect(repo.sent, isEmpty);
+    });
+
+    test('an image with no caption is allowed and reaches the repository', () async {
+      final _FakeChatRepository repo = _FakeChatRepository();
+
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          chatRepositoryProvider.overrideWithValue(repo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final SendChatMessageController controller =
+          container.read(sendChatMessageProvider.notifier);
+
+      // ข้อความว่างแต่มีรูป → ต้องส่งได้
+      expect(
+        await controller.send(
+          threadId: 't1',
+          text: '',
+          imageUrl: 'https://res.cloudinary.com/demo/image/upload/v1/z.jpg',
+        ),
+        isTrue,
+      );
+      expect(repo.sent.length, 1);
+      expect(repo.sent.single.imageUrl, isNotNull);
+      expect(repo.sent.single.text, isEmpty);
     });
 
     test('a failed repository write is rethrown to the caller', () async {

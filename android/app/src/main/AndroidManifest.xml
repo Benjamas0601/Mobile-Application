@@ -3,7 +3,8 @@
     <application
         android:label="thai_otop_marketplace"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round">
         <!-- จุดเชื่อมระหว่างระบบ Android กับหน้าจอ Flutter -->
         <activity
             android:name=".MainActivity"

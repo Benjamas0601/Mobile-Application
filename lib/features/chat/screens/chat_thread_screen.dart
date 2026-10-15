@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
+import '../../../core/constants/app_enums.dart' show MessageType;
 import '../../../core/constants/app_strings.dart';
+import '../../../core/services/image/image_storage_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../models/chat_message_model.dart';
 import '../../../models/chat_thread_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/chat_provider.dart';
+import '../../../providers/image_storage_provider.dart';
 import '../../../widgets/state_views.dart';
 
 
@@ -31,6 +35,9 @@ class ChatThreadScreen extends ConsumerStatefulWidget {
 class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
   final TextEditingController _input = TextEditingController();
   final ScrollController _scroll = ScrollController();
+
+  /// ระหว่างอัปโหลดรูปขึ้น Cloudinary — ล็อกปุ่มเลือกรูปและโชว์สปินเนอร์
+  bool _sendingImage = false;
 
   /// `ref.listen` ใช้ได้เฉพาะใน build — ที่นี่ต้องใช้ listenManual และปิดเอง
   ProviderSubscription<AsyncValue<List<ChatMessageModel>>>? _messagesSub;
@@ -86,11 +93,64 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     }
     // `sent == false` หมายถึงกดส่งซ้ำ (ข้อความยังอยู่ ไม่หาย) หรือช่องว่าง
     // จะเตือนเฉพาะเมื่อช่องมีข้อความจริง
-    if (mounted && text.trim().isNotEmpty) {
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(const SnackBar(content: Text(AppStrings.chatSendFailed)));
+    if (text.trim().isNotEmpty) {
+      _showError(AppStrings.chatSendFailed);
     }
+  }
+
+  /// เลือกรูปจากเครื่อง อัปโหลดขึ้น Cloudinary แล้วส่งเป็นข้อความชนิดรูป
+  ///
+  /// ข้อความที่พิมพ์ค้างอยู่จะกลายเป็นคำบรรยายของรูป แล้วล้างช่องพิมพ์ทิ้ง
+  /// ถ้าอัปโหลดหรือส่งพลาด จะบอกผู้ใช้และเก็บข้อความเดิมไว้ให้ลองใหม่
+  Future<void> _pickAndSendImage() async {
+    if (_sendingImage) return;
+
+    // ถ้า build นี้ไม่ได้ฝังค่า Cloudinary ก็ยังอัปโหลดไม่ได้ — บอกเหตุผล
+    // แทนที่จะปล่อยให้ยิงแล้วล้มกลางทาง
+    if (!ref.read(cloudinaryConfiguredProvider)) {
+      _showError(
+        ref.read(cloudinaryMissingConfigProvider) ?? AppStrings.uploadFailed,
+      );
+      return;
+    }
+
+    final XFile? file = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 88,
+    );
+    if (file == null || !mounted) return;
+
+    setState(() => _sendingImage = true);
+    try {
+      final UploadedImage uploaded = await ref
+          .read(imageStorageServiceProvider)
+          .uploadImage(
+            file: file,
+            folder: ImageUploadPolicy.folderForChat(threadId: widget.threadId),
+          );
+      final bool sent = await ref
+          .read(sendChatMessageProvider.notifier)
+          .send(
+            threadId: widget.threadId,
+            text: _input.text,
+            imageUrl: uploaded.url,
+          );
+      if (sent && mounted) _input.clear();
+    } on ImageUploadException catch (e) {
+      _showError(e.message);
+    } on Object catch (e) {
+      _showError('${AppStrings.uploadFailed}: $e');
+    } finally {
+      if (mounted) setState(() => _sendingImage = false);
+    }
+  }
+
+  /// แสดงข้อผิดพลาดแบบไม่ทับซ้อนกัน (เคลียร์อันเก่าก่อน)
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -139,19 +199,31 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
               },
             ),
           ),
-          _Composer(controller: _input, onSend: _send),
+          _Composer(
+            controller: _input,
+            onSend: _send,
+            onPickImage: _pickAndSendImage,
+            sendingImage: _sendingImage,
+          ),
         ],
       ),
     );
   }
 }
 
-/// แถบพิมพ์ข้อความด้านล่าง พร้อมปุ่มส่งกลม
+/// แถบพิมพ์ข้อความด้านล่าง ปุ่มเลือกรูป และปุ่มส่งกลม
 class _Composer extends StatelessWidget {
-  const _Composer({required this.controller, required this.onSend});
+  const _Composer({
+    required this.controller,
+    required this.onSend,
+    required this.onPickImage,
+    required this.sendingImage,
+  });
 
   final TextEditingController controller;
   final VoidCallback onSend;
+  final VoidCallback onPickImage;
+  final bool sendingImage;
 
   @override
   Widget build(BuildContext context) {
@@ -159,7 +231,7 @@ class _Composer extends StatelessWidget {
       top: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
-          AppSpacing.gutter,
+          AppSpacing.sm,
           AppSpacing.sm,
           AppSpacing.gutter,
           AppSpacing.sm,
@@ -167,6 +239,18 @@ class _Composer extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: <Widget>[
+            IconButton(
+              onPressed: sendingImage ? null : onPickImage,
+              tooltip: AppStrings.sendImage,
+              color: AppColors.primary,
+              icon: sendingImage
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.add_photo_alternate_outlined),
+            ),
             Expanded(
               child: TextField(
                 controller: controller,
@@ -224,6 +308,13 @@ class _Bubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    final bool isImage =
+        message.type == MessageType.image &&
+        (message.imageUrl?.isNotEmpty ?? false);
+    final Color bubbleColor = mine
+        ? AppColors.primary
+        : scheme.surfaceContainerHighest;
+    final Color onBubble = mine ? AppColors.onPrimary : scheme.onSurface;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -248,12 +339,8 @@ class _Bubble extends StatelessWidget {
             constraints: BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width * 0.78,
             ),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
-            ),
             decoration: BoxDecoration(
-              color: mine ? AppColors.primary : scheme.surfaceContainerHighest,
+              color: bubbleColor,
               borderRadius: BorderRadius.only(
                 topLeft: const Radius.circular(AppRadius.lg),
                 topRight: const Radius.circular(AppRadius.lg),
@@ -261,15 +348,112 @@ class _Bubble extends StatelessWidget {
                 bottomRight: Radius.circular(mine ? 4 : AppRadius.lg),
               ),
             ),
-            child: Text(
-              message.text,
-              style: TextStyle(
-                fontSize: 14.5,
-                height: 1.4,
-                color: mine ? AppColors.onPrimary : scheme.onSurface,
+            child: isImage
+                ? _ImageContent(
+                    url: message.imageUrl!,
+                    caption: message.text,
+                    captionColor: onBubble,
+                  )
+                : Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm,
+                    ),
+                    child: Text(
+                      message.text,
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        height: 1.4,
+                        color: onBubble,
+                      ),
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// เนื้อในฟองที่เป็นรูป — รูปมุมโค้ง พร้อมคำบรรยายใต้รูปเมื่อมี
+///
+/// `Image.network` โหลดจาก Cloudinary ตรง ๆ จึงมีสปินเนอร์ตอนโหลดและไอคอน
+/// แตกตอนโหลดพลาด เพื่อไม่ให้ผู้ใช้เห็นกล่องว่างที่ดูเหมือนแอปพัง
+class _ImageContent extends StatelessWidget {
+  const _ImageContent({
+    required this.url,
+    required this.caption,
+    required this.captionColor,
+  });
+
+  final String url;
+  final String caption;
+  final Color captionColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.all(4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 240,
+                maxHeight: 320,
+              ),
+              child: Image.network(
+                url,
+                fit: BoxFit.cover,
+                loadingBuilder:
+                    (
+                      BuildContext context,
+                      Widget child,
+                      ImageChunkEvent? progress,
+                    ) {
+                      if (progress == null) return child;
+                      return Container(
+                        width: 220,
+                        height: 160,
+                        alignment: Alignment.center,
+                        color: scheme.surfaceContainerHighest,
+                        child: const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      );
+                    },
+                errorBuilder:
+                    (
+                      BuildContext context,
+                      Object error,
+                      StackTrace? stack,
+                    ) => Container(
+                      width: 220,
+                      height: 160,
+                      alignment: Alignment.center,
+                      color: scheme.surfaceContainerHighest,
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
               ),
             ),
           ),
+          if (caption.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 6, 6, 2),
+              child: Text(
+                caption,
+                style: TextStyle(fontSize: 14.5, height: 1.4, color: captionColor),
+              ),
+            ),
         ],
       ),
     );

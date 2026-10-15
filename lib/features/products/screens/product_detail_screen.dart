@@ -17,6 +17,7 @@ import '../../../providers/cart_provider.dart';
 import '../../../providers/catalog_provider.dart';
 import '../../../providers/chat_provider.dart';
 import '../../../widgets/state_views.dart';
+import '../../favorites/widgets/favorite_button.dart';
 
 
 /// Product detail — the screen that has to sell the "story", so the four
@@ -51,6 +52,8 @@ class ProductDetailScreen extends ConsumerWidget {
         scrolledUnderElevation: 0,
         title: const Text(AppStrings.productStory),
         actions: <Widget>[
+          if (product.asData?.value != null)
+            FavoriteButton(productId: productId),
           if (canEdit)
             IconButton(
               tooltip: AppStrings.sellerEditProduct,

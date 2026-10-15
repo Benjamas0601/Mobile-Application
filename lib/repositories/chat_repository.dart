@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../core/constants/app_enums.dart';
+import '../core/constants/app_strings.dart';
 import '../models/chat_message_model.dart';
 import '../models/chat_thread_model.dart';
 import 'notification_repository.dart';
@@ -144,14 +145,20 @@ class ChatRepository {
   /// เพิ่มข้อความใหม่ และบันทึกลง thread ในคอมมิตเดียวกันเพื่อให้ปลายทางเห็น
   /// ตัวนับยังไม่อ่านจะเพิ่มฝั่ง "ตรงข้าม" กับผู้ส่ง
   ///
+  /// ส่งได้ทั้งข้อความล้วนและรูป: ถ้ามี [imageUrl] ข้อความจะเป็นชนิด `image`
+  /// และ [text] กลายเป็นคำบรรยาย (จะว่างก็ได้) — ถ้าไม่มีรูป [text] ต้องไม่ว่าง
+  /// รูปถูกอัปโหลดขึ้น Cloudinary มาก่อนแล้ว จึงเก็บแค่ URL ลง Firestore
+  ///
   /// เขียนเป็น batch เดียว เพื่อไม่ให้ข้อความถูกส่งแต่ตัวอย่างใน thread ไม่ตรง
   /// หรือตัวอย่างชี้ไปที่ไม่มีอยู่
   Future<void> sendMessage({
     required String threadId,
     required String text,
+    String? imageUrl,
   }) async {
     final String trimmed = text.trim();
-    if (trimmed.isEmpty) {
+    final bool hasImage = imageUrl != null && imageUrl.isNotEmpty;
+    if (trimmed.isEmpty && !hasImage) {
       throw const ChatWriteException('พิมพ์ข้อความก่อนส่ง');
     }
 
@@ -173,19 +180,25 @@ class ChatRepository {
             .toList(growable: false) ??
         const <String>[];
 
+    // ตัวอย่างในรายการห้อง: รูปที่ไม่มีคำบรรยายใช้ข้อความบอกแทนรูป
+    final String preview = trimmed.isNotEmpty
+        ? trimmed
+        : AppStrings.chatImagePreview;
+
     final WriteBatch batch = _firestore.batch();
     batch.set(_messagesCol(threadId).doc(), <String, dynamic>{
       'senderUid': myUid,
       'senderName': _auth.currentUser?.displayName ?? '',
-      'type': 'text',
-      'text': trimmed,
+      'type': hasImage ? MessageType.image.value : MessageType.text.value,
+      if (trimmed.isNotEmpty) 'text': trimmed,
+      if (hasImage) 'imageUrl': imageUrl,
       'participantUids': room,
       'createdAt': FieldValue.serverTimestamp(),
     });
     batch.update(
       _threadsCol.doc(threadId),
       <String, dynamic>{
-        'lastMessage': trimmed,
+        'lastMessage': preview,
         'lastAt': FieldValue.serverTimestamp(),
         if (iAmBuyer) 'unreadBySeller': FieldValue.increment(1)
         else 'unreadByBuyer': FieldValue.increment(1),
@@ -199,11 +212,14 @@ class ChatRepository {
         .toList(growable: false);
     if (others.isNotEmpty) {
       try {
+        final String body = trimmed.isNotEmpty
+            ? (trimmed.length > 60 ? '${trimmed.substring(0, 60)}…' : trimmed)
+            : AppStrings.chatImageMessage;
         await NotificationRepository(firestore: _firestore, auth: _auth).create(
           userId: others.first,
           type: NotificationType.newMessage,
           title: 'ข้อความใหม่จาก ${_auth.currentUser?.displayName ?? 'ผู้ใช้'}',
-          body: trimmed.length > 60 ? '${trimmed.substring(0, 60)}…' : trimmed,
+          body: body,
           threadId: threadId,
         );
       } catch (_) {

@@ -44,6 +44,18 @@ class AppStrings {
   static const String emptySearchHint =
       'ตรวจสอบคำค้น หรือลองค้นหาด้วยชื่อจังหวัดแทน';
 
+  // --- Favorites (ถูกใจ) -----------------------------------------------------
+  static const String favoritesTitle = 'ถูกใจ';
+  static const String favoritesEmpty = 'ยังไม่มีสินค้าที่ถูกใจ';
+  static const String favoritesEmptyHint =
+      'กดไอคอนหัวใจบนสินค้าที่สนใจ เพื่อเก็บไว้ดูทีหลังได้ที่นี่';
+  static const String addToFavorites = 'เพิ่มในรายการถูกใจ';
+  static const String removeFromFavorites = 'นำออกจากรายการถูกใจ';
+  static const String favoriteAdded = 'เพิ่มในรายการถูกใจแล้ว';
+  static const String favoriteRemoved = 'นำออกจากรายการถูกใจแล้ว';
+  static const String favoriteFailed = 'อัปเดตรายการถูกใจไม่สำเร็จ กรุณาลองใหม่';
+  static const String loginToFavorite = 'เข้าสู่ระบบเพื่อบันทึกสินค้าที่ถูกใจ';
+
   // --- Notifications ---------------------------------------------------------
   static const String notificationsEmpty = 'ยังไม่มีการแจ้งเตือน';
   static const String notificationsEmptyHint =
@@ -72,6 +84,11 @@ class AppStrings {
   static const String navProfile = 'โปรไฟล์';
   static const String navNotifications = 'การแจ้งเตือน';
   static const String backToHome = 'กลับหน้าแรก';
+
+  // --- Home header ---------------------------------------------------------
+  static const String greeting = 'สวัสดี';
+  static const String deliveryTo = 'ส่งถึง';
+  static const String selectDeliveryAddress = 'เลือกที่อยู่จัดส่ง';
 
   // --- Navigation (seller) -------------------------------------------------
   static const String navSellerDashboard = 'ภาพรวม';
@@ -241,6 +258,9 @@ class AppStrings {
   static const String chatOpenFailed = 'เปิดแชทไม่สำเร็จ กรุณาลองใหม่';
   static const String messageHint = 'พิมพ์ข้อความ...';
   static const String sendImage = 'ส่งรูป';
+  static const String chatImagePreview = '📷 รูปภาพ';
+  static const String chatImageMessage = 'ส่งรูปภาพ';
+  static const String chatSendImageFailed = 'ส่งรูปไม่สำเร็จ';
 
   // --- Platform economics (must be honest, never claim "free") ------------
   static const String platformFeeNote =

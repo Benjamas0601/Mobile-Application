@@ -47,16 +47,22 @@ class SendChatMessageController extends Notifier<bool> {
 
   ChatRepository get _repository => ref.read(chatRepositoryProvider);
 
-  /// คืน `false` เมื่อกำลังส่งอยู่แล้ว (กันกดซ้ำ)
+  /// คืน `false` เมื่อกำลังส่งอยู่แล้ว (กันกดซ้ำ) หรือช่องว่างและไม่มีรูป
   Future<bool> send({
     required String threadId,
     required String text,
+    String? imageUrl,
   }) async {
     if (state) return false;
-    if (text.trim().isEmpty) return false;
+    final bool hasImage = imageUrl != null && imageUrl.isNotEmpty;
+    if (text.trim().isEmpty && !hasImage) return false;
     state = true;
     try {
-      await _repository.sendMessage(threadId: threadId, text: text);
+      await _repository.sendMessage(
+        threadId: threadId,
+        text: text,
+        imageUrl: imageUrl,
+      );
       return true;
     } finally {
       state = false;

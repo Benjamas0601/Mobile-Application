@@ -379,6 +379,7 @@ class OtopHomeHeader extends StatefulWidget {
   const OtopHomeHeader({
     super.key,
     this.addressLabel,
+    this.userName,
     this.onAddressTap,
     this.onNotifications,
     this.unreadCount = 0,
@@ -392,6 +393,10 @@ class OtopHomeHeader extends StatefulWidget {
   });
 
   final String? addressLabel;
+
+  /// ชื่อผู้ใช้ที่ล็อกอินอยู่ — เมื่อมีค่า จะแสดงแทนที่อยู่จัดส่ง
+  /// (หัวข้อ "สวัสดี" + ชื่อผู้ใช้) เพื่อให้ผู้ใช้รู้ว่ากำลังใช้งานบัญชีไหน
+  final String? userName;
   final VoidCallback? onAddressTap;
   final int unreadCount;
   final VoidCallback? onNotifications;
@@ -434,6 +439,8 @@ class _OtopHomeHeaderState extends State<OtopHomeHeader> {
   @override
   Widget build(BuildContext context) {
     final double top = MediaQuery.paddingOf(context).top;
+    final String name = (widget.userName ?? '').trim();
+    final bool hasUser = name.isNotEmpty;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -466,13 +473,16 @@ class _OtopHomeHeaderState extends State<OtopHomeHeader> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
-                          'ส่งถึง',
+                          hasUser ? AppStrings.greeting : AppStrings.deliveryTo,
                           style: AppTextStyles.labelSmall.copyWith(
                             color: AppColors.gold,
                           ),
                         ),
                         Text(
-                          widget.addressLabel ?? 'เลือกที่อยู่จัดส่ง',
+                          hasUser
+                              ? name
+                              : (widget.addressLabel ??
+                                    AppStrings.selectDeliveryAddress),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.bodyMedium.copyWith(

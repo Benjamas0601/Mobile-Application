@@ -31,8 +31,8 @@ class ChatMessageModel {
   /// ชื่อผู้ส่ง ณ ตอนส่ง (snapshot ไว้)
   final String senderName;
 
-  /// รูปแบบเนื้อหา: `text` สำหรับข้อความที่ส่งวันนี้ ส่วน `image` เตรียมไว้
-  /// สำหรับการอัปโหลดในอนาคต (งาน Cloudinary ถูกพักไว้)
+  /// รูปแบบเนื้อหา: `text` สำหรับข้อความล้วน และ `image` เมื่อมี [imageUrl]
+  /// แนบมา (รูปถูกอัปโหลดขึ้น Cloudinary ก่อน แล้วเก็บแค่ URL)
   final MessageType type;
 
   /// เนื้อข้อความ

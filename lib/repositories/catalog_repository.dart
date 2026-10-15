@@ -186,6 +186,38 @@ class CatalogRepository {
     );
   }
 
+  /// Live products for a fixed set of ids, in the order given.
+  ///
+  /// Used by the ถูกใจ screen: the favourite ids arrive in "newest first"
+  /// order and the grid should keep it, so results are re-sorted to match the
+  /// input instead of Firestore's (arbitrary) `whereIn` order. Firestore caps
+  /// `whereIn` at 30 values per query, which is far beyond any realistic
+  /// wishlist; anything past that would need chunking.
+  Stream<List<ProductModel>> watchProductsByIds(List<String> ids) {
+    final List<String> wanted = ids.take(30).toList(growable: false);
+    if (wanted.isEmpty) {
+      return Stream<List<ProductModel>>.value(const <ProductModel>[]);
+    }
+
+    return _db
+        .collection(_products)
+        .where(FieldPath.documentId, whereIn: wanted)
+        .snapshots()
+        .map((QuerySnapshot<Map<String, dynamic>> snapshot) {
+          final Map<String, ProductModel> byId = <String, ProductModel>{
+            for (final QueryDocumentSnapshot<Map<String, dynamic>> doc
+                in snapshot.docs)
+              doc.id: ProductModel.fromFirestore(doc.id, doc.data()),
+          };
+
+          return wanted
+              .where(byId.containsKey)
+              .map((String id) => byId[id]!)
+              .where((ProductModel p) => p.isVisible)
+              .toList(growable: false);
+        });
+  }
+
   /// Real-time single product.
   Stream<ProductModel?> watchProduct(String productId) {
     return _db

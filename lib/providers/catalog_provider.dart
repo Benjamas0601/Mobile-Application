@@ -39,7 +39,13 @@ class ProductFilterNotifier extends Notifier<ProductFilter> {
 
   /// Tapping the selected category clears it — a toggle, not a radio.
   void toggleCategory(String? categoryId) {
-    if (categoryId == null) return;
+    // `null` is the "ทั้งหมด" chip: always clear the category (keeping the
+    // region/search) so tapping it after picking one returns to "everything".
+    if (categoryId == null) {
+      if (state.categoryId == null) return;
+      state = ProductFilter(region: state.region, search: state.search);
+      return;
+    }
     state = ProductFilter(
       categoryId: state.categoryId == categoryId ? null : categoryId,
       region: state.region,

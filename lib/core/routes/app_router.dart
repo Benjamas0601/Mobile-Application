@@ -11,6 +11,7 @@ import '../../features/cart/screens/payment_screen.dart';
 import '../../features/chat/screens/chat_list_screen.dart';
 import '../../features/chat/screens/chat_thread_screen.dart';
 import '../../features/coupons/screens/coupon_list_screen.dart';
+import '../../features/favorites/screens/favorites_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/notifications/screens/notification_list_screen.dart';
 import '../../features/orders/screens/order_detail_screen.dart';
@@ -45,6 +46,9 @@ class AppRoutes {
 
   /// หน้ารายการคูปองของผู้ซื้อ — เข้าถึงได้โดยไม่ต้องล็อกอิน
   static const String coupons = '/coupons';
+
+  /// หน้าสินค้าที่ผู้ซื้อกด "ถูกใจ" — ต้องเข้าสู่ระบบเพราะเก็บเป็นรายบุคคล
+  static const String favorites = '/favorites';
 
   /// หน้ากล่องแจ้งเตือนในแอป ต้องเข้าสู่ระบบก่อน
   static const String notifications = '/notifications';
@@ -103,6 +107,7 @@ String? authRedirect({
     AppRoutes.profile,
     AppRoutes.chat,
     AppRoutes.notifications,
+    AppRoutes.favorites,
   };
   final bool isOrderRoute = location.startsWith('/order/');
   final bool isChatRoute =
@@ -277,6 +282,12 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((Ref ref) {
         path: AppRoutes.coupons,
         builder: (BuildContext context, GoRouterState state) =>
             const CouponListScreen(),
+      ),
+      // สินค้าที่ถูกใจ — ต้องล็อกอิน (กันไว้ใน accountRequired ด้านบน)
+      GoRoute(
+        path: AppRoutes.favorites,
+        builder: (BuildContext context, GoRouterState state) =>
+            const FavoritesScreen(),
       ),
       // พื้นที่ผู้ขายต้องเข้าสู่ระบบตาม redirect ด้านบน และตรวจบทบาทซ้ำในหน้า
       // เนื่องจากข้อมูลบทบาทจัดเก็บใน Firestore ไม่ได้อยู่ใน path ของเส้นทาง

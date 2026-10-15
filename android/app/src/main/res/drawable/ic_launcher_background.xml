@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- สีพื้นของ adaptive launcher icon (สร้างโดย tool/make_app_icons.ps1) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:type="linear"
+        android:angle="270"
+        android:startColor="#0D8470"
+        android:endColor="#00443A" />
+</shape>

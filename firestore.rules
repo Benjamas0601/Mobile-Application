@@ -545,6 +545,26 @@ service cloud.firestore {
     }
 
     // ================================================================ //
+    // favorites/{favoriteId} — สินค้าที่ผู้ใช้กด "ถูกใจ" ของตัวเองเท่านั้น
+    //
+    // รหัสเอกสารคือ `{uid}_{productId}` (กำหนดจากฝั่งแอป) จึงกดซ้ำได้แบบ
+    // idempotent — create/update ใช้เงื่อนไขโครงสร้างชุดเดียวกัน
+    // ================================================================ //
+    match /favorites/{favoriteId} {
+      allow read, delete: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+
+      allow create, update: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.productId is string
+        && request.resource.data.productId.size() > 0
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.keys().hasOnly([
+             'userId', 'productId', 'createdAt',
+           ]);
+    }
+
+    // ================================================================ //
     // ทุก path ที่ไม่ได้ระบุข้างบน = ไม่อนุญาต
     // ================================================================ //
     match /{document=**} {

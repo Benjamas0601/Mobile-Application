@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/utils/shipping.dart' as shipping;
 import '../models/product_model.dart';
 
+//ไฟล์นี้เป็นตัวจัดการตะกร้าสินค้า (Cart) สำหรับแอปพลิเคชัน Flutter โดยใช้ Riverpod เป็น state management library
 /// One line in the cart.
 ///
 /// The product is flattened into the line on purpose: the cart must survive a

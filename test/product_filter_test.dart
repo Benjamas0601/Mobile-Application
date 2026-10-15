@@ -65,10 +65,52 @@ void main() {
       expect(container.read(productFilterProvider).categoryId, isNull);
     });
 
-    test('a null category is ignored rather than treated as a clear-all', () {
+    // `null` is the "ทั้งหมด" chip: it must return to every category instead of
+    // being ignored, otherwise tapping the first chip after picking one does
+    // nothing (the reported bug).
+    test('a null category clears the category (the "ทั้งหมด" chip)', () {
       filter.toggleCategory('c-coffee');
       filter.toggleCategory(null);
-      expect(container.read(productFilterProvider).categoryId, 'c-coffee');
+      expect(container.read(productFilterProvider).categoryId, isNull);
+    });
+
+    test('"ทั้งหมด" keeps the region and search while clearing the category', () {
+      filter.toggleRegion(ThaiRegion.north);
+      filter.setSearch('ไหม');
+      filter.toggleCategory('c-fashion');
+
+      filter.toggleCategory(null);
+
+      final ProductFilter state = container.read(productFilterProvider);
+      expect(state.categoryId, isNull);
+      expect(state.region, ThaiRegion.north);
+      expect(state.search, 'ไหม');
+    });
+
+    test('"ทั้งหมด" on an already-wide filter keeps the region', () {
+      filter.toggleRegion(ThaiRegion.south);
+      filter.toggleCategory(null);
+      expect(container.read(productFilterProvider).region, ThaiRegion.south);
+    });
+
+    test('tapping the active region clears it', () {
+      filter.toggleRegion(ThaiRegion.north);
+      expect(container.read(productFilterProvider).region, ThaiRegion.north);
+
+      filter.toggleRegion(ThaiRegion.north);
+      expect(container.read(productFilterProvider).region, isNull);
+    });
+
+    test('switching category or region keeps the other dimension', () {
+      filter.toggleRegion(ThaiRegion.south);
+      filter.toggleCategory('c-coffee');
+      filter.toggleCategory('c-health');
+      expect(container.read(productFilterProvider).categoryId, 'c-health');
+      expect(container.read(productFilterProvider).region, ThaiRegion.south);
+
+      filter.toggleRegion(ThaiRegion.central);
+      expect(container.read(productFilterProvider).region, ThaiRegion.central);
+      expect(container.read(productFilterProvider).categoryId, 'c-health');
     });
 
     test('clear resets every dimension', () {
