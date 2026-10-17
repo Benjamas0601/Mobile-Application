@@ -1,11 +1,11 @@
 {
-    "name": "thai_otop_marketplace",
-    "short_name": "thai_otop_marketplace",
+    "name": "Thai OTOP Marketplace",
+    "short_name": "Thai OTOP",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#146356",
+    "theme_color": "#146356",
+    "description": "Thai OTOP Marketplace — แพลตฟอร์มค้นพบสินค้าและเรื่องราวจากผู้ประกอบการ OTOP ทั่วประเทศไทย",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

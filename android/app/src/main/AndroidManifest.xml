@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- ประกาศชื่อแอป ไอคอน และ Activity หลักที่เปิดเมื่อผู้ใช้แตะไอคอน -->
     <application
-        android:label="thai_otop_marketplace"
+        android:label="Thai OTOP"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round">
