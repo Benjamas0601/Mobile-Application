@@ -6,15 +6,22 @@ import '../core/constants/app_strings.dart';
 import '../models/user_model.dart';
 
 //ไฟล์นี้เป็นตัวจัดการการยืนยันตัวตนของผู้ใช้ (Auth) โดยใช้ Firebase Auth และ Firestore เป็น backend
+/// What went wrong, for callers that need to react differently.
+///
+/// The login screen in particular must count only real password mistakes
+/// toward its 3-strike lock — a dropped connection must not burn an attempt.
+enum AuthFailureKind { invalidCredentials, network, tooManyRequests, unknown }
+
 /// Thrown by [AuthRepository] with a message already written for the user.
 ///
 /// Firebase errors are English SDK codes (`invalid-email`, `wrong-password`),
 /// which must never reach a Thai-first UI, so every failure crosses this
 /// boundary as Thai text.
 class AuthFailure implements Exception {
-  const AuthFailure(this.message);
+  const AuthFailure(this.message, {this.kind = AuthFailureKind.unknown});
 
   final String message;
+  final AuthFailureKind kind;
 
   @override
   String toString() => message;
@@ -98,7 +105,7 @@ class AuthRepository {
         roles: const <UserRole>[UserRole.customer],
       );
     } on FirebaseAuthException catch (e) {
-      throw AuthFailure(_messageFor(e));
+      throw _failureFor(e);
     } catch (e) {
       throw AuthFailure('เข้าสู่ระบบไม่สำเร็จ: $e');
     }
@@ -203,7 +210,7 @@ class AuthRepository {
       );
     } on FirebaseAuthException catch (e) {
       await _rollbackRegistration(createdUser, profileRef);
-      throw AuthFailure(_messageFor(e));
+      throw _failureFor(e);
     } on FirebaseException catch (e) {
       await _rollbackRegistration(createdUser, profileRef);
       // The rules rejected the profile write — usually a rules/schema drift.
@@ -230,7 +237,7 @@ class AuthRepository {
     try {
       await _auth.sendPasswordResetEmail(email: email.trim());
     } on FirebaseAuthException catch (e) {
-      throw AuthFailure(_messageFor(e));
+      throw _failureFor(e);
     }
   }
 
@@ -282,28 +289,41 @@ class AuthRepository {
         );
   }
 
-  /// Translates SDK codes into the wording in [AppStrings].
-  static String _messageFor(FirebaseAuthException e) {
+  /// Translates SDK codes into the wording in [AppStrings] and tags the ones
+  /// the login screen has to count as a wrong password.
+  static AuthFailure _failureFor(FirebaseAuthException e) {
     switch (e.code) {
       case 'invalid-email':
-      case 'invalid-credential':
-        return AppStrings.errEmailFormat;
+        return const AuthFailure(AppStrings.errEmailFormat);
       case 'user-disabled':
-        return 'บัญชีนี้ถูกปิดใช้งาน กรุณาติดต่อผู้ดูแล';
+        return const AuthFailure('บัญชีนี้ถูกปิดใช้งาน กรุณาติดต่อผู้ดูแล');
       case 'user-not-found':
       case 'wrong-password':
       case 'invalid-login-credentials':
-        return AppStrings.errInvalidCredentials;
+      case 'invalid-credential':
+        // Modern Firebase SDKs mask "user not found" as invalid-credential so
+        // the form cannot be used to probe which emails exist. All of them
+        // mean "this email + password pair is wrong" and count toward the lock.
+        return const AuthFailure(
+          AppStrings.errInvalidCredentials,
+          kind: AuthFailureKind.invalidCredentials,
+        );
       case 'email-already-in-use':
-        return AppStrings.errEmailInUse;
+        return const AuthFailure(AppStrings.errEmailInUse);
       case 'weak-password':
-        return 'รหัสผ่านอ่อนเกินไป กรุณาใช้อย่างน้อย 6 ตัวอักษร';
+        return const AuthFailure('รหัสผ่านอ่อนเกินไป กรุณาใช้อย่างน้อย 6 ตัวอักษร');
       case 'network-request-failed':
-        return 'เชื่อมต่ออินเทอร์เน็ตไม่สำเร็จ กรุณาลองใหม่';
+        return const AuthFailure(
+          'เชื่อมต่ออินเทอร์เน็ตไม่สำเร็จ กรุณาลองใหม่',
+          kind: AuthFailureKind.network,
+        );
       case 'too-many-requests':
-        return 'พยายามหลายครั้งเกินไป กรุณารอสักครู่แล้วลองใหม่';
+        return const AuthFailure(
+          'พยายามหลายครั้งเกินไป กรุณารอสักครู่แล้วลองใหม่',
+          kind: AuthFailureKind.tooManyRequests,
+        );
       default:
-        return e.message ?? AppStrings.errorBody;
+        return AuthFailure(e.message ?? AppStrings.errorBody);
     }
   }
 }

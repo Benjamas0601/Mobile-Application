@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/routes/app_router.dart';
+import '../../../core/services/auth/login_attempt_guard.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -45,7 +46,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    // The lock is keyed by email, so typing a different account while locked
+    // must re-enable the button immediately instead of waiting for the ticker.
+    _emailController.addListener(_refreshLockState);
+  }
+
+  void _refreshLockState() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
+    _emailController.removeListener(_refreshLockState);
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -55,6 +69,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // Validation runs first so the button gives immediate feedback instead of
     // a network round-trip.
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    final LoginAttemptGuard guard = ref.read(loginAttemptGuardProvider);
+    final String email = _emailController.text;
+    // The keyboard "done" action can still submit while the button is disabled,
+    // so the lock has to be checked here as well as in the button's onPressed.
+    if (guard.isLocked(email)) return;
 
     setState(() {
       _busy = true;
@@ -69,6 +89,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             password: _passwordController.text,
           );
       if (!mounted) return;
+
+      // Correct password — forget earlier misses for this account.
+      guard.recordSuccess(email);
 
       // Resume the interrupted flow when there was one; otherwise sellers go
       // to Seller Hub and buyers go to marketplace home. Tapping the profile
@@ -88,7 +111,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } on AuthFailure catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.message);
+      if (e.kind == AuthFailureKind.invalidCredentials) {
+        // Only a genuinely wrong email/password burns an attempt; a network
+        // failure must not lock the user out.
+        guard.recordFailure(email);
+        final bool locked = guard.isLocked(email);
+        setState(() {
+          _error = locked
+              ? null
+              : AppStrings.loginAttemptsLeft(guard.attemptsLeft(email));
+        });
+      } else {
+        setState(() => _error = e.message);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = 'เข้าสู่ระบบไม่สำเร็จ: $e');
@@ -124,51 +159,74 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final LoginAttemptGuard guard = ref.watch(loginAttemptGuardProvider);
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Column(
-        children: <Widget>[
-          // Jade hero band with the OTOP wordmark (revamped auth design).
-          const AuthHero(tagline: AppStrings.appTagline),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.xxl,
-                AppSpacing.xxl,
-                AppSpacing.xxl,
-                AppSpacing.xxl,
-              ),
-              child: Center(
-                child: ConstrainedBox(
-                  // Keeps the form readable on tablets and wide Chrome windows
-                  // instead of stretching a login form across 1920px.
-                  constraints: const BoxConstraints(maxWidth: 440),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      _buildHeadline(),
-                      const SizedBox(height: AppSpacing.xxl),
-                      if (_error != null) ...<Widget>[
-                        _ErrorBanner(message: _error!),
-                        const SizedBox(height: AppSpacing.md),
-                      ],
-                      _buildForm(),
-                      const SizedBox(height: AppSpacing.lg),
-                      _buildDemoHint(),
-                      const SizedBox(height: AppSpacing.xl),
-                      _buildFooter(),
-                      const SizedBox(height: AppSpacing.xxl),
-                    ],
+      // Rebuilds once per second only while a lock is counting down, so the
+      // banner and the button label stay in sync without extra plumbing.
+      body: ListenableBuilder(
+        listenable: guard,
+        builder: (BuildContext context, Widget? child) {
+          final String email = _emailController.text;
+          final bool locked = guard.isLocked(email);
+          final int lockSeconds = _secondsLeft(guard.remainingLock(email));
+          return Column(
+            children: <Widget>[
+              // Jade hero band with the OTOP wordmark (revamped auth design).
+              const AuthHero(tagline: AppStrings.appTagline),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xxl,
+                    AppSpacing.xxl,
+                    AppSpacing.xxl,
+                    AppSpacing.xxl,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      // Keeps the form readable on tablets and wide Chrome windows
+                      // instead of stretching a login form across 1920px.
+                      constraints: const BoxConstraints(maxWidth: 440),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          _buildHeadline(),
+                          const SizedBox(height: AppSpacing.xxl),
+                          if (locked) ...<Widget>[
+                            _LockBanner(
+                              message: AppStrings.loginLockedFor(
+                                guard.maxAttempts,
+                                lockSeconds,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                          ] else if (_error != null) ...<Widget>[
+                            _ErrorBanner(message: _error!),
+                            const SizedBox(height: AppSpacing.md),
+                          ],
+                          _buildForm(locked: locked, lockSeconds: lockSeconds),
+                          const SizedBox(height: AppSpacing.lg),
+                          _buildDemoHint(),
+                          const SizedBox(height: AppSpacing.xl),
+                          _buildFooter(),
+                          const SizedBox(height: AppSpacing.xxl),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
+
+  /// Rounds up so the first second of the lock reads "60" rather than "59".
+  static int _secondsLeft(Duration remaining) =>
+      (remaining.inMilliseconds / 1000).ceil();
 
   Widget _buildHeadline() {
     return Text(
@@ -178,7 +236,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Widget _buildForm() {
+  Widget _buildForm({required bool locked, required int lockSeconds}) {
     return Form(
       key: _formKey,
       child: Column(
@@ -228,7 +286,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
           const SizedBox(height: AppSpacing.sm),
           FilledButton(
-            onPressed: _busy ? null : _submit,
+            // The email and password fields stay editable while locked so the
+            // user can correct a typo and switch accounts; only signing in is
+            // blocked until the countdown ends.
+            onPressed: (_busy || locked) ? null : _submit,
             child: _busy
                 ? const SizedBox(
                     width: 20,
@@ -238,7 +299,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       color: Colors.white,
                     ),
                   )
-                : const Text(AppStrings.login),
+                : Text(
+                    locked
+                        ? AppStrings.loginRetryIn(lockSeconds)
+                        : AppStrings.login,
+                  ),
           ),
         ],
       ),
@@ -314,6 +379,40 @@ class _ErrorBanner extends StatelessWidget {
             child: Text(
               message,
               style: AppTextStyles.bodySmall.copyWith(color: AppColors.danger),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Amber banner shown instead of the red error while the 3-strike cooldown is
+/// running — the form is not broken, it is deliberately waiting.
+class _LockBanner extends StatelessWidget {
+  const _LockBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.warningLight,
+        borderRadius: AppRadius.cardRadius,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Icon(Icons.lock_clock, color: AppColors.warning, size: 18),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.warning,
+              ),
             ),
           ),
         ],

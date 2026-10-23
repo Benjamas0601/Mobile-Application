@@ -109,6 +109,19 @@ class AppStrings {
   static const String dontHaveAccount = 'ยังไม่มีบัญชี?';
   static const String alreadyHaveAccount = 'มีบัญชีอยู่แล้ว?';
 
+  // --- Login lockout -------------------------------------------------------
+  /// Shown under the form after the first/second wrong password.
+  static String loginAttemptsLeft(int left) =>
+      'รหัสผ่านไม่ถูกต้อง เหลืออีก $left ครั้ง';
+
+  /// Replaces the error banner while the 1-minute cooldown is running.
+  static String loginLockedFor(int attempts, int seconds) =>
+      'ใส่รหัสผ่านผิด $attempts ครั้ง กรุณารออีก $seconds วินาที';
+
+  /// Label on the disabled sign-in button during the cooldown.
+  static String loginRetryIn(int seconds) =>
+      'ลองใหม่ได้ในอีก $seconds วินาที';
+
   // --- Profile -------------------------------------------------------------
   static const String profileEdit = 'แก้ไขข้อมูลส่วนตัว';
   static const String emailLockedHint =

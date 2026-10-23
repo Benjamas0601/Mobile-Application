@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/services/auth/login_attempt_guard.dart';
 import '../models/user_model.dart';
 import '../repositories/auth_repository.dart';
 
@@ -37,3 +38,15 @@ final StreamProvider<UserModel?> authUserProvider = StreamProvider<UserModel?>((
 final Provider<AuthRepository> authActionsProvider = Provider<AuthRepository>( 
   (Ref ref) => ref.watch(authRepositoryProvider),
 );
+
+/// Tracks wrong-password attempts for the login screen.
+///
+/// Lives at app scope so the 1-minute lock survives leaving and re-entering
+/// the login screen; it is disposed (and the countdown ticker stopped) with the
+/// provider container.
+final Provider<LoginAttemptGuard> loginAttemptGuardProvider =
+    Provider<LoginAttemptGuard>((Ref ref) {
+      final LoginAttemptGuard guard = LoginAttemptGuard();
+      ref.onDispose(guard.dispose);
+      return guard;
+    });
